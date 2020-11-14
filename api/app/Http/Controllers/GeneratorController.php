@@ -13,7 +13,12 @@ use Illuminate\Routing\Controller as BaseController;
 use App\Models;
 use App\Repositories\Interfaces;
 
-
+/**
+ * Class GeneratorController
+ * Base route /api/tables/$tableId/generators
+ *
+ * @package App\Http\Controllers
+ */
 class GeneratorController extends BaseController
 {
     /**
@@ -36,6 +41,8 @@ class GeneratorController extends BaseController
     }
 
     /**
+     * GET /
+     *
      * Get all generators instances for table.
      * @param string $tableId table guid.
      * @return JsonResponse all generators for table.
@@ -50,6 +57,8 @@ class GeneratorController extends BaseController
     }
 
     /**
+     * GET /$id
+     *
      * Get generated XML file.
      * @param string $tableId table guid.
      * @param $id string generator guid.
@@ -61,6 +70,8 @@ class GeneratorController extends BaseController
     }
 
     /**
+     * POST /
+     *
      * Create new generator for table.
      * @param string $tableId table guid.
      * @param $request Request create request.

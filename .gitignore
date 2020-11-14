@@ -116,3 +116,4 @@ fabric.properties
 
 **/.editorconfig
 **/.env.example
+**/.env

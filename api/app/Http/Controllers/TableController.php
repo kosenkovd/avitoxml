@@ -12,6 +12,11 @@ use Illuminate\Routing\Controller as BaseController;
 use App\Models;
 use App\Repositories\Interfaces;
 
+/**
+ * Class TableController
+ * Base route /api/tables
+ * @package App\Http\Controllers
+ */
 class TableController extends BaseController
 {
     /**
@@ -26,6 +31,8 @@ class TableController extends BaseController
     }
 
     /**
+     * GET /
+     *
      * Get all table instances.
      * @return JsonResponse all tables.
      */
@@ -39,6 +46,8 @@ class TableController extends BaseController
     }
 
     /**
+     * GET /$id
+     *
      * Read table.
      * @param $id string table guid.
      * @return JsonResponse json table resource.
@@ -51,6 +60,8 @@ class TableController extends BaseController
     }
 
     /**
+     * POST /
+     *
      * Create new table.
      * @param $request Request create request.
      * @return JsonResponse created table resource.
@@ -61,6 +72,8 @@ class TableController extends BaseController
     }
 
     /**
+     * PUT /$id
+     *
      * Update table.
      * @param $id table guid.
      * @param $request Request update request.
