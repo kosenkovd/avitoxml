@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="45dfc0ce-5a2f-48d4-9201-f4095c23cb79" name="avitoxml" url="http://avitoxml.beget.tech">
+        <fileTransfer rootFolder="/avitoxml.beget.tech/public_html" host="avitoxml.beget.tech" port="21">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

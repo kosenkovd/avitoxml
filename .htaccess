@@ -1,0 +1,2 @@
+AddCharset UTF-8 .php
+RewriteRule ^api/(.*)$ /api/$1 [L]
