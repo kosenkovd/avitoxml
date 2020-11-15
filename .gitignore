@@ -116,3 +116,7 @@ fabric.properties
 
 **/.editorconfig
 **/.env.example
+
+# Config
+/api/app/Configuration/Config.php
+/services/config/*
