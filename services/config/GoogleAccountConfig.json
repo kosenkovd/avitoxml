@@ -1,12 +1,1 @@
-{
-  "type": "service_account",
-  "project_id": "orbital-nirvana-285612",
-  "private_key_id": "8ed03a4f606f09a4f5224290705ce05dbacefda6",
-  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC3WxUGhS/y9sHA\nHS7huWNWzxEu9Ttf8I4N/1DR4ANK9AZB09XJYqd5tktHKiKIYrppgsgCygIR3h9p\nnC5x0sE3Y68vUqOWDicmyOO22i972uGIq5bsEyVD0D/0ecBFRkBqwBxmqr8vM3v2\nGn/rHuLBG9wIKsZohcanB96QwR8CFrFY4sccK1FiI3HEKcsuqeqxGFDU1G89I437\nUjTaHECaxFWOlFQwR441ELREhWklgAE4cRlsNmi0dz0PvD9aqSdsudq9IWuWjYvz\n+3aViiqnO4XoDe7sGcfUPFtroBFzT8C2Dcs6yG0UJevUVByCjRZ373im3ouA59zl\nVWKRovSvAgMBAAECggEAAkCPKI5YQW7AgICbQ9CIJNfUSTRf71TAGfHp5zoOMEyB\nCyvz805P6lHP6Obel7hGu+cMV+RtVBTbY+u0Mle5YdnKnBUyxzQTTQmoqmVRsf7F\nSG17JBk0Gvoi3vjj4LX1Mpp7ftNYF9dVDXfT3Gp7tI2IDV2hJEWIZCLXnAWTQO5L\nFjsJv+2uTPdpVqOvLIRBB5AS2i73JcR7Jx7WFeFPgZwCtpMe1HK0Enf0yRRtvO0k\nYK+5w5TJ8YqqnpU+3dEMHY4CeQxNUZev/ISCOeZwvpnz19BD56/qD9vCM8stnNXB\n8vgo/GFuM/QdUP/PKY+ZTtyvZKB5Z/5xSiH7+xSGMQKBgQDrMr58EFJzVB3B/jdf\nszhr5mwXnRiwaslS9Pi7WhdC9NWn45aeImLNGEuTKCALovU8LD0HBDsE70PJNj6H\nEtyB3uhLuGrrNOZ5Jza3kM3OQrVTzW8IAv7opinTSqPcXFq8mgMbdeNqSXkCf233\nBaWLAuj0SF/nKWwK/9exkZCOqQKBgQDHkotV3o1s9FrRJfq/X6PitLJzpnWtansC\n3QLo5QWBA0N8MJvz4srUdNm4J8a8Kiw5LT5sTl19GzA4nrOjlwMMZgb52iu7P04p\n8xcxX3mw+H8O4Qap3ggwWGzT9UvmN+mi4nJfdUJSLDRMg+zF92pKHjXR3WyBNiP1\nVLVOtsS3lwKBgAdOiERqbWVP06zXLPk4JCSV//2rz7yLVL3TBncrkVVvLcQNefxn\nrRIaEx77PCOgaGX6Kdsx8nNwy3ZQzRh9KYSPXEAd9pRgDFjvMu/4+6vQvrlfxHdH\nQIwRvXLm+rg51kfNsRMFUo9WwP+m3c+yyTXMXVhZd0FDNCwTTqwhjZAhAoGBALWi\nHAn02QY2hokfZczSwJdOGbPD5goEhRwgBcvs1EuMqtjWbLlUyYD/MD+4g9kxELqh\nANUVpWR9YC/H0Hqsr+uS1/qBo5dxkDQBuDQJTvnPz+O8zZHAL/fAIpvt/jvy20KR\nkcJrOAcNkDOrRc0O1r/KKvVr7prSqXtYswKGuRbVAoGBAM2HvAuJWpfQy38zj4+K\nZwNoeGKw9XZEh16QMi3aYTSS9fYSyY0IvGaNkHTAjqGsbGuwWb5T8poPkkoyoYf2\nTIxIpWy49I/ywwKaH8AHxzLMbubzs985d1q7vwedgG2RtDJWW2UPATcUCb1a6MHc\n5H+f2u3P7pXE+tSXXFEVxsCq\n-----END PRIVATE KEY-----\n",
-  "client_email": "avito-606@orbital-nirvana-285612.iam.gserviceaccount.com",
-  "client_id": "111209639086532987012",
-  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-  "token_uri": "https://oauth2.googleapis.com/token",
-  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/avito-606%40orbital-nirvana-285612.iam.gserviceaccount.com"
-}
+{}
