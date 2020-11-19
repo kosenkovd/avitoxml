@@ -3,14 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
 
 use App\Models;
 use App\Repositories\Interfaces;
+use App\Enums\Roles;
 
 /**
  * Class TableController
@@ -22,12 +20,17 @@ class TableController extends BaseController
     /**
      * @var Interfaces\ITableRepository Models\Table repository.
      */
-    private Interfaces\ITableRepository $tables;
+    private Interfaces\ITableRepository $tableRepository;
 
-    public function __construct(Interfaces\ITableRepository $tables)
+    /**
+     * @var Roles Enum of roles.
+     */
+    private Roles $roles;
+
+    public function __construct(Interfaces\ITableRepository $tableRepository)
     {
-        parent::__construct();
-        $this->tables = $tables;
+        $this->tableRepository = $tableRepository;
+        $this->roles = new Roles();
     }
 
     /**
@@ -36,12 +39,21 @@ class TableController extends BaseController
      * Get all table instances.
      * @return JsonResponse all tables.
      */
-    public function index() : JsonResponse
+    public function index(Request $request) : JsonResponse
     {
+        $user = $request->input("currentUser");
         $tables = [];
-        $table = new Models\Table();
-        $table->ti = "pidor";
-        $tables[] = $table;
+
+        switch ($user->getRoleId())
+        {
+            case $this->roles->Admin:
+                $tables = $this->tableRepository->getTables();
+                break;
+            case $this->roles->Customer:
+                $tables = $this->tableRepository->getTables($user->getUserId());
+                break;
+        }
+
         return response()->json($tables, 200);
     }
 

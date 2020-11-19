@@ -4,10 +4,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Foundation\Bus\DispatchesJobs;
-use Illuminate\Foundation\Validation\ValidatesRequests;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
 
 use App\Models;
@@ -35,7 +33,6 @@ class GeneratorController extends BaseController
         Interfaces\ITableRepository $tables,
         Interfaces\IGeneratorRepository  $generators)
     {
-        parent::__construct();
         $this->tables = $tables;
         $this->generators = $generators;
     }
@@ -62,9 +59,9 @@ class GeneratorController extends BaseController
      * Get generated XML file.
      * @param string $tableId table guid.
      * @param $id string generator guid.
-     * @return generated XML.
+     * @return Response generated XML.
      */
-    public function show(string $tableId, string $id)
+    public function show(string $tableId, string $id) : Response
     {
         return response("$tableId, $id, XML", 200);
     }

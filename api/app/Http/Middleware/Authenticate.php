@@ -31,22 +31,20 @@ class Authenticate
         $hash = $request->query('hash');
         if(is_null($hash))
         {
-            http_response_code(401);
-            return;
+            return response(null, 401);
         }
 
-        $user = self::$userRepository->getUser($hash);
+        $user = $this->userRepository->getUserByApiKey($hash);
         if(is_null($user))
         {
             http_response_code(403);
-            return json_encode([
+            return response()->json([
                 "message" => "User with specified hash was not found."
-            ]);
+            ], 403);
         }
 
         $request->request->add([
-            'userId' => $user->userId,
-            'roleId' => $user->roleId
+            'currentUser' => $user
         ]);
 
         return $next($request);
