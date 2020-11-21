@@ -16,6 +16,13 @@ class LinkHelper
         return "https://drive.google.com/drive/folders/".$folderID;
     }
 
+    /**
+     * Create link for xml generation.
+     *
+     * @param string $tableGuid
+     * @param string $generatorGuid
+     * @return string
+     */
     public static function getXmlGeneratorLink(string $tableGuid, string $generatorGuid) : string
     {
         return "http://avitoxml.beget.tech/api/tables/".$tableGuid."/generators/".$generatorGuid;
