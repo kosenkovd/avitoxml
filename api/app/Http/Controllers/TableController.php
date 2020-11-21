@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\Interfaces\IGoogleServicesClient;
+use App\Services\SpintaxService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
@@ -87,9 +88,12 @@ class TableController extends BaseController
      * @param $id string table guid.
      * @return JsonResponse json table resource.
      */
-    public function show(string $id) : JsonResponse
+    public function show(string $id)
     {
-        return response()->json([$id], 200);
+        $service = new SpintaxService();
+        $res = $service->randomize($id);
+
+        return response($res, 200);
     }
 
     /**

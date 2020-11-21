@@ -17,9 +17,6 @@ use Google_Service_Drive;
  */
 class GoogleServicesClient implements IGoogleServicesClient
 {
-    /**
-     * @var string GoogleSheet template id.
-     */
     private Config $config;
     private Google_Client $client;
     private Google_Service_Drive_Permission $drivePermissions;
