@@ -23,7 +23,6 @@ class TableDtoMapper
 
     public static function MapTableDTO(Models\Table $table, Models\User $user) : DTOs\TableDTO
     {
-
         if(is_null($table->getDateExpired()))
         {
             $dateExpiredString = null;

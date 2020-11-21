@@ -19,3 +19,5 @@ Route::apiResources([
     'tables' => C\TableController::class,
     'tables.generators' => C\GeneratorController::class
 ]);
+
+Route::get('/users/myAccount', [C\UserController::class, 'myAccount']);
