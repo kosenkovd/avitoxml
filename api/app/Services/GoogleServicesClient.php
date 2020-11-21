@@ -3,6 +3,7 @@
 
 namespace App\Services;
 
+use App\Configuration\Config;
 use App\Services\Interfaces\IGoogleServicesClient;
 use Google_Client;
 use Google_Service_Sheets;
@@ -19,8 +20,7 @@ class GoogleServicesClient implements IGoogleServicesClient
     /**
      * @var string GoogleSheet template id.
      */
-    private static string $copySpreadsheetId = '1iZiPNNjReXtxF65ZMmodkPmuLvR-DVAv7Uow_4QsZOM';
-    private static string $baseFolderId = '1DmfncP64A8P7fV8K3Suj81uVKwlFebTU';
+    private Config $config;
     private Google_Client $client;
     private Google_Service_Drive_Permission $drivePermissions;
     private Google_Service_Sheets $sheetsService;
@@ -35,7 +35,7 @@ class GoogleServicesClient implements IGoogleServicesClient
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
         $driveFile = new Google_Service_Drive_DriveFile();
-        $result = $driveService->files->copy(self::$copySpreadsheetId, $driveFile);
+        $result = $driveService->files->copy($this->config->getCopySpreadsheetId(), $driveFile);
         $tableId = $result->id;
         $this->setPermissions($tableId);
         return $tableId;
@@ -90,6 +90,7 @@ class GoogleServicesClient implements IGoogleServicesClient
      */
     public function __construct()
     {
+        $this->config = new Config();
         $this->client = new Google_Client();
         $this->client->setApplicationName('Google Sheets Depeche');
         $this->client->setScopes([Google_Service_Sheets::SPREADSHEETS]);

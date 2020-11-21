@@ -39,8 +39,8 @@ SELECT `t`.`id` AS `tableId`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
        `g`.`dateLastGenerated`
-FROM `".$this->config::getTablesTableName()."` `t`
-LEFT JOIN `".$this->config::getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
+FROM `".$this->config->getTablesTableName()."` `t`
+LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
 WHERE 1";
         if(!is_null($userId))
         {
@@ -93,7 +93,7 @@ WHERE 1";
     public function insert(Table $table) : int
     {
         $statement = "
-INSERT INTO `".$this->config::getTablesTableName()."`(
+INSERT INTO `".$this->config->getTablesTableName()."`(
     `userId`,
     `googleSheetId`,
     `googleDriveId`,
@@ -137,8 +137,8 @@ SELECT `t`.`id` AS `tableId`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
        `g`.`dateLastGenerated`
-FROM `".$this->config::getTablesTableName()."` `t`
-LEFT JOIN `".$this->config::getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
+FROM `".$this->config->getTablesTableName()."` `t`
+LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
 WHERE `t`.`tableGuid`='".$tableGuid."'";
         $res = $mysqli->query($statement);
 

@@ -27,7 +27,7 @@ class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
     public function insert(Generator $generator) : int
     {
         $statement = "
-INSERT INTO `".$this->config::getGeneratorsTableName()."`(
+INSERT INTO `".$this->config->getGeneratorsTableName()."`(
     `tableId`,
     `generatorGuid`,
     `dateLastGenerated`)
@@ -56,7 +56,7 @@ VALUES (
         $statement = "
 SELECT
        `lastGeneration`
-FROM `".$this->config::getGeneratorsTableName()."`
+FROM `".$this->config->getGeneratorsTableName()."`
 WHERE `id`=".$generatorId;
 
         $mysqli = $this->connect();
@@ -85,7 +85,7 @@ WHERE `id`=".$generatorId;
         $mysqli = $this->connect();
         $content = $mysqli->real_escape_string($content);
         $statement = "
-UPDATE `".$this->config::getGeneratorsTableName()."`
+UPDATE `".$this->config->getGeneratorsTableName()."`
 SET `lastGeneration`='".$content."'
 WHERE `id`=".$generatorId;
         $mysqli->query($statement);
@@ -106,7 +106,7 @@ WHERE `id`=".$generatorId;
         }
 
         $statement = "
-UPDATE `".$this->config::getGeneratorsTableName()."`
+UPDATE `".$this->config->getGeneratorsTableName()."`
 SET `id`=".$generator->getGeneratorId().",
     `tableId`=".$generator->getTableId().",
     `generatorGuid`='".$generator->getGeneratorGuid()."',

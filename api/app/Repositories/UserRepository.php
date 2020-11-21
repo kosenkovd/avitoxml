@@ -28,7 +28,7 @@ class UserRepository extends RepositoryBase implements IUserRepository
         $res = $mysqli->query("
 SELECT
     `id`, `roleId`, `dateCreated`, `phoneNumber`, `socialNetworkUrl`, `isBlocked`, `apiKey`, `notes`
-FROM ".$this->config::getUsersTableName()."
+FROM ".$this->config->getUsersTableName()."
 WHERE apiKey='$cleanApiKey'");
 
         if(!$res || !$res->data_seek(0))

@@ -29,10 +29,10 @@ class RepositoryBase
     protected function connect() : mysqli
     {
         $connection = new mysqli(
-            $this->config::getDBHost(),
-            $this->config::getDbUser(),
-            $this->config::getDbPassword(),
-            $this->config::getDbName());
+            $this->config->getDBHost(),
+            $this->config->getDbUser(),
+            $this->config->getDbPassword(),
+            $this->config->getDbName());
 
         if ($connection->connect_errno) {
             throw new Exception(

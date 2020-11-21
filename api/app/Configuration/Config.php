@@ -3,12 +3,97 @@
 namespace App\Configuration;
 
 class Config {
-    private static $dbHost = "";
-    private static $dbName = "";
-    private static $dbUser = "";
-    private static $dbPassword = "";
+    private string $dbHost;
+    private string $dbName;
+    private string $dbUser;
+    private string $dbPassword;
+    private string $usersTableName;
+    private string $tablesTableName;
+    private string $generatorsTableName;
+    private string $copySpreadsheetId;
+    private string $baseFolderId;
 
-    function __get($name) {
-        return self::$$name;
+    public function __construct()
+    {
+        $configurationJson =  json_decode(file_get_contents(__dir__. '/appsettings.json'), true);
+        foreach ($configurationJson as $key => $value)
+        {
+            if(property_exists(Config::class, $key))
+            {
+                $this->$key = strval($value);
+            }
+        }
+    }
+
+    /**
+     * @return string
+     */
+    public function getDbHost(): string
+    {
+        return $this->dbHost;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDbName(): string
+    {
+        return $this->dbName;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDbUser(): string
+    {
+        return $this->dbUser;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDbPassword(): string
+    {
+        return $this->dbPassword;
+    }
+
+    /**
+     * @return string
+     */
+    public function getUsersTableName(): string
+    {
+        return $this->usersTableName;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTablesTableName(): string
+    {
+        return $this->tablesTableName;
+    }
+
+    /**
+     * @return string
+     */
+    public function getGeneratorsTableName(): string
+    {
+        return $this->generatorsTableName;
+    }
+
+    /**
+     * @return string
+     */
+    public function getCopySpreadsheetId(): string
+    {
+        return $this->copySpreadsheetId;
+    }
+
+    /**
+     * @return string
+     */
+    public function getBaseFolderId(): string
+    {
+        return $this->baseFolderId;
     }
 }
