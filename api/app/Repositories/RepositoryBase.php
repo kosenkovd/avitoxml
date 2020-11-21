@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use Exception;
 use mysqli;
 use App\Configuration\Config;
 
@@ -23,6 +24,7 @@ class RepositoryBase
     /**
      * Connect to database.
      * @return mysqli established database connection.
+     * @throws Exception in case of failed DB connection.
      */
     protected function connect() : mysqli
     {
@@ -37,6 +39,8 @@ class RepositoryBase
                 "Не удалось подключиться к MySQL: (" .
                 $connection->connect_errno . ") " . $connection->connect_error);
         }
+
+        $connection->set_charset("utf8");
 
         return $connection;
     }

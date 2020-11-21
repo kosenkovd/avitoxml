@@ -16,9 +16,9 @@ class LinkHelper
         return "https://drive.google.com/drive/folders/".$folderID;
     }
 
-    public static function getXmlGeneratorLink(string $generatorGuid, string $apiKey) : string
+    public static function getXmlGeneratorLink(string $tableGuid, string $generatorGuid) : string
     {
-        return "http://avitoxml.beget.tech/generateXml.php?hash=".$apiKey."&generatorID=".$generatorGuid;
+        return "http://avitoxml.beget.tech/api/tables/".$tableGuid."/generators/".$generatorGuid;
     }
 
     public static function getPictureDownloadLink(string $fileID) : string

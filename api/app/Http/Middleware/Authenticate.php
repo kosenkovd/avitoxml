@@ -14,6 +14,10 @@ class Authenticate
      */
     private Interfaces\IUserRepository $userRepository;
 
+    private static array $anonymousAllowed = [
+        "App\Http\Controllers\GeneratorController@show"
+    ];
+
     public function __construct(Interfaces\IUserRepository $userRepository)
     {
         $this->userRepository = $userRepository;
@@ -28,6 +32,12 @@ class Authenticate
      */
     public function handle(Request $request, Closure $next)
     {
+        $action = $request->route()->getAction()["controller"];
+        if(in_array($action, self::$anonymousAllowed))
+        {
+            return $next($request);
+        }
+
         $hash = $request->query('hash');
         if(is_null($hash))
         {

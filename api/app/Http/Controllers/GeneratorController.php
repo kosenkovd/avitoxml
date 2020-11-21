@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Interfaces\IXmlGenerationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -22,19 +23,26 @@ class GeneratorController extends BaseController
     /**
      * @var Interfaces\ITableRepository Models\Table repository.
      */
-    private Interfaces\ITableRepository $tables;
+    private Interfaces\ITableRepository $tablesRepository;
 
     /**
      * @var Interfaces\IGeneratorRepository Models\Generator repository.
      */
-    private Interfaces\IGeneratorRepository $generators;
+    private Interfaces\IGeneratorRepository $generatorsRepository;
+
+    /**
+     * @var IXmlGenerationService XML generator for spreadsheet.
+     */
+    private IXmlGenerationService $xmlGenerator;
 
     public function __construct(
-        Interfaces\ITableRepository $tables,
-        Interfaces\IGeneratorRepository  $generators)
+        Interfaces\ITableRepository $tablesRepository,
+        Interfaces\IGeneratorRepository  $generatorsRepository,
+        IXmlGenerationService $xmlGenerator)
     {
-        $this->tables = $tables;
-        $this->generators = $generators;
+        $this->tablesRepository = $tablesRepository;
+        $this->generatorsRepository = $generatorsRepository;
+        $this->xmlGenerator = $xmlGenerator;
     }
 
     /**
@@ -61,9 +69,43 @@ class GeneratorController extends BaseController
      * @param $id string generator guid.
      * @return Response generated XML.
      */
-    public function show(string $tableId, string $id) : Response
+    public function show(string $tableGuid, string $generatorGuid) : Response
     {
-        return response("$tableId, $id, XML", 200);
+        $table = $this->tablesRepository->get($tableGuid);
+        if(is_null($table))
+        {
+            return response("Table not found", 404);
+        }
+
+        $generator = null;
+        foreach ($table->getGenerators() as $curGenerator)
+        {
+            if(strcmp($curGenerator->getGeneratorGuid(), $generatorGuid) == 0)
+            {
+                $generator = $curGenerator;
+                break;
+            }
+        }
+        if(is_null($generator))
+        {
+            return response("File not found", 404);
+        }
+
+        $content = "";
+        if($table->isDeleted() || (!is_null($table->getDateExpired()) && $table->getDateExpired() < time()))
+        {
+            $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
+        }
+        else
+        {
+            $content = $this->xmlGenerator->generateAvitoXML($table->getGoogleSheetId());
+            $generator->setLastGenerated(time());
+            $this->generatorsRepository->update($generator);
+            $this->generatorsRepository->setLastGeneration($generator->getGeneratorId(), $content);
+        }
+
+        return response($content, 200)
+            ->header("Content-Type", "application/xml");
     }
 
     /**

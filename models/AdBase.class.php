@@ -27,7 +27,7 @@ abstract class AdBase
         $this->adType = htmlspecialchars($row[$propertyColumns->adType]);
         $this->condition = htmlspecialchars($row[$propertyColumns->condition]);
         $this->title = htmlspecialchars($row[$propertyColumns->title]);
-        $this->description = nl2br($row[$propertyColumns->description], true);
+        $this->description = preg_replace('#<br\s+/>#', '<br/>', nl2br($row[$propertyColumns->description], true));
         $this->price = htmlspecialchars($row[$propertyColumns->price]);
         $this->images = explode(PHP_EOL, $row[$propertyColumns->imagesRaw]);
         $this->videoURL = htmlspecialchars($row[$propertyColumns->videoURL]);

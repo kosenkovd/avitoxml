@@ -3,23 +3,25 @@
 
 namespace App\Mappers;
 
+use DateTime;
 use App\Models;
+use App\DTOs;
 use App\Helpers\LinkHelper;
 
 class TableDtoMapper
 {
-    private static function GetGeneratorUrls(array $generators, Models\User $user)
+    private static function GetGeneratorUrls(string $tableGuid, array $generators)
     {
         $generatorUrls = [];
         foreach ($generators as $generator)
         {
-            $generatorUrls[] = LinkHelper::getXmlGeneratorLink($generator->getGeneratorId(), $user->getApiKey());
+            $generatorUrls[] = LinkHelper::getXmlGeneratorLink($tableGuid, $generator->getGeneratorGuid());
         }
 
         return $generatorUrls;
     }
 
-    public static function MapTableDTO(Models\Table $table, Models\User $user, array $generators) : Models\TableDTO
+    public static function MapTableDTO(Models\Table $table, Models\User $user) : DTOs\TableDTO
     {
 
         if(is_null($table->getDateExpired()))
@@ -35,29 +37,31 @@ class TableDtoMapper
 
         $isActive = !$user->isBlocked() && (is_null($table->getDateExpired()) || $table->getDateExpired() > time());
 
-        return new Models\TableDTO(
+        return new DTOs\TableDTO(
             $table->getTableId(),
             $user->getUserId(),
             $user->getPhoneNumber(),
             $user->getSocialNetworkUrl(),
             LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
             LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId()),
-            self::GetGeneratorUrls($generators, $user),
+            self::GetGeneratorUrls($table->getTableGuid(), $table->getGenerators()),
+            $table->getNotes(),
             $dateExpiredString,
             $isActive);
     }
 
-    public static function MapDeletedTableDTO(Models\Table $table, Models\User $user, array $generators)
-        : Models\DeletedTableDTO
+    public static function MapDeletedTableDTO(Models\Table $table, Models\User $user)
+        : DTOs\DeletedTableDTO
     {
-        return new Models\DeletedTableDTO(
+        return new DTOs\DeletedTableDTO(
             $table->getTableId(),
             $user->getUserId(),
             $user->getPhoneNumber(),
             $user->getSocialNetworkUrl(),
             LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
             LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId()),
-            self::GetGeneratorUrls($generators, $user),
+            self::GetGeneratorUrls($table->getTableGuid(), $table->getGenerators()),
+            $table->getNotes(),
             $table->getDateDeleted());
     }
 }

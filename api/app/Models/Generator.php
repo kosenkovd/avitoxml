@@ -6,7 +6,7 @@ namespace App\Models;
 
 class Generator
 {
-    private int $generatorId;
+    private ?int $generatorId;
 
     private int $tableId;
 
@@ -16,12 +16,12 @@ class Generator
 
     /**
      * Generator constructor.
-     * @param int $generatorId
+     * @param ?int $generatorId
      * @param int $tableId
      * @param string $generatorGuid
      * @param int|null $lastGenerated
      */
-    public function __construct(int $generatorId, int $tableId, string $generatorGuid, ?int $lastGenerated)
+    public function __construct(?int $generatorId, int $tableId, string $generatorGuid, ?int $lastGenerated)
     {
         $this->generatorId = $generatorId;
         $this->tableId = $tableId;
@@ -32,7 +32,7 @@ class Generator
     /**
      * @return int
      */
-    public function getGeneratorId(): int
+    public function getGeneratorId(): ?int
     {
         return $this->generatorId;
     }
@@ -59,5 +59,25 @@ class Generator
     public function getLastGenerated(): ?int
     {
         return $this->lastGenerated;
+    }
+
+    /**
+     * @param int|null $generatorId
+     * @return Generator
+     */
+    public function setGeneratorId(?int $generatorId): Generator
+    {
+        $this->generatorId = $generatorId;
+        return $this;
+    }
+
+    /**
+     * @param int|null $lastGenerated
+     * @return Generator
+     */
+    public function setLastGenerated(?int $lastGenerated): Generator
+    {
+        $this->lastGenerated = $lastGenerated;
+        return $this;
     }
 }

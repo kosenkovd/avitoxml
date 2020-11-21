@@ -1,7 +1,7 @@
 <?php
 
 
-namespace App\Models;
+namespace App\DTOs;
 
 
 class TableDTO extends TableDtoBase

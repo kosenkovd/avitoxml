@@ -3,7 +3,7 @@
 namespace App\Models;
 
 class Table {
-    private int $tableId;
+    private ?int $tableId;
 
     private int $userId;
 
@@ -22,8 +22,13 @@ class Table {
     private string $tableGuid;
 
     /**
+     * @var Generator[] generators for table.
+     */
+    private array $generators;
+
+    /**
      * Table constructor.
-     * @param int $tableId
+     * @param ?int $tableId
      * @param int $userId
      * @param string $googleSheetId
      * @param string $googleDriveId
@@ -32,9 +37,10 @@ class Table {
      * @param int|null $dateDeleted
      * @param string|null $notes
      * @param string $tableGuid
+     * @param array $generators
      */
     public function __construct(
-        int $tableId,
+        ?int $tableId,
         int $userId,
         string $googleSheetId,
         string $googleDriveId,
@@ -42,7 +48,8 @@ class Table {
         bool $isDeleted,
         ?int $dateDeleted,
         ?string $notes,
-        string $tableGuid)
+        string $tableGuid,
+        array $generators = [])
     {
         $this->tableId = $tableId;
         $this->userId = $userId;
@@ -53,12 +60,13 @@ class Table {
         $this->dateDeleted = $dateDeleted;
         $this->notes = $notes;
         $this->tableGuid = $tableGuid;
+        $this->generators = $generators;
     }
 
     /**
      * @return int
      */
-    public function getTableId(): int
+    public function getTableId(): ?int
     {
         return $this->tableId;
     }
@@ -125,5 +133,33 @@ class Table {
     public function getTableGuid(): string
     {
         return $this->tableGuid;
+    }
+
+    /**
+     * @return array
+     */
+    public function getGenerators(): array
+    {
+        return $this->generators;
+    }
+
+    /**
+     * @param Generator $generator
+     * @return Table
+     */
+    public function addGenerator(Generator $generator): Table
+    {
+        $this->generators[] = $generator;
+        return $this;
+    }
+
+    /**
+     * @param int|null $tableId
+     * @return Table
+     */
+    public function setTableId(?int $tableId): Table
+    {
+        $this->tableId = $tableId;
+        return $this;
     }
 }

@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Interfaces\IGoogleServicesClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
 
 use App\Models;
+use App\Mappers\TableDtoMapper;
 use App\Repositories\Interfaces;
 use App\Enums\Roles;
+use Ramsey\Uuid\Guid\Guid;
 
 /**
  * Class TableController
@@ -23,13 +26,28 @@ class TableController extends BaseController
     private Interfaces\ITableRepository $tableRepository;
 
     /**
+     * @var Interfaces\IGeneratorRepository Models\Generator repository.
+     */
+    private Interfaces\IGeneratorRepository $generatorRepository;
+
+    /**
+     * @var IGoogleServicesClient Google services client.
+     */
+    private IGoogleServicesClient $googleServicesClient;
+
+    /**
      * @var Roles Enum of roles.
      */
     private Roles $roles;
 
-    public function __construct(Interfaces\ITableRepository $tableRepository)
+    public function __construct(
+        Interfaces\ITableRepository $tableRepository,
+        Interfaces\IGeneratorRepository $generatorRepository,
+        IGoogleServicesClient $googleServicesClient)
     {
         $this->tableRepository = $tableRepository;
+        $this->generatorRepository = $generatorRepository;
+        $this->googleServicesClient = $googleServicesClient;
         $this->roles = new Roles();
     }
 
@@ -54,7 +72,12 @@ class TableController extends BaseController
                 break;
         }
 
-        return response()->json($tables, 200);
+        $tableDtos = [];
+        foreach ($tables as $table)
+        {
+            $tableDtos[] = TableDtoMapper::MapTableDTO($table, $user);
+        }
+        return response()->json($tableDtos, 200);
     }
 
     /**
@@ -66,9 +89,7 @@ class TableController extends BaseController
      */
     public function show(string $id) : JsonResponse
     {
-        $table = new Models\Table();
-        $table->ti = "pidor";
-        return response()->json($table, 200);
+        return response()->json([$id], 200);
     }
 
     /**
@@ -80,7 +101,37 @@ class TableController extends BaseController
      */
     public function store(Request $request) : JsonResponse
     {
-        return response()->json($request, 201);
+        $user = $request->input("currentUser");
+
+        [$googleTableId, $googleFolderId] = $this->googleServicesClient->createTableInfrastructure();
+        $table = new Models\Table(
+            null,
+            $user->getUserId(),
+            $googleTableId,
+            $googleFolderId,
+            null,
+            false,
+            null,
+            null,
+            Guid::uuid4()->toString(),
+            []
+        );
+
+        $newTableId = $this->tableRepository->insert($table);
+
+
+        $generator = new Models\Generator(
+            null,
+            $newTableId,
+            Guid::uuid4()->toString(),
+            0
+        );
+
+        $newGeneratorId = $this->generatorRepository->insert($generator);
+
+        $table->setTableId($newTableId)->addGenerator($generator->setGeneratorId($newGeneratorId));
+
+        return response()->json(TableDtoMapper::MapTableDTO($table, $user), 201);
     }
 
     /**

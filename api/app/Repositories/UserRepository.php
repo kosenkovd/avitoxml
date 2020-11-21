@@ -14,10 +14,16 @@ class UserRepository extends RepositoryBase implements IUserRepository
         parent::__construct();
     }
 
+    /**
+     * Find user by api key.
+     *
+     * @param string $apiKey user api key
+     * @return User|null user if found, otherwise null.
+     * @throws \Exception in case of DB connection failure.
+     */
     public function getUserByApiKey(string $apiKey): ?User
     {
         $mysqli = $this->connect();
-        $mysqli->set_charset("utf8");
         $cleanApiKey = $mysqli->real_escape_string($apiKey);
         $res = $mysqli->query("
 SELECT
