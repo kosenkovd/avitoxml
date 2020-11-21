@@ -17,6 +17,7 @@ class TableHeader {
     public $title;
     public $description;
     public $price;
+    public $photoSourceFolder;
     public $subFolderName;
     public $imagesRaw;
     public $videoURL;
@@ -35,91 +36,113 @@ class TableHeader {
     public $dateEnd;
     public $avitoManualID;
     public $paidControl;
+    public $photoCount;
+
+    public $priceSpintax;
+    public $descriptionSpintax;
+    public $titleSpintax;
 
 
     public function __construct(array $headers)
     {
         foreach($headers as $colNum => $header)
         {
-            $header = trim($header);
+            // Lowering case and removing space characters to avoid errors in case of line break, etc.
+            $header = mb_strtolower(preg_replace('/\s/i', "", $header));
+
             switch($header)
             {
-                case "ID":
+                case "id":
                     $this->ID = $colNum;
                     break;
-                case "Категория товара":
+                case "категориятовара":
                     $this->category = $colNum;
                     break;
-                case "Вид товара":
+                case "видтовара":
                     $this->goodsType = $colNum;
                     break;
-                case "Вид объявления":
+                case "видобъявления":
                     $this->adType = $colNum;
                     break;
-                case "Состояние товара":
+                case "состояниетовара":
                     $this->condition = $colNum;
                     break;
-                case "Заголовок объявления":
+                case "заголовокобъявления":
                     $this->title = $colNum;
                     break;
-                case "Описание":
+                case "рандомизаторзаголовка":
+                    $this->titleSpintax = $colNum;
+                    break;
+                case "описание":
                     $this->description = $colNum;
                     break;
-                case "Цена":
+                case "рандомизаторописания":
+                    $this->descriptionSpintax = $colNum;
+                    break;
+                case "цена":
                     $this->price = $colNum;
                     break;
-                case "Название папки с фотографиями":
+                case "рандомизаторцен":
+                    $this->priceSpintax = $colNum;
+                    break;
+                case "генераторпапоксфотографиями":
+                    $this->photoSourceFolder = $colNum;
+                    break;
+                case "названиепапкисфотографиями":
                     $this->subFolderName = $colNum;
                     break;
-                case "Ссылки на фотографии (заполняется программой автоматически, если заполнено название папки)":
+                case "ссылкинафотографии(заполняетсяпрограммойавтоматически,еслизаполненоназваниепапки)":
                     $this->imagesRaw = $colNum;
                     break;
-                case "Ссылка на видео":
+                case "ссылканавидео":
                     $this->videoURL = $colNum;
                     break;
-                case "Регион РФ":
+                case "регионрф":
                     $this->region = $colNum;
                     break;
-                case "Район/Административный округ":
+                case "район/административныйокруг":
                     $this->district = $colNum;
                     break;
-                case "Населенный пункт":
+                case "населенныйпункт":
                     $this->city = $colNum;
                     break;
-                case "Район населенного пункта":
+                case "районнаселенногопункта":
                     $this->area = $colNum;
                     break;
-                case "Улица":
+                case "улица":
                     $this->street = $colNum;
                     break;
-                case "Номер дома":
+                case "номердома":
                     $this->house = $colNum;
                     break;
-                case "Телефон":
+                case "телефон":
                     $this->phone = $colNum;
                     break;
-                case "Менеджер":
+                case "менеджер":
                     $this->manager = $colNum;
                     break;
-                case "Дата и время начала размещения объявления (часовой пояс MSK)":
+                case "датаивремяначаларазмещенияобъявления(часовойпоясmsk)":
                     $this->dateCreated = $colNum;
                     break;
-                case "Группа товаров":
+                case "группатоваров":
                     $this->goodsGroup = $colNum;
                     break;
-                case "Подтип услуги  и Вид одежды":
+                case "подтипуслугиивидодежды":
                     $this->subTypeApparel = $colNum;
                     break;
-                case "Размер":
+                case "размер":
                     $this->size = $colNum;
                     break;
-                case "Дата окончания размещения объявления":
+                case "кол-вофото":
+                    $this->photoCount = $colNum;
+                    break;
+                case "датаокончанияразмещенияобъявления":
                     $this->dateEnd = $colNum;
                     break;
-                case "Avito ID (для объявлений, размещенных вручную) [?]":
+                case "avitoid(дляобъявлений,размещенныхвручную)[?]":
                     $this->avitoManualID = $colNum;
                     break;
-                case "Управление платными услугами [?]":
+                case "управлениеплатнымиуслугами[?]":
                     $this->paidControl = $colNum;
                     break;
             }

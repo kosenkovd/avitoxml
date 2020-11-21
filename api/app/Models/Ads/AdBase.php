@@ -28,7 +28,10 @@ abstract class AdBase
         if(isset($row[$propertyColumns->dateCreated]))
         {
             $dateRaw = date_create_from_format('d.m.Y H:i', $row[$propertyColumns->dateCreated]);
-            $this->dateBegin = date_format($dateRaw, 'Y-m-d\TH:i:sP');
+            if($dateRaw !== false)
+            {
+                $this->dateBegin = date_format($dateRaw, 'Y-m-d\TH:i:sP');
+            }
         }
         else
         {
