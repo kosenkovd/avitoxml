@@ -14,6 +14,8 @@
         private IGoogleServicesClient $googleClient;
         private ITableRepository $tableRepository;
 
+        private array $images;
+
         /**
          * Get Images from GoogleDrive.
          *
@@ -39,26 +41,20 @@
         /**
          * Add Images to GoogleSheet.
          *
-         * @param array $images images to add.
+         * @param string $content content to put in cell.
          * @param int $numRow number of row.
          * @param string $tableID table id.
          * @param string $columnName col name.
          * @return void
          */
-        private function addImagesToTable(array $images, int $numRow, string $tableID, string $columnName): void
+        private function updateCellContent(string $content, int $numRow, string $tableID, string $columnName): void
         {
             // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
             $numRow += +2;
             $range = 'Avito!' . $columnName . $numRow . ':' . $columnName . $numRow;
 
-            $links = [];
-            foreach ($images as $image)
-            {
-                $links[] = LinkHelper::getPictureDownloadLink($image->id);
-            }
-            $imagesString = join(PHP_EOL, $links);
             $values = [
-                [$imagesString]
+                [$content]
             ];
             $params = [
                 'valueInputOption' => 'RAW'
@@ -82,21 +78,36 @@
         private function createSubFolderWithContent(string $baseFolderId, array $row, TableHeader $propertyColumns) : string
         {
             $sourceFolders = explode(PHP_EOL, $row[$propertyColumns->photoSourceFolder]);
-            $newFolderName = crc32b(Guid::uuid4()->toString());
-            $newFolderId = $this->googleClient->createFolder($newFolderName);
+            $newFolderName = crc32(Guid::uuid4()->toString());
+            $newFolderId = $this->googleClient->createFolder($newFolderName, $baseFolderId);
 
+            $imageCount = 0;
             foreach ($sourceFolders as $sourceFolder)
             {
                 $sourceFolderId = $this->googleClient->getChildFolderByName($baseFolderId, $sourceFolder);
-                $images = $this->googleClient->listFolderImages($sourceFolderId);
-                if(count($images) == 0)
+                $image = null;
+                if(isset($this->images[$sourceFolderId]))
                 {
-                    continue;
+                    if(count($this->images[$sourceFolderId]) == 0)
+                    {
+                        continue;
+                    }
+                    $image = array_shift($this->images[$sourceFolderId]);
                 }
-                $this->googleClient->moveFile($images[0], $newFolderId);
+                else
+                {
+                    $this->images[$sourceFolderId] = $this->googleClient->listFolderImages($sourceFolderId);
+                    if(count($this->images[$sourceFolderId]) == 0)
+                    {
+                        continue;
+                    }
+                    $image = array_shift($this->images[$sourceFolderId]);
+                }
+                $imageCount++;
+                $this->googleClient->moveFile($image, $newFolderId);
             }
 
-            return $newFolderId;
+            return $newFolderName;
         }
 
         public function __construct(
@@ -155,10 +166,22 @@
                             $subFolderName = $row[$propertyColumns->subFolderName];
                         }
 
+                        $this->updateCellContent(
+                            $subFolderName,
+                            $numRow,
+                            $tableID,
+                            SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName));
+
                         $images = $this->getImages($baseFolderID, $subFolderName);
                         if ($images !== []) {
-                            $this->addImagesToTable(
-                                $images,
+                            $links = [];
+                            foreach ($images as $image)
+                            {
+                                $links[] = LinkHelper::getPictureDownloadLink($image->id);
+                            }
+                            $imagesString = join(PHP_EOL, $links);
+                            $this->updateCellContent(
+                                $imagesString,
                                 $numRow,
                                 $tableID,
                                 SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw));
@@ -167,7 +190,7 @@
                 }
 
                 // Waiting so as not to exceed reads and writes quota.
-                //sleep(20);
+                sleep(20);
             }
         }
     }

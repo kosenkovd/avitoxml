@@ -44,7 +44,7 @@ class RandomizeTextJob
         // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
         $numRow += +2;
         $columnName = SpreadsheetHelper::getColumnLetterByNumber($resultCol);
-        $range = 'Sheet1!' . $columnName . $numRow . ':' . $columnName . $numRow;
+        $range = 'Avito!' . $columnName . $numRow . ':' . $columnName . $numRow;
         $params = [
             'valueInputOption' => 'RAW'
         ];
@@ -76,11 +76,11 @@ class RandomizeTextJob
             $tableID = $table->getGoogleSheetId();
             echo "Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId().PHP_EOL;
 
-            $headerRange = 'Sheet1!A1:FZ1';
+            $headerRange = 'Avito!A1:FZ1';
             $headerResponse = $this->googleClient->getSpreadsheetCellsRange($tableID, $headerRange);
             $propertyColumns = new TableHeader($headerResponse[0]);
 
-            $range = 'Sheet1!A2:FZ5001';
+            $range = 'Avito!A2:FZ5001';
             $values = $this->googleClient->getSpreadsheetCellsRange($tableID, $range);
 
             if(empty($values))
