@@ -7,6 +7,7 @@ use App\Console\Jobs\RandomizeTextJob;
 use App\Repositories\TableRepository;
 use App\Services\GoogleServicesClient;
 use App\Services\Interfaces\IGoogleServicesClient;
+use App\Services\Interfaces\IMailService;
 use App\Services\SpintaxService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,11 @@ class TableController extends BaseController
      * @var IGoogleServicesClient Google services client.
      */
     private IGoogleServicesClient $googleServicesClient;
+    
+    /**
+     * @var IMailService Mail service.
+     */
+    private IMailService $mailService;
 
     /**
      * @var Roles Enum of roles.
@@ -48,11 +54,14 @@ class TableController extends BaseController
     public function __construct(
         Interfaces\ITableRepository $tableRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
-        IGoogleServicesClient $googleServicesClient)
+        IGoogleServicesClient $googleServicesClient,
+        IMailService $mailService
+    )
     {
         $this->tableRepository = $tableRepository;
         $this->generatorRepository = $generatorRepository;
         $this->googleServicesClient = $googleServicesClient;
+        $this->mailService = $mailService;
         $this->roles = new Roles();
     }
 
@@ -140,6 +149,8 @@ class TableController extends BaseController
         $newGeneratorId = $this->generatorRepository->insert($generator);
 
         $table->setTableId($newTableId)->addGenerator($generator->setGeneratorId($newGeneratorId));
+    
+        $this->mailService->sendEmailWithTableData($table);
 
         return response()->json(TableDtoMapper::MapTableDTO($table, $user), 201);
     }

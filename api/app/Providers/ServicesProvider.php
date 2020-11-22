@@ -3,11 +3,15 @@
 
 namespace App\Providers;
 
-use App\Services\GoogleServicesClient;
+use Illuminate\Support\ServiceProvider;
 use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\Interfaces\IXmlGenerationService;
+use App\Services\Interfaces\ISpintaxService;
+use App\Services\Interfaces\IMailService;
+use App\Services\GoogleServicesClient;
 use App\Services\XmlGenerationService;
-use Illuminate\Support\ServiceProvider;
+use App\Services\SpintaxService;
+use App\Services\MailService;
 
 class ServicesProvider extends ServiceProvider
 {
@@ -23,6 +27,12 @@ class ServicesProvider extends ServiceProvider
         });
         $this->app->bind(IXmlGenerationService::class, function ($app) {
             return new XmlGenerationService(new GoogleServicesClient());
+        });
+        $this->app->bind(ISpintaxService::class, function () {
+            return new SpintaxService();
+        });
+        $this->app->bind(IMailService::class, function () {
+            return new MailService();
         });
     }
 }
