@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Console\Jobs\FillImagesJob;
+use App\Console\Jobs\RandomizeTextJob;
+use App\Repositories\TableRepository;
+use App\Services\GoogleServicesClient;
 use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\SpintaxService;
 use Illuminate\Http\Request;
@@ -90,10 +94,13 @@ class TableController extends BaseController
      */
     public function show(string $id)
     {
-        $service = new SpintaxService();
-        $res = $service->randomize($id);
+        $service = new FillImagesJob(
+            new GoogleServicesClient(),
+            new TableRepository()
+        );
+        $service->start();
 
-        return response($res, 200);
+        return response("", 200);
     }
 
     /**
@@ -122,7 +129,6 @@ class TableController extends BaseController
         );
 
         $newTableId = $this->tableRepository->insert($table);
-
 
         $generator = new Models\Generator(
             null,
