@@ -16,9 +16,9 @@
         public function sendEmailWithTableData(Table $dataForEmail): void
         {
             $files = '';
-            foreach ($dataForEmail->getGenerators() as $link) {
+            foreach ($dataForEmail->getGenerators() as $generator) {
                 $files .= "
-    Файл: " . LinkHelper::getXmlGeneratorLink($dataForEmail->getTableGuid(), $link);
+    Файл: " . LinkHelper::getXmlGeneratorLink($dataForEmail->getTableGuid(), $generator->getGeneratorGuid());
             }
             
             $headers = 'From: ' . $this->serviceEmail . "\r\n" .
