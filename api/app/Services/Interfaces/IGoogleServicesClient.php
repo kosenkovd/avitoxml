@@ -63,4 +63,20 @@ interface IGoogleServicesClient
      * @return array cells in chosen range.
      */
     public function getSpreadsheetCellsRange(string $spreadsheetId, string $range) : array;
+    
+    /**
+     * Update cells range for GoogleSheet.
+     *
+     * @param string $spreadsheetId spreadsheet id.
+     * @param string $range range to update.
+     * @param array $values values to update.
+     * @param array $params params of request to update.
+     * @return void
+     */
+    public function updateSpreadsheetCellsRange(
+        string $spreadsheetId,
+        string $range,
+        array $values,
+        array $params
+    ) : void;
 }

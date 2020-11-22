@@ -210,4 +210,35 @@ class GoogleServicesClient implements IGoogleServicesClient
         $service = new Google_Service_Sheets($this->client);
         return $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
     }
+    
+    /**
+     * Update cells range for GoogleSheet.
+     *
+     * @param string $spreadsheetId spreadsheet id.
+     * @param string $range range to update.
+     * @param array $values values to update.
+     * @param array $params params of request to update.
+     * @return void
+     */
+    public function updateSpreadsheetCellsRange(
+        string $spreadsheetId,
+        string $range,
+        array $values,
+        array $params
+    ) : void
+    {
+        $body = new Google_Service_Sheets_ValueRange(
+            [
+                'values' => $values
+            ]
+        );
+        $service = new Google_Service_Sheets($this->client);
+        
+        $service->spreadsheets_values->update(
+            $spreadsheetId,
+            $range,
+            $body,
+            $params
+        );
+    }
 }

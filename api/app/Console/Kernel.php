@@ -2,8 +2,11 @@
 
 namespace App\Console;
 
+use App\Repositories\TableRepository;
+use App\Services\GoogleServicesClient;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use App\Console\Jobs\FillImagesJob;
 
 class Kernel extends ConsoleKernel
 {
@@ -24,7 +27,9 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->call(function () {
+            (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start();
+        })->everyMinute();
     }
 
     /**
