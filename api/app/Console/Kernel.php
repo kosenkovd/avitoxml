@@ -2,8 +2,10 @@
 
 namespace App\Console;
 
+use App\Console\Jobs\RandomizeTextJob;
 use App\Repositories\TableRepository;
 use App\Services\GoogleServicesClient;
+use App\Services\SpintaxService;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Console\Jobs\FillImagesJob;
@@ -29,7 +31,10 @@ class Kernel extends ConsoleKernel
     {
         $schedule->call(function () {
             (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start();
-        })->everyMinute();
+        })->everyMinute()->appendOutputTo(__DIR__."/Logs/imageFillerLog.log");
+        $schedule->call(function () {
+            (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))->start();
+        })->everyMinute()->appendOutputTo(__DIR__."/Logs/randomizerLog.log");
     }
 
     /**

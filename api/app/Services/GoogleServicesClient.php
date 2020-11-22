@@ -10,6 +10,7 @@ use Google_Client;
 use Google_Service_Sheets;
 use Google_Service_Drive_DriveFile;
 use Google_Service_Drive_Permission;
+use Google_Service_Sheets_ValueRange;
 use Google_Service_Drive;
 
 /**
@@ -137,14 +138,12 @@ class GoogleServicesClient implements IGoogleServicesClient
      */
     public function listFolderImages(string $folderID): array
     {
-        global $client;
-
-        $client->addScope(Google_Service_Drive::DRIVE);
-        $driveService = new Google_Service_Drive($client);
+        $this->client->addScope(Google_Service_Drive::DRIVE);
+        $driveService = new Google_Service_Drive($this->client);
         $result = $driveService->files->listFiles([
             'q' => "('" . $folderID . "' in parents)" .
                 "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
-            'orderBy' => 'folder','name']);
+            'orderBy' => 'folder,name']);
 
         return $result->files;
     }
@@ -210,7 +209,7 @@ class GoogleServicesClient implements IGoogleServicesClient
         $service = new Google_Service_Sheets($this->client);
         return $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
     }
-    
+
     /**
      * Update cells range for GoogleSheet.
      *
@@ -233,7 +232,7 @@ class GoogleServicesClient implements IGoogleServicesClient
             ]
         );
         $service = new Google_Service_Sheets($this->client);
-        
+
         $service->spreadsheets_values->update(
             $spreadsheetId,
             $range,
