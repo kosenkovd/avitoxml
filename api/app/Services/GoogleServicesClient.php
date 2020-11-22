@@ -87,12 +87,9 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Creates new folder on GoogleDisk.
-     *
-     * @param string|null $name name of new folder.
-     * @return string new folder id.
+     * @inheritDoc
      */
-    public function createFolder(string $name = null): string
+    public function createFolder(string $name = null, string $parentId = null): string
     {
         if(is_null($name))
         {
@@ -100,6 +97,11 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         $driveFolder = new Google_Service_Drive_DriveFile();
         $driveFolder->setName($name);
+        if(!is_null($parentId))
+        {
+            $driveFolder->setParents([$parentId]);
+        }
+        $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveFolder->setMimeType('application/vnd.google-apps.folder');
         $driveService = new Google_Service_Drive($this->client);
         $result = $driveService->files->create($driveFolder);
@@ -151,16 +153,20 @@ class GoogleServicesClient implements IGoogleServicesClient
     /**
      * Move file to specified folder.
      *
+     * PS. for now it only copies file, as it is no way to delete source one.
+     *
      * @param Google_Service_Drive_DriveFile $file file.
      * @param string $folderId folder id.
      */
     public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId): void
     {
-        $file->setParents([$folderId]);
+        $fileId = $file->getId();
+        $newFile = new Google_Service_Drive_DriveFile();
+        $newFile->setParents([$folderId]);
 
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
-        $driveService->files->update($file);
+        $driveService->files->copy($fileId, $newFile);
     }
 
     /**

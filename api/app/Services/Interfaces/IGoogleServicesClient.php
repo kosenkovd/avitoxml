@@ -12,9 +12,10 @@ interface IGoogleServicesClient
      * Creates new folder on GoogleDisk.
      *
      * @param string|null $name name of new folder.
+     * @param string|null $parentId parent folder id.
      * @return string new folder id.
      */
-    public function createFolder(string $name = null): string;
+    public function createFolder(string $name = null, string $parentId = null): string;
 
     /**
      * Retrieves subfolder id by parent folder id and subfolder name.
@@ -63,7 +64,7 @@ interface IGoogleServicesClient
      * @return array cells in chosen range.
      */
     public function getSpreadsheetCellsRange(string $spreadsheetId, string $range) : array;
-    
+
     /**
      * Update cells range for GoogleSheet.
      *
