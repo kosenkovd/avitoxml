@@ -43,11 +43,11 @@ class XmlGenerationService implements IXmlGenerationService
      */
     public function generateAvitoXML(string $spreadsheetId) : ?string
     {
-        $headerRange = 'Sheet1!A1:FZ1';
+        $headerRange = 'Avito!A1:FZ1';
         $headerResponse = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $headerRange);
         $propertyColumns = new TableHeader($headerResponse[0]);
 
-        $range = 'Sheet1!A2:FZ5001';
+        $range = 'Avito!A2:FZ5001';
         $values = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range);
 
         if (empty($values))

@@ -110,6 +110,7 @@ class TableHeader {
                     $this->area = $colNum;
                     break;
                 case "улица":
+                case "улицаилиметро":
                     $this->street = $colNum;
                     break;
                 case "номердома":
@@ -122,12 +123,14 @@ class TableHeader {
                     $this->manager = $colNum;
                     break;
                 case "датаивремяначаларазмещенияобъявления(часовойпоясmsk)":
+                case "датаивремяпубликации(помск)":
                     $this->dateCreated = $colNum;
                     break;
                 case "группатоваров":
                     $this->goodsGroup = $colNum;
                     break;
                 case "подтипуслугиивидодежды":
+                case "Подтипуслугииливидодежды":
                     $this->subTypeApparel = $colNum;
                     break;
                 case "размер":
@@ -137,12 +140,15 @@ class TableHeader {
                     $this->photoCount = $colNum;
                     break;
                 case "датаокончанияразмещенияобъявления":
+                case "датаокончанияразмещения":
                     $this->dateEnd = $colNum;
                     break;
                 case "avitoid(дляобъявлений,размещенныхвручную)[?]":
+                case "avitoid":
                     $this->avitoManualID = $colNum;
                     break;
                 case "управлениеплатнымиуслугами[?]":
+                case "управлениеплатнымиуслугами":
                     $this->paidControl = $colNum;
                     break;
             }
