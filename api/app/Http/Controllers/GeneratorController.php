@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\Interfaces\IXmlGenerationService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -35,14 +36,21 @@ class GeneratorController extends BaseController
      */
     private IXmlGenerationService $xmlGenerator;
 
+    /**
+     * @var IGoogleServicesClient GoogleServices client.
+     */
+    private IGoogleServicesClient $googleClient;
+
     public function __construct(
         Interfaces\ITableRepository $tablesRepository,
         Interfaces\IGeneratorRepository  $generatorsRepository,
-        IXmlGenerationService $xmlGenerator)
+        IXmlGenerationService $xmlGenerator,
+        IGoogleServicesClient $googleClient)
     {
         $this->tablesRepository = $tablesRepository;
         $this->generatorsRepository = $generatorsRepository;
         $this->xmlGenerator = $xmlGenerator;
+        $this->googleClient = $googleClient;
     }
 
     /**
@@ -92,7 +100,13 @@ class GeneratorController extends BaseController
         }
 
         $content = "";
-        if($table->isDeleted() || (!is_null($table->getDateExpired()) && $table->getDateExpired() < time()))
+
+        $timeModified = $this->googleClient->getFileModifiedTime($table->getGoogleSheetId());
+        $toLoadLastGeneration = $table->isDeleted() ||
+            (!is_null($table->getDateExpired()) && $table->getDateExpired() < time()) ||
+            ($generator->getLastGenerated() > $timeModified->getTimestamp());
+
+        if($toLoadLastGeneration)
         {
             $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
         }

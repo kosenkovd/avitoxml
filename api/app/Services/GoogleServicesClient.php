@@ -5,6 +5,7 @@ namespace App\Services;
 
 use App\Configuration\Config;
 use App\Services\Interfaces\IGoogleServicesClient;
+use DateTime;
 use Google_Client;
 use Google_Service_Sheets;
 use Google_Service_Drive_DriveFile;
@@ -66,23 +67,6 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Creates new folder on GoogleDisk.
-     *
-     * @return string new folder id.
-     */
-    private function createFolder(): string
-    {
-        $driveFolder = new Google_Service_Drive_DriveFile();
-        $driveFolder->setName(time());
-        $driveFolder->setMimeType('application/vnd.google-apps.folder');
-        $driveService = new Google_Service_Drive($this->client);
-        $result = $driveService->files->create($driveFolder);
-        $folderId = $result->id;
-        $this->setPermissions($folderId);
-        return $folderId;
-    }
-
-    /**
      * GoogleServicesClient constructor.
      */
     public function __construct()
@@ -99,6 +83,107 @@ class GoogleServicesClient implements IGoogleServicesClient
         $this->drivePermissions = new Google_Service_Drive_Permission();
         $this->drivePermissions->setRole('writer');
         $this->drivePermissions->setType('anyone');
+    }
+
+    /**
+     * Creates new folder on GoogleDisk.
+     *
+     * @param string|null $name name of new folder.
+     * @return string new folder id.
+     */
+    public function createFolder(string $name = null): string
+    {
+        if(is_null($name))
+        {
+            $name = strval(time());
+        }
+        $driveFolder = new Google_Service_Drive_DriveFile();
+        $driveFolder->setName($name);
+        $driveFolder->setMimeType('application/vnd.google-apps.folder');
+        $driveService = new Google_Service_Drive($this->client);
+        $result = $driveService->files->create($driveFolder);
+        $folderId = $result->id;
+        $this->setPermissions($folderId);
+        return $folderId;
+    }
+
+    /**
+     * Retrieves subfolder id by parent folder id and subfolder name.
+     *
+     * @param string $folderID parent folder id.
+     * @param string $subFolderName name of subfolder.
+     * @return string|null subfolder id, if subfolder with specified name exists.
+     */
+    public function getChildFolderByName(string $folderID, string $subFolderName): ?string
+    {
+        $this->client->addScope(Google_Service_Drive::DRIVE);
+        $driveService = new Google_Service_Drive($this->client);
+        $result = $driveService->files->listFiles(['q' =>
+            "('" . $folderID . "' in parents) and (mimeType = 'application/vnd.google-apps.folder')" .
+            " and (name='" . trim($subFolderName) . "')"]);
+
+        if(count($result->files) == 0)
+        {
+            return null;
+        }
+
+        return $result->files[0]['id'];
+    }
+
+    /**
+     * Gets images in specified folder.
+     * @param string $folderID folder id.
+     * @return Google_Service_Drive_DriveFile[] images.
+     */
+    public function listFolderImages(string $folderID): array
+    {
+        global $client;
+
+        $client->addScope(Google_Service_Drive::DRIVE);
+        $driveService = new Google_Service_Drive($client);
+        $result = $driveService->files->listFiles([
+            'q' => "('" . $folderID . "' in parents)" .
+                "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
+            'orderBy' => 'folder','name']);
+
+        return $result->files;
+    }
+
+    /**
+     * Move file to specified folder.
+     *
+     * @param Google_Service_Drive_DriveFile $file file.
+     * @param string $folderId folder id.
+     */
+    public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId): void
+    {
+        $file->setParents([$folderId]);
+
+        $this->client->addScope(Google_Service_Drive::DRIVE);
+        $driveService = new Google_Service_Drive($this->client);
+        $driveService->files->update($file);
+    }
+
+    /**
+     * Get last modified time for file.
+     *
+     * @param string $fileId file id.
+     * @return DateTime last modified time if file found.
+     */
+    public function getFileModifiedTime(string $fileId) : DateTime
+    {
+        $this->client->addScope(Google_Service_Drive::DRIVE);
+        $driveService = new Google_Service_Drive($this->client);
+        $file = $driveService->files->get($fileId, [
+            'fields' => 'modifiedTime, createdTime'
+        ]);
+
+        if(is_null($file->getModifiedTime()))
+        {
+            return DateTime::createFromFormat(DateTime::RFC3339_EXTENDED, $file->getCreatedTime());
+        }
+
+        return DateTime::createFromFormat(DateTime::RFC3339_EXTENDED, $file->getModifiedTime());
     }
 
     /**

@@ -3,9 +3,51 @@
 
 namespace App\Services\Interfaces;
 
+use DateTime;
+use Google_Service_Drive_DriveFile;
 
 interface IGoogleServicesClient
 {
+    /**
+     * Creates new folder on GoogleDisk.
+     *
+     * @param string|null $name name of new folder.
+     * @return string new folder id.
+     */
+    public function createFolder(string $name = null): string;
+
+    /**
+     * Retrieves subfolder id by parent folder id and subfolder name.
+     *
+     * @param string $folderID parent folder id.
+     * @param string $subFolderName name of subfolder.
+     * @return string|null subfolder id, if subfolder with specified name exists.
+     */
+    public function getChildFolderByName(string $folderID, string $subFolderName): ?string;
+
+    /**
+     * Gets images in specified folder.
+     * @param string $folderID folder id.
+     * @return Google_Service_Drive_DriveFile[] images.
+     */
+    public function listFolderImages(string $folderID): array;
+
+    /**
+     * Get last modified time for file.
+     *
+     * @param string $fileId file id.
+     * @return DateTime last modified time if file found.
+     */
+    public function getFileModifiedTime(string $fileId) : DateTime;
+
+    /**
+     * Move file to specified folder.
+     *
+     * @param Google_Service_Drive_DriveFile $file file.
+     * @param string $folderId folder id.
+     */
+    public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId): void;
+
     /**
      * Create new GoogleSheet and new folder on GoogleDisk.
      *
