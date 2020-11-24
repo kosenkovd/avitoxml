@@ -1,2 +1,8 @@
 AddCharset UTF-8 .php
-RewriteRule ^api/(.*)$ /api/$1 [L]
+<IfModule mod_rewrite.c>
+    RewriteEngine on
+    RewriteRule ^api/(.*)$ /api/$1 [L]
+#    RewriteCond %{REQUEST_FILENAME} !-f
+#    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ /frontend/$1 [L]
+</IfModule>

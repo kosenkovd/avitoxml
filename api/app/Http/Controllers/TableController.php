@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Console\Jobs\FillImagesJob;
+use App\Console\Jobs\RandomizeTextJob;
+use App\Repositories\TableRepository;
+use App\Services\GoogleServicesClient;
 use App\Services\Interfaces\IGoogleServicesClient;
+use App\Services\Interfaces\IMailService;
 use App\Services\SpintaxService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +42,11 @@ class TableController extends BaseController
     private IGoogleServicesClient $googleServicesClient;
 
     /**
+     * @var IMailService Mail service.
+     */
+    private IMailService $mailService;
+
+    /**
      * @var Roles Enum of roles.
      */
     private Roles $roles;
@@ -44,11 +54,14 @@ class TableController extends BaseController
     public function __construct(
         Interfaces\ITableRepository $tableRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
-        IGoogleServicesClient $googleServicesClient)
+        IGoogleServicesClient $googleServicesClient,
+        IMailService $mailService
+    )
     {
         $this->tableRepository = $tableRepository;
         $this->generatorRepository = $generatorRepository;
         $this->googleServicesClient = $googleServicesClient;
+        $this->mailService = $mailService;
         $this->roles = new Roles();
     }
 
@@ -90,10 +103,13 @@ class TableController extends BaseController
      */
     public function show(string $id)
     {
-        $service = new SpintaxService();
-        $res = $service->randomize($id);
+        $service = new FillImagesJob(
+            new GoogleServicesClient(),
+            new TableRepository()
+        );
+        $service->start();
 
-        return response($res, 200);
+        return response("", 200);
     }
 
     /**
@@ -123,7 +139,6 @@ class TableController extends BaseController
 
         $newTableId = $this->tableRepository->insert($table);
 
-
         $generator = new Models\Generator(
             null,
             $newTableId,
@@ -134,6 +149,8 @@ class TableController extends BaseController
         $newGeneratorId = $this->generatorRepository->insert($generator);
 
         $table->setTableId($newTableId)->addGenerator($generator->setGeneratorId($newGeneratorId));
+
+        $this->mailService->sendEmailWithTableData($table);
 
         return response()->json(TableDtoMapper::MapTableDTO($table, $user), 201);
     }

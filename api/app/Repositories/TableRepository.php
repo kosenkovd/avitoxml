@@ -46,6 +46,8 @@ WHERE 1";
         {
             $statement .= " AND `userId`=".$mysqli->real_escape_string($userId);
         }
+
+        $statement .= " ORDER BY `tableId`";
         $res = $mysqli->query($statement);
 
         $tables = [];
@@ -92,6 +94,8 @@ WHERE 1";
      */
     public function insert(Table $table) : int
     {
+        $dateExpired = is_null($table->getDateExpired()) ? "NULL" : $table->getDateExpired();
+
         $statement = "
 INSERT INTO `".$this->config->getTablesTableName()."`(
     `userId`,
@@ -103,7 +107,7 @@ VALUES (
     ".$table->getUserId().",
     '".$table->getGoogleSheetId()."',
     '".$table->getGoogleDriveId()."',
-    ".$table->getDateExpired().",
+    ".$dateExpired.",
     '".$table->getTableGuid()."')";
 
         $mysqli = $this->connect();

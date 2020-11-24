@@ -3,6 +3,8 @@
 
 namespace App\Services;
 
+use App\Services\Interfaces\ISpintaxService;
+
 /**
  * Class SpintaxService
  *
@@ -14,7 +16,7 @@ namespace App\Services;
  *
  * @package App\Services
  */
-class SpintaxService
+class SpintaxService implements ISpintaxService
 {
     /**
      * Replaces square braces with one random element in it.
