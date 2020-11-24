@@ -44,10 +44,13 @@ interface IGoogleServicesClient
     /**
      * Move file to specified folder.
      *
-     * @param Google_Service_Drive_DriveFile $file file.
-     * @param string $folderId folder id.
+     * PS. for now it only copies file, as it is no way to delete source one.
+     *
+     * @param Google_Service_Drive_DriveFile $file source file.
+     * @param string $folderId destination folder id.
+     * @param string|null $newName new file name, if needs to be updated.
      */
-    public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId): void;
+    public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId, string $newName = null): void;
 
     /**
      * Create new GoogleSheet and new folder on GoogleDisk.

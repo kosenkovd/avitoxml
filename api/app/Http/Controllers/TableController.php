@@ -40,7 +40,7 @@ class TableController extends BaseController
      * @var IGoogleServicesClient Google services client.
      */
     private IGoogleServicesClient $googleServicesClient;
-    
+
     /**
      * @var IMailService Mail service.
      */
@@ -149,7 +149,7 @@ class TableController extends BaseController
         $newGeneratorId = $this->generatorRepository->insert($generator);
 
         $table->setTableId($newTableId)->addGenerator($generator->setGeneratorId($newGeneratorId));
-    
+
         $this->mailService->sendEmailWithTableData($table);
 
         return response()->json(TableDtoMapper::MapTableDTO($table, $user), 201);

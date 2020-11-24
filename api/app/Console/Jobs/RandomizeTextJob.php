@@ -16,6 +16,16 @@ class RandomizeTextJob
     private IGoogleServicesClient $googleClient;
     private ITableRepository $tableRepository;
 
+    private function log(string $message) : void
+    {
+        $timestamp = new \DateTime();
+        $timestamp->setTimestamp(time());
+        $file = __DIR__."/../Logs/randomizerLog.log";
+        file_put_contents($file,
+            $timestamp->format(DATE_ISO8601)." ".$message.PHP_EOL,
+            FILE_APPEND | LOCK_EX);
+    }
+
     /**
      * Randomises text in specified result column based on pattern column and updates spreadsheet.
      *
@@ -36,10 +46,12 @@ class RandomizeTextJob
         }
 
         echo "Randomizing row ".$numRow.", pattern is: ".$row[$patternCol].PHP_EOL;
+        $this->log("Randomizing row ".$numRow.", pattern is: ".$row[$patternCol]);
 
         $text = $this->spintaxService->randomize($row[$patternCol]);
 
         echo "Randomized text is: ".$text.PHP_EOL;
+        $this->log("Randomized text is: ".$text);
 
         // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
         $numRow += +2;
@@ -67,14 +79,16 @@ class RandomizeTextJob
      *
      * Randomizes texts in all tables that were not randomized before.
      */
-    public function start() : void
+    public function start() : string
     {
         $tables = $this->tableRepository->getTables();
+        $this->logs = "";
 
         foreach ($tables as $table)
         {
             $tableID = $table->getGoogleSheetId();
             echo "Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId().PHP_EOL;
+            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
 
             $headerRange = 'Avito!A1:FZ1';
             $headerResponse = $this->googleClient->getSpreadsheetCellsRange($tableID, $headerRange);
@@ -121,7 +135,9 @@ class RandomizeTextJob
             }
 
             // Waiting so as not to exceed reads and writes quota.
-            sleep(20);
+            //sleep(44);
         }
+
+        return $this->logs;
     }
 }

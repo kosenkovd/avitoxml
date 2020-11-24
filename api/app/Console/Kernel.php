@@ -31,10 +31,10 @@ class Kernel extends ConsoleKernel
     {
         $schedule->call(function () {
             (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start();
-        })->everyMinute()->appendOutputTo(__DIR__."/Logs/imageFillerLog.log");
+        })->everyTwoMinutes();
         $schedule->call(function () {
             (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))->start();
-        })->everyMinute()->appendOutputTo(__DIR__."/Logs/randomizerLog.log");
+        })->everyThreeMinutes();
     }
 
     /**

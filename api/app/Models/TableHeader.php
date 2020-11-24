@@ -9,34 +9,34 @@ namespace App\Models;
  */
 class TableHeader {
 
-    public $ID;
-    public $category;
-    public $goodsType;
-    public $adType;
-    public $condition;
-    public $title;
-    public $description;
-    public $price;
-    public $photoSourceFolder;
-    public $subFolderName;
-    public $imagesRaw;
-    public $videoURL;
-    public $region;
-    public $district;
-    public $city;
-    public $area;
-    public $street;
-    public $house;
-    public $phone;
-    public $manager;
-    public $dateCreated;
-    public $goodsGroup;
-    public $subTypeApparel;
-    public $size;
-    public $dateEnd;
-    public $avitoManualID;
-    public $paidControl;
-    public $photoCount;
+    public ?int $ID = null;
+    public ?int $category = null;
+    public ?int $goodsType = null;
+    public ?int $adType = null;
+    public ?int $condition = null;
+    public ?int $title = null;
+    public ?int $description = null;
+    public ?int $price = null;
+    public ?int $photoSourceFolder = null;
+    public ?int $subFolderName = null;
+    public ?int $imagesRaw = null;
+    public ?int $videoURL = null;
+    public ?int $region = null;
+    public ?int $district = null;
+    public ?int $city = null;
+    public ?int $area = null;
+    public ?int $street = null;
+    public ?int $house = null;
+    public ?int $phone = null;
+    public ?int $manager = null;
+    public ?int $dateCreated = null;
+    public ?int $goodsGroup = null;
+    public ?int $subTypeApparel = null;
+    public ?int $size = null;
+    public ?int $dateEnd = null;
+    public ?int $avitoManualID = null;
+    public ?int $paidControl = null;
+    public ?int $photoCount = null;
 
     public $priceSpintax;
     public $descriptionSpintax;
@@ -92,6 +92,7 @@ class TableHeader {
                     $this->subFolderName = $colNum;
                     break;
                 case "ссылкинафотографии(заполняетсяпрограммойавтоматически,еслизаполненоназваниепапки)":
+                case "ссылканафото":
                     $this->imagesRaw = $colNum;
                     break;
                 case "ссылканавидео":

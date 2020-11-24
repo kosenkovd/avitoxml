@@ -4,11 +4,11 @@
         $tableID = $table["tableID"];
         $folderID = $table["folderID"];
         
-        $headerRange = 'Sheet1!A1:FZ1';
+        $headerRange = 'Avito!A1:FZ1';
         $headerResponse = $service->spreadsheets_values->get($tableID, $headerRange);
         $propertyColumns = new TableHeader($headerResponse->getValues()[0]);
         
-        $range = 'Sheet1!A2:FZ5001';
+        $range = 'Avito!A2:FZ5001';
         $response = $service->spreadsheets_values->get($tableID, $range);
         $values = $response->getValues();
         if (empty($values)) {
@@ -127,7 +127,7 @@
         global $service;
         // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
         $numRow += +2;
-        $range = 'Sheet1!' . $columnName . $numRow . ':' . $columnName . $numRow;
+        $range = 'Avito!' . $columnName . $numRow . ':' . $columnName . $numRow;
         
         $imagesString = join(PHP_EOL, $images);
         $values = [

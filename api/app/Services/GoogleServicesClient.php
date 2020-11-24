@@ -6,6 +6,7 @@ namespace App\Services;
 use App\Configuration\Config;
 use App\Services\Interfaces\IGoogleServicesClient;
 use DateTime;
+use Exception;
 use Google_Client;
 use Google_Service_Sheets;
 use Google_Service_Drive_DriveFile;
@@ -50,21 +51,30 @@ class GoogleServicesClient implements IGoogleServicesClient
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
         $drivePermissions = new Google_Service_Drive_Permission();
+
         $drivePermissions->setRole('writer');
         $drivePermissions->setType('anyone');
         $driveService->permissions->create($id, $drivePermissions);
+
         $drivePermissions->setRole('writer');
         $drivePermissions->setType('user');
         $drivePermissions->setEmailAddress('wdenkosw@gmail.com');
         $driveService->permissions->create($id, $drivePermissions);
+
         $drivePermissions->setRole('writer');
         $drivePermissions->setType('user');
         $drivePermissions->setEmailAddress('xml.avito@gmail.com');
         $driveService->permissions->create($id, $drivePermissions);
-        $drivePermissions->setRole('writer');
+
+        $drivePermissions->setRole('owner');
         $drivePermissions->setType('user');
         $drivePermissions->setEmailAddress('Ipagishev@gmail.com');
-        $driveService->permissions->create($id, $drivePermissions);
+        $driveService->permissions->create(
+            $id,
+            $drivePermissions,
+            [
+                "transferOwnership" => true
+            ]);
     }
 
     /**
@@ -104,7 +114,17 @@ class GoogleServicesClient implements IGoogleServicesClient
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveFolder->setMimeType('application/vnd.google-apps.folder');
         $driveService = new Google_Service_Drive($this->client);
-        $result = $driveService->files->create($driveFolder);
+
+        try
+        {
+            $result = $driveService->files->create($driveFolder);
+        }
+        catch (Exception $exception)
+        {
+            sleep(100);
+            $result = $driveService->files->create($driveFolder);
+        }
+
         $folderId = $result->id;
         $this->setPermissions($folderId);
         return $folderId;
@@ -121,9 +141,20 @@ class GoogleServicesClient implements IGoogleServicesClient
     {
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
-        $result = $driveService->files->listFiles(['q' =>
-            "('" . $folderID . "' in parents) and (mimeType = 'application/vnd.google-apps.folder')" .
-            " and (name='" . trim($subFolderName) . "')"]);
+
+        try
+        {
+            $result = $driveService->files->listFiles(['q' =>
+                "('" . $folderID . "' in parents) and (mimeType = 'application/vnd.google-apps.folder')" .
+                " and (name='" . trim($subFolderName) . "')"]);
+        }
+        catch (Exception $exception)
+        {
+            sleep(100);
+            $result = $driveService->files->listFiles(['q' =>
+                "('" . $folderID . "' in parents) and (mimeType = 'application/vnd.google-apps.folder')" .
+                " and (name='" . trim($subFolderName) . "')"]);
+        }
 
         if(count($result->files) == 0)
         {
@@ -142,10 +173,22 @@ class GoogleServicesClient implements IGoogleServicesClient
     {
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
-        $result = $driveService->files->listFiles([
-            'q' => "('" . $folderID . "' in parents)" .
-                "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
-            'orderBy' => 'folder,name']);
+
+        try
+        {
+            $result = $driveService->files->listFiles([
+                'q' => "('" . $folderID . "' in parents)" .
+                    "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
+                'orderBy' => 'folder,name']);
+        }
+        catch (Exception $exception)
+        {
+            sleep(100);
+            $result = $driveService->files->listFiles([
+                'q' => "('" . $folderID . "' in parents)" .
+                    "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
+                'orderBy' => 'folder,name']);
+        }
 
         return $result->files;
     }
@@ -155,18 +198,32 @@ class GoogleServicesClient implements IGoogleServicesClient
      *
      * PS. for now it only copies file, as it is no way to delete source one.
      *
-     * @param Google_Service_Drive_DriveFile $file file.
-     * @param string $folderId folder id.
+     * @param Google_Service_Drive_DriveFile $file source file.
+     * @param string $folderId destination folder id.
+     * @param string|null $newName new file name, if needs to be updated.
      */
-    public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId): void
+    public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId, string $newName = null): void
     {
         $fileId = $file->getId();
         $newFile = new Google_Service_Drive_DriveFile();
         $newFile->setParents([$folderId]);
+        if(!is_null($newName))
+        {
+            $newFile->setName($newName);
+        }
 
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
-        $driveService->files->copy($fileId, $newFile);
+
+        try
+        {
+            $driveService->files->copy($fileId, $newFile);
+        }
+        catch (Exception $exception)
+        {
+            sleep(100);
+            $driveService->files->copy($fileId, $newFile);
+        }
     }
 
     /**
@@ -179,9 +236,20 @@ class GoogleServicesClient implements IGoogleServicesClient
     {
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
-        $file = $driveService->files->get($fileId, [
-            'fields' => 'modifiedTime, createdTime'
-        ]);
+
+        try
+        {
+            $file = $driveService->files->get($fileId, [
+                'fields' => 'modifiedTime, createdTime'
+            ]);
+        }
+        catch (Exception $exception)
+        {
+            sleep(100);
+            $file = $driveService->files->get($fileId, [
+                'fields' => 'modifiedTime, createdTime'
+            ]);
+        }
 
         if(is_null($file->getModifiedTime()))
         {
@@ -213,7 +281,16 @@ class GoogleServicesClient implements IGoogleServicesClient
     public function getSpreadsheetCellsRange(string $spreadsheetId, string $range) : array
     {
         $service = new Google_Service_Sheets($this->client);
-        return $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+        try
+        {
+            $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+        }
+        catch (Exception $exception)
+        {
+            sleep(100);
+            $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+        }
+        return $values;
     }
 
     /**
@@ -239,11 +316,24 @@ class GoogleServicesClient implements IGoogleServicesClient
         );
         $service = new Google_Service_Sheets($this->client);
 
-        $service->spreadsheets_values->update(
-            $spreadsheetId,
-            $range,
-            $body,
-            $params
-        );
+        try
+        {
+            $service->spreadsheets_values->update(
+                $spreadsheetId,
+                $range,
+                $body,
+                $params
+            );
+        }
+        catch (Exception $exception)
+        {
+            sleep(100);
+            $service->spreadsheets_values->update(
+                $spreadsheetId,
+                $range,
+                $body,
+                $params
+            );
+        }
     }
 }

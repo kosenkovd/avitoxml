@@ -9,6 +9,8 @@ use App\Repositories\Interfaces\IGeneratorRepository;
 
 class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
 {
+    private static int $MaxDataLength = 2000000;
+
     /**
      * GeneratorRepository constructor.
      */
@@ -53,24 +55,31 @@ VALUES (
      */
     public function getLastGeneration(int $generatorId) : ?string
     {
-        $statement = "
+        $query = "
 SELECT
        `lastGeneration`
 FROM `".$this->config->getGeneratorsTableName()."`
-WHERE `id`=".$generatorId;
+WHERE `id`=?";
 
         $mysqli = $this->connect();
-        $res = $mysqli->query($statement);
+        $statement = $mysqli->prepare($query);
+        $statement->bind_param('i', $generatorId);
 
-        if(!$res || !$res->data_seek(0))
+        $statement->execute();
+
+        $generatedXML = null;
+        $statement->store_result();
+        $statement->bind_result($generatedXML);
+        $statement->data_seek(0);
+        if(!$statement->fetch())
         {
             return null;
         }
+        $statement->free_result();
 
-        $row = $res->fetch_assoc();
         $mysqli->close();
 
-        return $row["lastGeneration"];
+        return $generatedXML;
     }
 
     /**
@@ -83,12 +92,30 @@ WHERE `id`=".$generatorId;
     public function setLastGeneration(int $generatorId, string $content) : void
     {
         $mysqli = $this->connect();
-        $content = $mysqli->real_escape_string($content);
-        $statement = "
+        $query = "
 UPDATE `".$this->config->getGeneratorsTableName()."`
-SET `lastGeneration`='".$content."'
-WHERE `id`=".$generatorId;
-        $mysqli->query($statement);
+SET `lastGeneration`=?
+WHERE `id`=?";
+        $statement = $mysqli->prepare($query);
+
+        // Big files should be uploaded partially
+        $null = null;
+        $statement->bind_param('bi', $null, $generatorId);
+
+        $stringNotCompletelyLoaded = true;
+        $offset = 0;
+        while($stringNotCompletelyLoaded)
+        {
+            $statement->send_long_data(0, substr($content, $offset, self::$MaxDataLength));
+            $offset += self::$MaxDataLength;
+
+            if($offset > strlen($content))
+            {
+                $stringNotCompletelyLoaded = false;
+            }
+        }
+
+        $statement->execute();
         $mysqli->close();
     }
 
