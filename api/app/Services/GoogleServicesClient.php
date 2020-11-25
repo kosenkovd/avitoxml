@@ -99,7 +99,10 @@ class GoogleServicesClient implements IGoogleServicesClient
     /**
      * @inheritDoc
      */
-    public function createFolder(string $name = null, string $parentId = null): string
+    public function createFolder(
+        string $name = null,
+        string $parentId = null,
+        bool $setPermissions = true): string
     {
         if(is_null($name))
         {
@@ -126,7 +129,10 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
 
         $folderId = $result->id;
-        $this->setPermissions($folderId);
+        if($setPermissions)
+        {
+            $this->setPermissions($folderId);
+        }
         return $folderId;
     }
 

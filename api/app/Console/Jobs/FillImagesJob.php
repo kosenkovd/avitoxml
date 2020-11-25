@@ -14,7 +14,9 @@
         private IGoogleServicesClient $googleClient;
         private ITableRepository $tableRepository;
 
-        private array $images;
+        private string $jobId;
+
+        private array $images = [];
 
         private function log(string $message) : void
         {
@@ -22,7 +24,7 @@
             $timestamp->setTimestamp(time());
             $file = __DIR__."/../Logs/imageFillerLog.log";
             file_put_contents($file,
-                $timestamp->format(DATE_ISO8601)." ".$message.PHP_EOL,
+                $timestamp->format(DATE_ISO8601)." ".$this->jobId." ".$message.PHP_EOL,
                 FILE_APPEND | LOCK_EX);
         }
 
@@ -80,8 +82,6 @@
          */
         private function updateCellContent(string $content, int $numRow, string $tableID, string $columnName): void
         {
-            // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
-            $numRow += +2;
             $range = 'Avito!' . $columnName . $numRow . ':' . $columnName . $numRow;
 
             $values = [
@@ -108,15 +108,18 @@
          */
         private function createSubFolderWithContent(string $baseFolderId, array $row, TableHeader $propertyColumns) : string
         {
+            $this->log("Source folders ".$row[$propertyColumns->photoSourceFolder]);
             $sourceFolders = explode(PHP_EOL, $row[$propertyColumns->photoSourceFolder]);
             $newFolderName = crc32(Guid::uuid4()->toString());
-            $newFolderId = $this->googleClient->createFolder($newFolderName, $baseFolderId);
+            $newFolderId = $this->googleClient->createFolder($newFolderName, $baseFolderId, false);
 
             $maxNumberOfSymbolsInFileNumber = strlen(strval(count($sourceFolders)));
 
             $imageNumber = 1;
             foreach ($sourceFolders as $sourceFolder)
             {
+                $sourceFolder = trim($sourceFolder);
+                $this->log("Processing ".$sourceFolder);
                 $sourceFolderId = $this->googleClient->getChildFolderByName($baseFolderId, $sourceFolder);
                 $image = null;
                 if(isset($this->images[$sourceFolderId]))
@@ -129,6 +132,7 @@
                 }
                 else
                 {
+                    $this->log("Getting images from ".$sourceFolder);
                     $this->images[$sourceFolderId] = $this->googleClient->listFolderImages($sourceFolderId);
                     if(count($this->images[$sourceFolderId]) == 0)
                     {
@@ -156,6 +160,7 @@
             ITableRepository $tableRepository
         )
         {
+            $this->jobId = Guid::uuid4()->toString();
             $this->googleClient = $googleClient;
             $this->tableRepository = $tableRepository;
         }
@@ -167,7 +172,7 @@
          */
         public function start(): void
         {
-            $logs = "";
+            $this->log("Start fill images job");
             $tables = $this->tableRepository->getTables();
 
             foreach ($tables as $table)
@@ -184,64 +189,71 @@
                 $range = 'Avito!A2:FZ5001';
                 $values = $this->googleClient->getSpreadsheetCellsRange($tableID, $range);
 
-                if (!empty($values))
+                if (empty($values))
                 {
-                    foreach ($values as $numRow => $row) {
-                        $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
-                            $row[$propertyColumns->imagesRaw] != '';
+                    continue;
+                }
 
-                        if($alreadyFilled || !$this->canFillImages($row, $propertyColumns))
-                        {
-                            continue;
-                        }
+                foreach ($values as $numRow => $row) {
+                    $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
+                        $row[$propertyColumns->imagesRaw] != '';
 
-                        echo "Filling row ".$numRow.PHP_EOL;
-                        $this->log("Filling row ".$numRow);
+                    // content starts at line 2
+                    $spreadsheetRowNum = $numRow + 2;
+                    if($alreadyFilled || !$this->canFillImages($row, $propertyColumns))
+                    {
+                        continue;
+                    }
 
-                        if(!isset($row[$propertyColumns->subFolderName]) ||
-                            $row[$propertyColumns->subFolderName] == '')
-                        {
-                            $subFolderName = $this->createSubFolderWithContent($baseFolderID, $row, $propertyColumns);
-                        }
-                        else
-                        {
-                            $subFolderName = $row[$propertyColumns->subFolderName];
-                        }
+                    echo "Filling row ".$spreadsheetRowNum.PHP_EOL;
+                    $this->log("Filling row ".$spreadsheetRowNum);
 
-                        $this->log("Folder name ".$subFolderName);
-                        echo "Folder name ".$subFolderName.PHP_EOL;
+                    if(!isset($row[$propertyColumns->subFolderName]) ||
+                        $row[$propertyColumns->subFolderName] == '')
+                    {
+                        $subFolderName = $this->createSubFolderWithContent($baseFolderID, $row, $propertyColumns);
 
                         $this->updateCellContent(
                             $subFolderName,
-                            $numRow,
+                            $spreadsheetRowNum,
                             $tableID,
                             SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName));
+                    }
+                    else
+                    {
+                        $subFolderName = trim($row[$propertyColumns->subFolderName]);
+                    }
 
-                        $images = $this->getImages($baseFolderID, $subFolderName);
-                        $this->log("Found ".count($images)." images");
-                        echo "Found ".count($images)." images";
+                    $this->log("Folder name ".$subFolderName);
+                    echo "Folder name ".$subFolderName.PHP_EOL;
 
-                        if ($images !== []) {
-                            $links = [];
-                            foreach ($images as $image)
-                            {
-                                $links[] = LinkHelper::getPictureDownloadLink($image->id);
-                            }
-                            $imagesString = join(PHP_EOL, $links);
+                    $images = $this->getImages($baseFolderID, $subFolderName);
+                    $this->log("Found ".count($images)." images");
+                    echo "Found ".count($images)." images";
 
-                            $this->log("Images string ".$imagesString);
-                            echo "Images string ".$imagesString.PHP_EOL;
-                            $this->updateCellContent(
-                                $imagesString,
-                                $numRow,
-                                $tableID,
-                                SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw));
+                    if ($images !== []) {
+                        $links = [];
+                        foreach ($images as $image)
+                        {
+                            $links[] = LinkHelper::getPictureDownloadLink($image->id);
                         }
+                        $imagesString = join(PHP_EOL, $links);
+
+                        $this->log("Images string ".$imagesString);
+                        echo "Images string ".$imagesString.PHP_EOL;
+                        $this->updateCellContent(
+                            $imagesString,
+                            $spreadsheetRowNum,
+                            $tableID,
+                            SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw));
                     }
                 }
 
+
                 // Waiting so as not to exceed reads and writes quota.
-                //sleep(33);
+                sleep(5);
             }
+
+            $this->log("Finished fill images job.");
         }
     }

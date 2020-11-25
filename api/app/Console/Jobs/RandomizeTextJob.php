@@ -9,6 +9,7 @@ use App\Models\TableHeader;
 use App\Repositories\Interfaces\ITableRepository;
 use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\SpintaxService;
+use Ramsey\Uuid\Guid\Guid;
 
 class RandomizeTextJob
 {
@@ -16,13 +17,15 @@ class RandomizeTextJob
     private IGoogleServicesClient $googleClient;
     private ITableRepository $tableRepository;
 
+    private string $jobId;
+
     private function log(string $message) : void
     {
         $timestamp = new \DateTime();
         $timestamp->setTimestamp(time());
         $file = __DIR__."/../Logs/randomizerLog.log";
         file_put_contents($file,
-            $timestamp->format(DATE_ISO8601)." ".$message.PHP_EOL,
+            $timestamp->format(DATE_ISO8601)." ".$this->jobId." ".$message.PHP_EOL,
             FILE_APPEND | LOCK_EX);
     }
 
@@ -69,6 +72,7 @@ class RandomizeTextJob
         ITableRepository $tableRepository
     )
     {
+        $this->jobId = Guid::uuid4()->toString();
         $this->spintaxService = $spintaxService;
         $this->googleClient = $googleClient;
         $this->tableRepository = $tableRepository;
@@ -79,10 +83,9 @@ class RandomizeTextJob
      *
      * Randomizes texts in all tables that were not randomized before.
      */
-    public function start() : string
+    public function start() : void
     {
         $tables = $this->tableRepository->getTables();
-        $this->logs = "";
 
         foreach ($tables as $table)
         {
@@ -135,9 +138,7 @@ class RandomizeTextJob
             }
 
             // Waiting so as not to exceed reads and writes quota.
-            //sleep(44);
+            sleep(15);
         }
-
-        return $this->logs;
     }
 }

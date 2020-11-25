@@ -13,9 +13,13 @@ interface IGoogleServicesClient
      *
      * @param string|null $name name of new folder.
      * @param string|null $parentId parent folder id.
+     * @param bool $setPermissions whether to set default permissions to folder.
      * @return string new folder id.
      */
-    public function createFolder(string $name = null, string $parentId = null): string;
+    public function createFolder(
+        string $name = null,
+        string $parentId = null,
+        bool $setPermissions = true): string;
 
     /**
      * Retrieves subfolder id by parent folder id and subfolder name.

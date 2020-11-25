@@ -21,8 +21,8 @@ class TableHeader {
     public ?int $subFolderName = null;
     public ?int $imagesRaw = null;
     public ?int $videoURL = null;
+    public ?int $address = null;
     public ?int $region = null;
-    public ?int $district = null;
     public ?int $city = null;
     public ?int $area = null;
     public ?int $street = null;
@@ -92,7 +92,7 @@ class TableHeader {
                     $this->subFolderName = $colNum;
                     break;
                 case "ссылкинафотографии(заполняетсяпрограммойавтоматически,еслизаполненоназваниепапки)":
-                case "ссылканафото":
+                case "ссылка(и)нафото":
                     $this->imagesRaw = $colNum;
                     break;
                 case "ссылканавидео":
@@ -101,8 +101,8 @@ class TableHeader {
                 case "регионрф":
                     $this->region = $colNum;
                     break;
-                case "район/административныйокруг":
-                    $this->district = $colNum;
+                case "Адрес":
+                    $this->address = $colNum;
                     break;
                 case "населенныйпункт":
                     $this->city = $colNum;

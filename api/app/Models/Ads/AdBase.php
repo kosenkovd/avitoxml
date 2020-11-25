@@ -73,13 +73,13 @@ abstract class AdBase
             : null;
 
         $address = [];
+        if (isset($row[$propertyColumns->address]) && $row[$propertyColumns->address] != '')
+        {
+            $address[] = htmlspecialchars($row[$propertyColumns->address]);
+        }
         if (isset($row[$propertyColumns->region]) && $row[$propertyColumns->region] != '')
         {
             $address[] = htmlspecialchars($row[$propertyColumns->region]);
-        }
-        if (isset($row[$propertyColumns->district]) && $row[$propertyColumns->district] != '')
-        {
-            $address[] = htmlspecialchars($row[$propertyColumns->district]);
         }
         if (isset($row[$propertyColumns->city]) && $row[$propertyColumns->city] != '')
         {
