@@ -101,7 +101,7 @@ class TableHeader {
                 case "регионрф":
                     $this->region = $colNum;
                     break;
-                case "Адрес":
+                case "адрес":
                     $this->address = $colNum;
                     break;
                 case "населенныйпункт":
