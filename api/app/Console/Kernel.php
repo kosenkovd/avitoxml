@@ -29,11 +29,20 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->call(function () {
-            (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start();
-        })
-            ->name("Fill image links")
-            ->withoutOverlapping();
+        $tableRepository = new TableRepository();
+        $tables = $tableRepository->getTables();
+
+        foreach ($tables as $table)
+        {
+            $schedule->call(function () use($table) {
+                (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start($table);
+            })
+                ->name("Fill image links ".$table->getTableId())
+                ->everyThreeMinutes()
+                ->withoutOverlapping();
+
+            sleep(1);
+        }
 
         $schedule->call(function () {
             (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))->start();

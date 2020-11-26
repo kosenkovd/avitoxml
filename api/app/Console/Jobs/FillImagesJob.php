@@ -5,6 +5,7 @@
 
     use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
+    use App\Models\Table;
     use App\Models\TableHeader;
     use App\Repositories\Interfaces\ITableRepository;
     use App\Services\Interfaces\IGoogleServicesClient;
@@ -169,89 +170,84 @@
          * Start job.
          *
          * Fills images for all tables that were not filled before.
+         *
+         * @param Table $table table to process.
          */
-        public function start(): void
+        public function start(Table $table): void
         {
+            var_dump($table);
             $this->log("Start fill images job");
-            $tables = $this->tableRepository->getTables();
 
-            foreach ($tables as $table)
+            $tableID = $table->getGoogleSheetId();
+            echo "Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId().PHP_EOL;
+            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
+            $baseFolderID = $table->getGoogleDriveId();
+
+            $headerRange = 'Avito!A1:FZ1';
+            $headerResponse = $this->googleClient->getSpreadsheetCellsRange($tableID, $headerRange);
+            $propertyColumns = new TableHeader($headerResponse[0]);
+
+            $range = 'Avito!A2:FZ5001';
+            $values = $this->googleClient->getSpreadsheetCellsRange($tableID, $range);
+
+            if (empty($values))
             {
-                $tableID = $table->getGoogleSheetId();
-                echo "Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId().PHP_EOL;
-                $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
-                $baseFolderID = $table->getGoogleDriveId();
+                return;
+            }
 
-                $headerRange = 'Avito!A1:FZ1';
-                $headerResponse = $this->googleClient->getSpreadsheetCellsRange($tableID, $headerRange);
-                $propertyColumns = new TableHeader($headerResponse[0]);
+            foreach ($values as $numRow => $row) {
+                $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
+                    $row[$propertyColumns->imagesRaw] != '';
 
-                $range = 'Avito!A2:FZ5001';
-                $values = $this->googleClient->getSpreadsheetCellsRange($tableID, $range);
-
-                if (empty($values))
+                // content starts at line 2
+                $spreadsheetRowNum = $numRow + 2;
+                if($alreadyFilled || !$this->canFillImages($row, $propertyColumns))
                 {
                     continue;
                 }
 
-                foreach ($values as $numRow => $row) {
-                    $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
-                        $row[$propertyColumns->imagesRaw] != '';
+                echo "Filling row ".$spreadsheetRowNum.PHP_EOL;
+                $this->log("Filling row ".$spreadsheetRowNum);
 
-                    // content starts at line 2
-                    $spreadsheetRowNum = $numRow + 2;
-                    if($alreadyFilled || !$this->canFillImages($row, $propertyColumns))
-                    {
-                        continue;
-                    }
+                if(!isset($row[$propertyColumns->subFolderName]) ||
+                    $row[$propertyColumns->subFolderName] == '')
+                {
+                    $subFolderName = $this->createSubFolderWithContent($baseFolderID, $row, $propertyColumns);
 
-                    echo "Filling row ".$spreadsheetRowNum.PHP_EOL;
-                    $this->log("Filling row ".$spreadsheetRowNum);
-
-                    if(!isset($row[$propertyColumns->subFolderName]) ||
-                        $row[$propertyColumns->subFolderName] == '')
-                    {
-                        $subFolderName = $this->createSubFolderWithContent($baseFolderID, $row, $propertyColumns);
-
-                        $this->updateCellContent(
-                            $subFolderName,
-                            $spreadsheetRowNum,
-                            $tableID,
-                            SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName));
-                    }
-                    else
-                    {
-                        $subFolderName = trim($row[$propertyColumns->subFolderName]);
-                    }
-
-                    $this->log("Folder name ".$subFolderName);
-                    echo "Folder name ".$subFolderName.PHP_EOL;
-
-                    $images = $this->getImages($baseFolderID, $subFolderName);
-                    $this->log("Found ".count($images)." images");
-                    echo "Found ".count($images)." images";
-
-                    if ($images !== []) {
-                        $links = [];
-                        foreach ($images as $image)
-                        {
-                            $links[] = LinkHelper::getPictureDownloadLink($image->id);
-                        }
-                        $imagesString = join(PHP_EOL, $links);
-
-                        $this->log("Images string ".$imagesString);
-                        echo "Images string ".$imagesString.PHP_EOL;
-                        $this->updateCellContent(
-                            $imagesString,
-                            $spreadsheetRowNum,
-                            $tableID,
-                            SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw));
-                    }
+                    $this->updateCellContent(
+                        $subFolderName,
+                        $spreadsheetRowNum,
+                        $tableID,
+                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName));
+                }
+                else
+                {
+                    $subFolderName = trim($row[$propertyColumns->subFolderName]);
                 }
 
+                $this->log("Folder name ".$subFolderName);
+                echo "Folder name ".$subFolderName.PHP_EOL;
 
-                // Waiting so as not to exceed reads and writes quota.
-                sleep(5);
+                $images = $this->getImages($baseFolderID, $subFolderName);
+                $this->log("Found ".count($images)." images");
+                echo "Found ".count($images)." images";
+
+                if ($images !== []) {
+                    $links = [];
+                    foreach ($images as $image)
+                    {
+                        $links[] = LinkHelper::getPictureDownloadLink($image->id);
+                    }
+                    $imagesString = join(PHP_EOL, $links);
+
+                    $this->log("Images string ".$imagesString);
+                    echo "Images string ".$imagesString.PHP_EOL;
+                    $this->updateCellContent(
+                        $imagesString,
+                        $spreadsheetRowNum,
+                        $tableID,
+                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw));
+                }
             }
 
             $this->log("Finished fill images job.");

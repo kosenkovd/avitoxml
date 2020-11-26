@@ -103,11 +103,12 @@ class TableController extends BaseController
      */
     public function show(string $id)
     {
+        $tables = $this->tableRepository->getTables();
         $service = new FillImagesJob(
             new GoogleServicesClient(),
             new TableRepository()
         );
-        $service->start();
+        $service->start($tables[11]);
 
         return response("", 200);
     }
