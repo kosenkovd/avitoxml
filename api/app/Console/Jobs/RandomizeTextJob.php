@@ -6,6 +6,7 @@ namespace App\Console\Jobs;
 
 use App\Helpers\SpreadsheetHelper;
 use App\Models\Generator;
+use App\Models\Table;
 use App\Repositories\Interfaces\ITableRepository;
 use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\SpintaxService;
@@ -120,25 +121,19 @@ class RandomizeTextJob extends JobBase
      * Start job.
      *
      * Randomizes texts in all tables that were not randomized before.
+     *
+     * @param Table $table table to process.
      */
-    public function start() : void
+    public function start(Table $table) : void
     {
-        $tables = $this->tableRepository->getTables();
+        $tableID = $table->getGoogleSheetId();
+        $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
 
-        foreach ($tables as $table)
+        foreach ($table->getGenerators() as $generator)
         {
-            $tableID = $table->getGoogleSheetId();
-            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
-
-            foreach ($table->getGenerators() as $generator)
-            {
-                $this->log("Processing table ".$table->getTableId().", sheet ".$generator->getTargetPlatform().", spreadsheet id ".$table->getGoogleSheetId());
-                $this->processSheet($tableID, $generator);
-                $this->stopIfTimeout();
-            }
-
-            // Waiting so as not to exceed reads and writes quota.
-            sleep(10);
+            $this->log("Processing table ".$table->getTableId().", sheet ".$generator->getTargetPlatform().", spreadsheet id ".$table->getGoogleSheetId());
+            $this->processSheet($tableID, $generator);
+            $this->stopIfTimeout();
         }
     }
 }

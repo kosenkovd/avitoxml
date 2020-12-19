@@ -45,11 +45,24 @@ class XmlGenerationService implements IXmlGenerationService
      * @param TableHeader $propertyColumns
      * @return bool is construction material.
      */
-    private function isConstructionMaterial(array $row, TableHeader  $propertyColumns) : bool
+    private function isConstructionMaterial(array $row, TableHeader $propertyColumns) : bool
     {
         return isset($propertyColumns->goodsType) &&
             isset($row[$propertyColumns->goodsType]) &&
             $row[$propertyColumns->goodsType] == "Стройматериалы";
+    }
+
+    /**
+     * Defines if ad in row is construction material.
+     *
+     * @param array $row
+     * @param TableHeader $propertyColumns
+     * @return bool is auto part.
+     */
+    private function isAutoPart(array $row, TableHeader $propertyColumns) : bool
+    {
+        return isset($propertyColumns->autoPart) &&
+            isset($row[$propertyColumns->autoPart]);
     }
 
     /**
@@ -134,6 +147,11 @@ class XmlGenerationService implements IXmlGenerationService
                         if($this->isConstructionMaterial($row, $propertyColumns))
                         {
                             $ad = new Ads\ConstructionMaterialAd($row, $propertyColumns);
+                            break;
+                        }
+                        if($this->isAutoPart($row, $propertyColumns))
+                        {
+                            $ad = new Ads\AutoPartAd($row, $propertyColumns);
                             break;
                         }
                     default:
