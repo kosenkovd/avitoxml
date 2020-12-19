@@ -29,21 +29,27 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
+        $startTime = time();
+        $timeout = 540;
+
         $tableRepository = new TableRepository();
         $tables = $tableRepository->getTables();
 
+        // Shuffle, because all tasks are run synchronously and stops by timeout, and this
+        // will allow tables from end to be processed too.
+        shuffle($tables);
         foreach ($tables as $table)
         {
             $schedule->call(function () use($table) {
+                echo "Starting FillImagesJob for ".$table->getTableGuid();
                 (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start($table);
             })
                 ->name("Fill image links ".$table->getTableId())
                 ->everyTenMinutes()
                 ->withoutOverlapping();
 
-            sleep(1);
-
             $schedule->call(function () use($table) {
+                echo "Starting RandomizeTextJob for ".$table->getTableGuid();
                 (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))
                     ->start($table);
             })
@@ -51,7 +57,10 @@ class Kernel extends ConsoleKernel
                 ->everyFiveMinutes()
                 ->withoutOverlapping();
 
-            sleep(1);
+            if(time() >= $startTime + $timeout)
+            {
+                break;
+            }
         }
     }
 

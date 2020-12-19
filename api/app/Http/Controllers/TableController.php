@@ -116,14 +116,20 @@ class TableController extends BaseController
             new GoogleServicesClient(),
             new TableRepository()
         );
+
+        $spintaxService = new RandomizeTextJob(
+            new SpintaxService(),
+            new GoogleServicesClient(),
+            new TableRepository()
+        );
         if(is_null($table))
         {
             echo $id;
         }
         else
         {
-            // 1YZ5Zo7WVbkMc2rIGgW6Ln1sc96mNpbyJPVO3kLI1Uhw
-            $service->start($table);
+            //$service->start($table);
+            $spintaxService->start($table);
         }
 
         return response("", 200);
