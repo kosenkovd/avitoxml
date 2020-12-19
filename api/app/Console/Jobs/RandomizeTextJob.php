@@ -3,7 +3,7 @@
 
 namespace App\Console\Jobs;
 
-
+use App\Configuration\Log\JobLog as JobLogConfig;
 use App\Helpers\SpreadsheetHelper;
 use App\Models\Generator;
 use App\Models\Table;
@@ -109,10 +109,11 @@ class RandomizeTextJob extends JobBase
     public function __construct(
         SpintaxService $spintaxService,
         IGoogleServicesClient $googleClient,
+        JobLogConfig $jobLogConfig,
         ITableRepository $tableRepository
     )
     {
-        parent::__construct($googleClient);
+        parent::__construct($googleClient, $jobLogConfig);
         $this->tableRepository = $tableRepository;
         $this->spintaxService = $spintaxService;
     }

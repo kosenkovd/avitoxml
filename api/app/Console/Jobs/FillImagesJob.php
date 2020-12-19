@@ -3,6 +3,7 @@
 
     namespace App\Console\Jobs;
 
+    use App\Configuration\Log\JobLog as JobLogConfig;
     use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
     use App\Models\Generator;
@@ -252,10 +253,11 @@
 
         public function __construct(
             IGoogleServicesClient $googleClient,
+            JobLogConfig $jobLogConfig,
             ITableRepository $tableRepository
         )
         {
-            parent::__construct($googleClient);
+            parent::__construct($googleClient, $jobLogConfig);
             $this->tableRepository = $tableRepository;
         }
 

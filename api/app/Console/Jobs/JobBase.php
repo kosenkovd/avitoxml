@@ -1,23 +1,22 @@
 <?php
 
-
 namespace App\Console\Jobs;
-
 
 use App\Models\TableHeader;
 use App\Services\Interfaces\IGoogleServicesClient;
 use Ramsey\Uuid\Guid\Guid;
+use App\Configuration\Log\JobLog as JobLogConfig;
 
 abstract class JobBase
 {
     protected IGoogleServicesClient $googleClient;
-
+    protected JobLogConfig $jobLogConfig;
     protected string $jobId;
 
     /**
      * @var bool is logging enabled.
      */
-    protected bool $loggingEnabled = true;
+    protected bool $loggingEnabled;
 
     /**
      * @var int job execution time start epoch.
@@ -77,10 +76,12 @@ abstract class JobBase
     }
 
     public function __construct(
-        IGoogleServicesClient $googleClient
+        IGoogleServicesClient $googleClient,
+        JobLogConfig $jobLogConfig
     )
     {
         $this->jobId = Guid::uuid4()->toString();
         $this->googleClient = $googleClient;
+        $this->loggingEnabled = $jobLogConfig->getEnabled();
     }
 }
