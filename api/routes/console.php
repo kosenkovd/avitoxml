@@ -1,6 +1,11 @@
 <?php
-
-use Illuminate\Foundation\Inspiring;
+    
+    use App\Console\Jobs\FillImagesJob;
+    use App\Console\Jobs\RandomizeTextJob;
+    use App\Repositories\TableRepository;
+    use App\Services\GoogleServicesClient;
+    use App\Services\SpintaxService;
+    use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 
 /*
@@ -14,6 +19,15 @@ use Illuminate\Support\Facades\Artisan;
 |
 */
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+Artisan::command('FillImages {table}', function ($table) {
+    $table = json_decode($table);
+    echo "Starting FillImagesJob for ".$table->getTableGuid();
+    (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start($table);
+});
+
+Artisan::command('FillImages2 {table}', function ($table) {
+    $table = json_decode($table);
+    echo "Starting RandomizeTextJob for ".$table->getTableGuid();
+    (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))
+        ->start($table);
+});

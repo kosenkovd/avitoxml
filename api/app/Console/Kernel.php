@@ -40,19 +40,12 @@ class Kernel extends ConsoleKernel
         shuffle($tables);
         foreach ($tables as $table)
         {
-            $schedule->call(function () use($table) {
-                echo "Starting FillImagesJob for ".$table->getTableGuid();
-                (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start($table);
-            })
+            $schedule->exec('php artisan FillImages ' . json_encode($table))
                 ->name("Fill image links ".$table->getTableId())
                 ->everyTenMinutes()
                 ->withoutOverlapping();
-
-            $schedule->call(function () use($table) {
-                echo "Starting RandomizeTextJob for ".$table->getTableGuid();
-                (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))
-                    ->start($table);
-            })
+    
+            $schedule->exec('php artisan FillImages2 ' . json_encode($table))
                 ->name("Randomize text ".$table->getTableId())
                 ->everyFiveMinutes()
                 ->withoutOverlapping();
