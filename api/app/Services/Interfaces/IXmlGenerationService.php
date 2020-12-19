@@ -10,7 +10,7 @@ interface IXmlGenerationService
      * Generates XML for specified spreadsheet.
      *
      * @param string $spreadsheetId spreadsheet id.
-     * @return string|null generated xml.
+     * @return string generated xml.
      */
-    public function generateAvitoXML(string $spreadsheetId) : ?string;
+    public function generateAvitoXML(string $spreadsheetId) : string;
 }

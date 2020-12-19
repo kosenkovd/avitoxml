@@ -73,8 +73,8 @@ class GeneratorController extends BaseController
      * GET /$id
      *
      * Get generated XML file.
-     * @param string $tableId table guid.
-     * @param $id string generator guid.
+     * @param $tableGuid string table guid.
+     * @param $generatorGuid string generator guid.
      * @return Response generated XML.
      */
     public function show(string $tableGuid, string $generatorGuid) : Response
@@ -112,10 +112,17 @@ class GeneratorController extends BaseController
         }
         else
         {
-            $content = $this->xmlGenerator->generateAvitoXML($table->getGoogleSheetId());
-            $generator->setLastGenerated(time());
-            $this->generatorsRepository->update($generator);
-            $this->generatorsRepository->setLastGeneration($generator->getGeneratorId(), $content);
+            try
+            {
+                $content = $this->xmlGenerator->generateAvitoXML($table->getGoogleSheetId());
+                $generator->setLastGenerated(time());
+                $this->generatorsRepository->update($generator);
+                $this->generatorsRepository->setLastGeneration($generator->getGeneratorId(), $content);
+            }
+            catch(\Exception $e)
+            {
+                $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
+            }
         }
 
         return response($content, 200)

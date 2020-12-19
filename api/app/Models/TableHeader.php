@@ -56,9 +56,11 @@ class TableHeader {
                     $this->ID = $colNum;
                     break;
                 case "категориятовара":
+                case "категория":
                     $this->category = $colNum;
                     break;
                 case "видтовара":
+                case "подкатегория":
                     $this->goodsType = $colNum;
                     break;
                 case "видобъявления":
@@ -125,13 +127,16 @@ class TableHeader {
                     break;
                 case "датаивремяначаларазмещенияобъявления(часовойпоясmsk)":
                 case "датаивремяпубликации(помск)":
+                case "датапубликации":
+                case "датаивремяпубликации":
                     $this->dateCreated = $colNum;
                     break;
                 case "группатоваров":
                     $this->goodsGroup = $colNum;
                     break;
                 case "подтипуслугиивидодежды":
-                case "Подтипуслугииливидодежды":
+                case "подтипуслугииливидодежды":
+                case "подтипуслугивидодеждытипстроймат":
                     $this->subTypeApparel = $colNum;
                     break;
                 case "размер":

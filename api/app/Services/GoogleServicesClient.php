@@ -185,15 +185,17 @@ class GoogleServicesClient implements IGoogleServicesClient
             $result = $driveService->files->listFiles([
                 'q' => "('" . $folderID . "' in parents)" .
                     "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
-                'orderBy' => 'folder,name']);
+                'orderBy' => 'folder,name',
+                "pageSize" => 1000]);
         }
         catch (Exception $exception)
         {
-            sleep(100);
+            //sleep(100);
             $result = $driveService->files->listFiles([
                 'q' => "('" . $folderID . "' in parents)" .
                     "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
-                'orderBy' => 'folder,name']);
+                'orderBy' => 'folder,name',
+                "pageSize" => 1000]);
         }
 
         return $result->files;
@@ -295,6 +297,11 @@ class GoogleServicesClient implements IGoogleServicesClient
         {
             sleep(100);
             $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+        }
+
+        if(is_null($values))
+        {
+            return [];
         }
         return $values;
     }

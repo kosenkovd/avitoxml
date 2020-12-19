@@ -3,6 +3,8 @@
 namespace App\Models\Ads;
 
 use App\Models\TableHeader;
+use DateTime;
+use DateTimeZone;
 
 abstract class AdBase
 {
@@ -27,10 +29,11 @@ abstract class AdBase
         $this->id = htmlspecialchars($row[$propertyColumns->ID]);
         if(isset($row[$propertyColumns->dateCreated]))
         {
-            $dateRaw = date_create_from_format('d.m.Y H:i', $row[$propertyColumns->dateCreated]);
-            if($dateRaw !== false)
+            $date = DateTime::createFromFormat(
+                'd.m.Y H:i', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+            if($date !== false)
             {
-                $this->dateBegin = date_format($dateRaw, 'Y-m-d\TH:i:sP');
+                $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
             }
         }
         else

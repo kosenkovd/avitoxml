@@ -176,6 +176,7 @@ return [
         App\Providers\RouteServiceProvider::class,
         App\Providers\RepositoriesProvider::class,
         App\Providers\ServicesProvider::class,
+        App\Providers\ConfigurationProvider::class
 
     ],
 

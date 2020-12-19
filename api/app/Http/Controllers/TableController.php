@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Configuration\Spreadsheet\SheetNames;
 use App\Console\Jobs\FillImagesJob;
 use App\Console\Jobs\RandomizeTextJob;
+use App\Helpers\LinkHelper;
 use App\Repositories\TableRepository;
 use App\Services\GoogleServicesClient;
 use App\Services\Interfaces\IGoogleServicesClient;
@@ -51,17 +53,23 @@ class TableController extends BaseController
      */
     private Roles $roles;
 
+    /**
+     * @var SheetNames configuration with sheet names.
+     */
+    private SheetNames $sheetNamesConfig;
+
     public function __construct(
         Interfaces\ITableRepository $tableRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
         IGoogleServicesClient $googleServicesClient,
-        IMailService $mailService
-    )
+        IMailService $mailService,
+        SheetNames $sheetNames)
     {
         $this->tableRepository = $tableRepository;
         $this->generatorRepository = $generatorRepository;
         $this->googleServicesClient = $googleServicesClient;
         $this->mailService = $mailService;
+        $this->sheetNamesConfig = $sheetNames;
         $this->roles = new Roles();
     }
 
@@ -108,7 +116,8 @@ class TableController extends BaseController
             new GoogleServicesClient(),
             new TableRepository()
         );
-        $service->start($tables[11]);
+        // 1YZ5Zo7WVbkMc2rIGgW6Ln1sc96mNpbyJPVO3kLI1Uhw
+        $service->start($tables[9]);
 
         return response("", 200);
     }
@@ -140,16 +149,51 @@ class TableController extends BaseController
 
         $newTableId = $this->tableRepository->insert($table);
 
-        $generator = new Models\Generator(
-            null,
-            $newTableId,
-            Guid::uuid4()->toString(),
-            0
+        $targetsToAdd = [
+            [
+                "cell" => "C3",
+                "target" =>$this->sheetNamesConfig->getAvito()
+            ],
+            [
+                "cell" => "C4",
+                "target" =>$this->sheetNamesConfig->getYandex()
+            ],
+            [
+                "cell" => "C5",
+                "target" =>$this->sheetNamesConfig->getYoula()
+            ]
+        ];
+
+        $table->setTableId($newTableId);
+
+        foreach ($targetsToAdd as $target)
+        {
+            $generator = new Models\Generator(
+                null,
+                $newTableId,
+                Guid::uuid4()->toString(),
+                0,
+                $target["target"]);
+
+            $newGeneratorId = $this->generatorRepository->insert($generator);
+
+            $table->addGenerator($generator->setGeneratorId($newGeneratorId));
+
+            $this->googleServicesClient->updateSpreadsheetCellsRange(
+                $googleTableId,
+                $this->sheetNamesConfig->getInformation()."!".$target["cell"].":".$target["cell"],
+                [LinkHelper::getXmlGeneratorLink(
+                    $table->getTableGuid(), $generator->getGeneratorGuid())],
+                [ 'valueInputOption' => 'RAW' ]
+            );
+        }
+
+        $this->googleServicesClient->updateSpreadsheetCellsRange(
+            $googleTableId,
+            $this->sheetNamesConfig->getInformation()."!F7:F7",
+            [LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId())],
+            [ 'valueInputOption' => 'RAW' ]
         );
-
-        $newGeneratorId = $this->generatorRepository->insert($generator);
-
-        $table->setTableId($newTableId)->addGenerator($generator->setGeneratorId($newGeneratorId));
 
         $this->mailService->sendEmailWithTableData($table);
 

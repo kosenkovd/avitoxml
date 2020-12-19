@@ -32,6 +32,7 @@ class Kernel extends ConsoleKernel
         $tableRepository = new TableRepository();
         $tables = $tableRepository->getTables();
 
+        var_dump($schedule->events());
         foreach ($tables as $table)
         {
             $schedule->call(function () use($table) {
@@ -48,6 +49,7 @@ class Kernel extends ConsoleKernel
             (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))->start();
         })
             ->name("Randomize text")
+            ->everyThreeMinutes()
             ->withoutOverlapping();
     }
 

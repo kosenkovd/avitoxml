@@ -19,8 +19,9 @@ abstract class AdBase
     public function __construct(array $row, TableHeader $propertyColumns)
     {
         $this->id = htmlspecialchars($row[$propertyColumns->ID]);
-        $dateRaw = date_create_from_format('d.m.Y H:i', $row[$propertyColumns->dateCreated]);
-        $this->dateBegin = date_format($dateRaw, 'Y-m-d\TH:i:sP');
+        $date = DateTime::createFromFormat(
+            'd.m.Y H:i', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+        $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
         $this->managerName = htmlspecialchars($row[$propertyColumns->manager]);
         $this->contactPhone = htmlspecialchars($row[$propertyColumns->phone]);
         $this->category = htmlspecialchars($row[$propertyColumns->category]);

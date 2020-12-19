@@ -21,6 +21,7 @@ class RandomizeTextJob
 
     private function log(string $message) : void
     {
+        return;
         $timestamp = new \DateTime();
         $timestamp->setTimestamp(time());
         $file = __DIR__."/../Logs/randomizerLog.log";

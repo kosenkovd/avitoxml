@@ -105,17 +105,18 @@
          * @param string $baseFolderId base folder id.
          * @param array $row data row.
          * @param TableHeader $propertyColumns human readable columns.
-         * @return string new folder id.
+         * @return string|null new folder id if it can be created with content.
          */
-        private function createSubFolderWithContent(string $baseFolderId, array $row, TableHeader $propertyColumns) : string
+        private function createSubFolderWithContent(
+            string $baseFolderId, array $row, TableHeader $propertyColumns) : ?string
         {
+            $newFolderName = null;
             $this->log("Source folders ".$row[$propertyColumns->photoSourceFolder]);
             $sourceFolders = explode(PHP_EOL, $row[$propertyColumns->photoSourceFolder]);
-            $newFolderName = crc32(Guid::uuid4()->toString());
-            $newFolderId = $this->googleClient->createFolder($newFolderName, $baseFolderId, false);
 
             $maxNumberOfSymbolsInFileNumber = strlen(strval(count($sourceFolders)));
 
+            $imageCopyData = [];
             $imageNumber = 1;
             foreach ($sourceFolders as $sourceFolder)
             {
@@ -142,15 +143,29 @@
                     $image = array_shift($this->images[$sourceFolderId]);
                 }
 
-                $this->googleClient->moveFile(
-                    $image,
-                    $newFolderId,
-                    str_pad(
-                        $imageNumber,
-                        $maxNumberOfSymbolsInFileNumber,
-                        '0',
-                        STR_PAD_LEFT).$image->getName());
+                $imageCopyData[] = [
+                    "image" => $image,
+                    "newName" => str_pad(
+                            $imageNumber,
+                            $maxNumberOfSymbolsInFileNumber,
+                            '0',
+                            STR_PAD_LEFT).$image->getName()
+                ];
                 $imageNumber++;
+            }
+
+            if(count($imageCopyData) > 0)
+            {
+                $newFolderName = crc32(Guid::uuid4()->toString());
+                $newFolderId = $this->googleClient->createFolder($newFolderName, $baseFolderId, false);
+
+                foreach ($imageCopyData as $imageCopyDatum)
+                {
+                    $this->googleClient->moveFile(
+                        $imageCopyDatum["image"],
+                        $newFolderId,
+                        $imageCopyDatum["newName"]);
+                }
             }
 
             return $newFolderName;
@@ -175,7 +190,6 @@
          */
         public function start(Table $table): void
         {
-            var_dump($table);
             $this->log("Start fill images job");
 
             $tableID = $table->getGoogleSheetId();
@@ -213,6 +227,10 @@
                     $row[$propertyColumns->subFolderName] == '')
                 {
                     $subFolderName = $this->createSubFolderWithContent($baseFolderID, $row, $propertyColumns);
+                    if(is_null($subFolderName))
+                    {
+                        continue;
+                    }
 
                     $this->updateCellContent(
                         $subFolderName,
@@ -224,6 +242,7 @@
                 {
                     $subFolderName = trim($row[$propertyColumns->subFolderName]);
                 }
+
 
                 $this->log("Folder name ".$subFolderName);
                 echo "Folder name ".$subFolderName.PHP_EOL;

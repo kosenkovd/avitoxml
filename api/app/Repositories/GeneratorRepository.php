@@ -32,11 +32,13 @@ class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
 INSERT INTO `".$this->config->getGeneratorsTableName()."`(
     `tableId`,
     `generatorGuid`,
-    `dateLastGenerated`)
+    `dateLastGenerated`,
+    `targetPlatform`)
 VALUES (
     ".$generator->getTableId().",
     '".$generator->getGeneratorGuid()."',
-    ".$generator->getLastGenerated().")";
+    ".$generator->getLastGenerated().",
+    '".$generator->getTargetPlatform()."')";
 
         $mysqli = $this->connect();
         $mysqli->query($statement);
@@ -137,7 +139,8 @@ UPDATE `".$this->config->getGeneratorsTableName()."`
 SET `id`=".$generator->getGeneratorId().",
     `tableId`=".$generator->getTableId().",
     `generatorGuid`='".$generator->getGeneratorGuid()."',
-    `dateLastGenerated`=".$generator->getLastGenerated()."
+    `dateLastGenerated`=".$generator->getLastGenerated().",
+    `targetPlatform`='".$generator->getTargetPlatform()."'
 WHERE `id`=".$generator->getGeneratorId();
 
         $mysqli = $this->connect();
