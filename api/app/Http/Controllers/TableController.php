@@ -111,13 +111,20 @@ class TableController extends BaseController
      */
     public function show(string $id)
     {
-        $tables = $this->tableRepository->getTables();
+        $table = $this->tableRepository->get($id);
         $service = new FillImagesJob(
             new GoogleServicesClient(),
             new TableRepository()
         );
-        // 1YZ5Zo7WVbkMc2rIGgW6Ln1sc96mNpbyJPVO3kLI1Uhw
-        $service->start($tables[9]);
+        if(is_null($table))
+        {
+            echo $id;
+        }
+        else
+        {
+            // 1YZ5Zo7WVbkMc2rIGgW6Ln1sc96mNpbyJPVO3kLI1Uhw
+            $service->start($table);
+        }
 
         return response("", 200);
     }
@@ -182,8 +189,8 @@ class TableController extends BaseController
             $this->googleServicesClient->updateSpreadsheetCellsRange(
                 $googleTableId,
                 $this->sheetNamesConfig->getInformation()."!".$target["cell"].":".$target["cell"],
-                [LinkHelper::getXmlGeneratorLink(
-                    $table->getTableGuid(), $generator->getGeneratorGuid())],
+                [[LinkHelper::getXmlGeneratorLink(
+                    $table->getTableGuid(), $generator->getGeneratorGuid())]],
                 [ 'valueInputOption' => 'RAW' ]
             );
         }
@@ -191,7 +198,7 @@ class TableController extends BaseController
         $this->googleServicesClient->updateSpreadsheetCellsRange(
             $googleTableId,
             $this->sheetNamesConfig->getInformation()."!F7:F7",
-            [LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId())],
+            [[LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId())]],
             [ 'valueInputOption' => 'RAW' ]
         );
 

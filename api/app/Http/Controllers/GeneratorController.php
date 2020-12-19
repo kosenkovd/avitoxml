@@ -84,7 +84,6 @@ class GeneratorController extends BaseController
         {
             return response("Table not found", 404);
         }
-
         $generator = null;
         foreach ($table->getGenerators() as $curGenerator)
         {
@@ -114,7 +113,8 @@ class GeneratorController extends BaseController
         {
             try
             {
-                $content = $this->xmlGenerator->generateAvitoXML($table->getGoogleSheetId());
+                $content = $this->xmlGenerator->generateAvitoXML(
+                    $table->getGoogleSheetId(), $generator->getTargetPlatform());
                 $generator->setLastGenerated(time());
                 $this->generatorsRepository->update($generator);
                 $this->generatorsRepository->setLastGeneration($generator->getGeneratorId(), $content);

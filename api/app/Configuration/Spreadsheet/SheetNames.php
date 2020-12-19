@@ -10,11 +10,12 @@ class SheetNames
     private string $youla;
     private string $yandex;
     private string $information;
+    private string $yandexSettings;
 
     public function __construct()
     {
         $configurationJson =  json_decode(file_get_contents(__dir__. '/../appsettings.json'), true);
-        foreach ($configurationJson as $key => $value)
+        foreach ($configurationJson["spreadsheet"]["sheetNames"] as $key => $value)
         {
             if(property_exists(SheetNames::class, $key))
             {
@@ -53,5 +54,13 @@ class SheetNames
     public function getInformation(): string
     {
         return $this->information;
+    }
+
+    /**
+     * @return string
+     */
+    public function getYandexSettings(): string
+    {
+        return $this->yandexSettings;
     }
 }

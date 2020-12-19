@@ -29,8 +29,16 @@ abstract class AdBase
         $this->id = htmlspecialchars($row[$propertyColumns->ID]);
         if(isset($row[$propertyColumns->dateCreated]))
         {
-            $date = DateTime::createFromFormat(
-                'd.m.Y H:i', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+            if(strpos($row[$propertyColumns->dateCreated], ":"))
+            {
+                $date = DateTime::createFromFormat(
+                    'd.m.Y H:i', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+            }
+            else
+            {
+                $date = DateTime::createFromFormat(
+                    'd.m.Y', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+            }
             if($date !== false)
             {
                 $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
@@ -110,7 +118,38 @@ abstract class AdBase
             : null;
     }
 
-    abstract public function toAvitoXml() : string;
+    /**
+     * Generates default XML content.
+     *
+     * @return string default XML tags.
+     */
+    protected function generateDefaultXML(): string
+    {
+        $imageTags = $this->generateImageAvitoTags($this->images);
+
+        if(strcmp(strtolower($this->condition), "неприменимо") === 0)
+        {
+            $this->condition = "inapplicable";
+        }
+
+        return <<<AVITOXML
+        <Id>$this->id</Id>
+        <DateBegin>$this->dateBegin</DateBegin>
+        <ManagerName>$this->managerName</ManagerName>
+        <ContactPhone>$this->contactPhone</ContactPhone>
+        <Address>$this->address</Address>
+        <Category>$this->category</Category>
+        <AdType>$this->adType</AdType>
+        <Condition>$this->condition</Condition>
+        <Title>$this->title</Title>
+        <Description><![CDATA[$this->description]]></Description>
+        <Price>$this->price</Price>
+        <Images>$imageTags</Images>
+        <VideoURL>$this->videoURL</VideoURL>
+        <AvitoId>$this->avitoId</AvitoId>
+        <AdStatus>$this->adStatus</AdStatus>
+AVITOXML;
+    }
 
     protected function generateImageAvitoTags(array $images)
     {
@@ -125,4 +164,6 @@ abstract class AdBase
         }
         return $imageTags."\t\t";
     }
+
+    public abstract function toAvitoXml() : string;
 }

@@ -38,6 +38,7 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`tableGuid`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
+       `g`.`targetPlatform`,
        `g`.`dateLastGenerated`
 FROM `".$this->config->getTablesTableName()."` `t`
 LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
@@ -58,7 +59,8 @@ WHERE 1";
                 $row["generatorId"],
                 $tableId,
                 $row["generatorGuid"],
-                $row["dateLastGenerated"]
+                $row["dateLastGenerated"],
+                $row["targetPlatform"]
             );
             if(!isset($tables["table".$tableId]))
             {
@@ -76,7 +78,7 @@ WHERE 1";
             }
             else
             {
-                $tables[$tableId]->addGenerator($generator);
+                $tables["table".$tableId]->addGenerator($generator);
             }
         }
 
@@ -140,6 +142,7 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`tableGuid`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
+       `g`.`targetPlatform`,
        `g`.`dateLastGenerated`
 FROM `".$this->config->getTablesTableName()."` `t`
 LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
@@ -150,35 +153,40 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
         {
             return null;
         }
-        $row = $res->fetch_assoc();
 
         $mysqli->close();
 
-        $tableId = $row["tableId"];
-        $table = new Table(
-            $tableId,
-            $row["userId"],
-            $row["googleSheetId"],
-            $row["googleDriveId"],
-            $row["dateExpired"],
-            $row["isDeleted"],
-            $row["dateDeleted"],
-            $row["notes"],
-            $row["tableGuid"],
-            []);
-
-        $generatorId = $row["generatorId"];
-        if(is_null($generatorId))
+        $table = null;
+        while($row = $res->fetch_assoc())
         {
-            return $table;
-        }
-
-        return $table->addGenerator(
-            new Generator(
+            $tableId = $row["tableId"];
+            $generator = new Generator(
                 $row["generatorId"],
                 $tableId,
                 $row["generatorGuid"],
-                $row["dateLastGenerated"]
-            ));
+                $row["dateLastGenerated"],
+                $row["targetPlatform"]
+            );
+            if(is_null($table))
+            {
+                $table = new Table(
+                    $tableId,
+                    $row["userId"],
+                    $row["googleSheetId"],
+                    $row["googleDriveId"],
+                    $row["dateExpired"],
+                    $row["isDeleted"],
+                    $row["dateDeleted"],
+                    $row["notes"],
+                    $row["tableGuid"],
+                    [$generator]);
+            }
+            else
+            {
+                $table->addGenerator($generator);
+            }
+        }
+
+        return $table;
     }
 }

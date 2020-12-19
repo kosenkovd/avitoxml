@@ -19,28 +19,13 @@ class GeneralAd extends AdBase
 
     public function toAvitoXml() : string
     {
-        $imageTags = $this->generateImageAvitoTags($this->images);
+        $defaultTags = $this->generateDefaultXML();
 
         return <<<AVITOXML
     <Ad>
-        <Id>$this->id</Id>
-        <DateBegin>$this->dateBegin</DateBegin>
-        <ManagerName>$this->managerName</ManagerName>
-        <ContactPhone>$this->contactPhone</ContactPhone>
-        <Address>$this->address</Address>
-        <Category>$this->category</Category>
+$defaultTags
 
         <GoodsType>$this->goodsType</GoodsType>
-
-        <AdType>$this->adType</AdType>
-        <Condition>$this->condition</Condition>
-        <Title>$this->title</Title>
-        <Description><![CDATA[$this->description]]></Description>
-        <Price>$this->price</Price>
-        <Images>$imageTags</Images>
-        <VideoURL>$this->videoURL</VideoURL>
-        <AvitoId>$this->avitoId</AvitoId>
-        <AdStatus>$this->adStatus</AdStatus>
     </Ad>
 AVITOXML;
     }

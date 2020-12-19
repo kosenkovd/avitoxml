@@ -10,15 +10,23 @@ use App\Helpers\LinkHelper;
 
 class TableDtoMapper
 {
-    private static function GetGeneratorUrls(string $tableGuid, array $generators)
+    /**
+     * @param string $tableGuid
+     * @param Models\Generator[] $generators
+     * @return DTOs\GeneratorDTO[]
+     */
+    private static function GetGenerators(string $tableGuid, array $generators) : array
     {
-        $generatorUrls = [];
+        $generatorDtos = [];
         foreach ($generators as $generator)
         {
-            $generatorUrls[] = LinkHelper::getXmlGeneratorLink($tableGuid, $generator->getGeneratorGuid());
+            $generatorDtos[] = new DTOs\GeneratorDTO(
+                $generator->getTargetPlatform(),
+                LinkHelper::getXmlGeneratorLink($tableGuid, $generator->getGeneratorGuid())
+            );
         }
 
-        return $generatorUrls;
+        return $generatorDtos;
     }
 
     public static function MapTableDTO(Models\Table $table, Models\User $user) : DTOs\TableDTO
@@ -43,7 +51,7 @@ class TableDtoMapper
             $user->getSocialNetworkUrl(),
             LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
             LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId()),
-            self::GetGeneratorUrls($table->getTableGuid(), $table->getGenerators()),
+            self::GetGenerators($table->getTableGuid(), $table->getGenerators()),
             $table->getNotes(),
             $dateExpiredString,
             $isActive);
@@ -59,7 +67,7 @@ class TableDtoMapper
             $user->getSocialNetworkUrl(),
             LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
             LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId()),
-            self::GetGeneratorUrls($table->getTableGuid(), $table->getGenerators()),
+            self::GetGenerators($table->getTableGuid(), $table->getGenerators()),
             $table->getNotes(),
             $table->getDateDeleted());
     }

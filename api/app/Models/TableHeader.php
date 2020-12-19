@@ -37,10 +37,11 @@ class TableHeader {
     public ?int $avitoManualID = null;
     public ?int $paidControl = null;
     public ?int $photoCount = null;
+    public ?int $autoPart = null;
 
-    public $priceSpintax;
-    public $descriptionSpintax;
-    public $titleSpintax;
+    public ?int $priceSpintax = null;
+    public ?int $descriptionSpintax = null;
+    public ?int $titleSpintax = null;
 
 
     public function __construct(array $headers)
@@ -124,6 +125,9 @@ class TableHeader {
                     break;
                 case "менеджер":
                     $this->manager = $colNum;
+                    break;
+                case "типавтозапчастей":
+                    $this->autoPart = $colNum;
                     break;
                 case "датаивремяначаларазмещенияобъявления(часовойпоясmsk)":
                 case "датаивремяпубликации(помск)":

@@ -5,29 +5,23 @@
 
     use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
+    use App\Models\Generator;
     use App\Models\Table;
     use App\Models\TableHeader;
     use App\Repositories\Interfaces\ITableRepository;
     use App\Services\Interfaces\IGoogleServicesClient;
     use Ramsey\Uuid\Guid\Guid;
 
-    class FillImagesJob {
-        private IGoogleServicesClient $googleClient;
+    class FillImagesJob extends JobBase
+    {
         private ITableRepository $tableRepository;
 
-        private string $jobId;
+        /**
+         * @var int max time to execute job.
+         */
+        protected int $maxJobTime = 9*60;
 
         private array $images = [];
-
-        private function log(string $message) : void
-        {
-            $timestamp = new \DateTime();
-            $timestamp->setTimestamp(time());
-            $file = __DIR__."/../Logs/imageFillerLog.log";
-            file_put_contents($file,
-                $timestamp->format(DATE_ISO8601)." ".$this->jobId." ".$message.PHP_EOL,
-                FILE_APPEND | LOCK_EX);
-        }
 
         /**
          * Checks if it is possible to fill images in row.
@@ -73,17 +67,19 @@
         }
 
         /**
-         * Add Images to GoogleSheet.
+         * Updates GoogleSheet cell content.
          *
          * @param string $content content to put in cell.
          * @param int $numRow number of row.
          * @param string $tableID table id.
          * @param string $columnName col name.
+         * @param string $targetSheet sheet name.
          * @return void
          */
-        private function updateCellContent(string $content, int $numRow, string $tableID, string $columnName): void
+        private function updateCellContent(
+            string $content, int $numRow, string $tableID, string $columnName, string $targetSheet): void
         {
-            $range = 'Avito!' . $columnName . $numRow . ':' . $columnName . $numRow;
+            $range = $targetSheet.'!' . $columnName . $numRow . ':' . $columnName . $numRow;
 
             $values = [
                 [$content]
@@ -171,45 +167,30 @@
             return $newFolderName;
         }
 
-        public function __construct(
-            IGoogleServicesClient $googleClient,
-            ITableRepository $tableRepository
-        )
-        {
-            $this->jobId = Guid::uuid4()->toString();
-            $this->googleClient = $googleClient;
-            $this->tableRepository = $tableRepository;
-        }
-
         /**
-         * Start job.
+         * Fills images for specified generator.
          *
-         * Fills images for all tables that were not filled before.
-         *
-         * @param Table $table table to process.
+         * @param string $tableID Google spreadsheet id.
+         * @param string $baseFolderID Google drive base folder id.
+         * @param Generator $generator Generator.
          */
-        public function start(Table $table): void
+        private function processSheet(string $tableID, string $baseFolderID, Generator $generator): void
         {
-            $this->log("Start fill images job");
-
-            $tableID = $table->getGoogleSheetId();
-            echo "Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId().PHP_EOL;
-            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
-            $baseFolderID = $table->getGoogleDriveId();
-
-            $headerRange = 'Avito!A1:FZ1';
-            $headerResponse = $this->googleClient->getSpreadsheetCellsRange($tableID, $headerRange);
-            $propertyColumns = new TableHeader($headerResponse[0]);
-
-            $range = 'Avito!A2:FZ5001';
-            $values = $this->googleClient->getSpreadsheetCellsRange($tableID, $range);
+            $sheetName = $generator->getTargetPlatform();
+            $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
+            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
 
             if (empty($values))
             {
+                $this->log("No values (sheetName: ".$sheetName.", tableID: ".$tableID.")");
                 return;
             }
 
-            foreach ($values as $numRow => $row) {
+            foreach ($values as $numRow => $row)
+            {
+                $this->stopIfTimeout();
+
+                var_dump($numRow);
                 $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
                     $row[$propertyColumns->imagesRaw] != '';
 
@@ -217,10 +198,10 @@
                 $spreadsheetRowNum = $numRow + 2;
                 if($alreadyFilled || !$this->canFillImages($row, $propertyColumns))
                 {
+                    $this->log("Image fill is not required (sheetName: ".$sheetName.", tableID: ".$tableID.")");
                     continue;
                 }
 
-                echo "Filling row ".$spreadsheetRowNum.PHP_EOL;
                 $this->log("Filling row ".$spreadsheetRowNum);
 
                 if(!isset($row[$propertyColumns->subFolderName]) ||
@@ -236,7 +217,8 @@
                         $subFolderName,
                         $spreadsheetRowNum,
                         $tableID,
-                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName));
+                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName),
+                        $sheetName);
                 }
                 else
                 {
@@ -245,11 +227,9 @@
 
 
                 $this->log("Folder name ".$subFolderName);
-                echo "Folder name ".$subFolderName.PHP_EOL;
 
                 $images = $this->getImages($baseFolderID, $subFolderName);
                 $this->log("Found ".count($images)." images");
-                echo "Found ".count($images)." images";
 
                 if ($images !== []) {
                     $links = [];
@@ -260,13 +240,46 @@
                     $imagesString = join(PHP_EOL, $links);
 
                     $this->log("Images string ".$imagesString);
-                    echo "Images string ".$imagesString.PHP_EOL;
                     $this->updateCellContent(
                         $imagesString,
                         $spreadsheetRowNum,
                         $tableID,
-                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw));
+                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw),
+                        $generator->getTargetPlatform());
                 }
+            }
+        }
+
+        public function __construct(
+            IGoogleServicesClient $googleClient,
+            ITableRepository $tableRepository
+        )
+        {
+            parent::__construct($googleClient);
+            $this->tableRepository = $tableRepository;
+        }
+
+        /**
+         * Start job.
+         *
+         * Fills images for all tables that were not filled before.
+         *
+         * @param Table $table table to process.
+         */
+        public function start(Table $table): void
+        {
+            $this->log("Start fill images job");
+
+            $this->startTimestamp = time();
+
+            $tableID = $table->getGoogleSheetId();
+            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
+            $baseFolderID = $table->getGoogleDriveId();
+
+            foreach ($table->getGenerators() as $generator)
+            {
+                $this->processSheet($tableID, $baseFolderID, $generator);
+                $this->stopIfTimeout();
             }
 
             $this->log("Finished fill images job.");

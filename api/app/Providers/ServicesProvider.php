@@ -3,6 +3,7 @@
 
 namespace App\Providers;
 
+use App\Configuration\Spreadsheet\SheetNames;
 use Illuminate\Support\ServiceProvider;
 use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\Interfaces\IXmlGenerationService;
@@ -26,7 +27,7 @@ class ServicesProvider extends ServiceProvider
             return new GoogleServicesClient();
         });
         $this->app->bind(IXmlGenerationService::class, function ($app) {
-            return new XmlGenerationService(new GoogleServicesClient());
+            return new XmlGenerationService(new GoogleServicesClient(), new SheetNames());
         });
         $this->app->bind(ISpintaxService::class, function () {
             return new SpintaxService();

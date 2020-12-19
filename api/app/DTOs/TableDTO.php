@@ -18,7 +18,7 @@ class TableDTO extends TableDtoBase
      * @param string|null $userSocialNetworkUrl
      * @param string $googleSheetUrl
      * @param string $googleDriveUrl
-     * @param array $generatorUrls
+     * @param GeneratorDTO[] $generators
      * @param string|null $notes
      * @param string|null $dateExpired
      * @param bool $isActive
@@ -30,7 +30,7 @@ class TableDTO extends TableDtoBase
         ?string $userSocialNetworkUrl,
         string $googleSheetUrl,
         string $googleDriveUrl,
-        array $generatorUrls,
+        array $generators,
         ?string $notes,
         ?string $dateExpired,
         bool $isActive)
@@ -42,7 +42,7 @@ class TableDTO extends TableDtoBase
             $userSocialNetworkUrl,
             $googleSheetUrl,
             $googleDriveUrl,
-            $generatorUrls,
+            $generators,
             $notes);
 
         $this->dateExpired = $dateExpired;

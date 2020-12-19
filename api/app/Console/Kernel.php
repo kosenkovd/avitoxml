@@ -39,7 +39,7 @@ class Kernel extends ConsoleKernel
                 (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start($table);
             })
                 ->name("Fill image links ".$table->getTableId())
-                ->everyThreeMinutes()
+                ->everyTenMinutes()
                 ->withoutOverlapping();
 
             sleep(1);

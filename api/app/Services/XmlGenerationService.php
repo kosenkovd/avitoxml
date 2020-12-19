@@ -3,6 +3,7 @@
 
 namespace App\Services;
 
+use App\Configuration\Spreadsheet\SheetNames;
 use App\Models\Ads;
 use App\Models\TableHeader;
 use App\Services\Interfaces\IGoogleServicesClient;
@@ -15,7 +16,15 @@ use App\Services\Interfaces\IXmlGenerationService;
  */
 class XmlGenerationService implements IXmlGenerationService
 {
+    /**
+     * @var IGoogleServicesClient Google services client.
+     */
     private IGoogleServicesClient $googleClient;
+
+    /**
+     * @var SheetNames configuration with sheet names.
+     */
+    private SheetNames $sheetNamesConfig;
 
     /**
      * Checks if row contains all required properties.
@@ -43,25 +52,44 @@ class XmlGenerationService implements IXmlGenerationService
             $row[$propertyColumns->goodsType] == "Стройматериалы";
     }
 
+    /**
+     * Defines if row should not be processed.
+     *
+     * @param array $row
+     * @param TableHeader $propertyColumns
+     * @param string $sheetName
+     * @param string[] $ids ad ids for yandex.
+     * @param int $numRow
+     * @return bool
+     */
+    private function shouldSkipRow(
+        array $row, TableHeader $propertyColumns, string $sheetName, array $ids, int $numRow) : bool
+    {
+        $isIdPresent = ($sheetName == $this->sheetNamesConfig->getYandex() &&
+                            isset($ids[$numRow]) &&
+                            $ids[$numRow] != '') ||
+                       ($sheetName != $this->sheetNamesConfig->getYandex() &&
+                            @$row[@$propertyColumns->ID] != '');
+        return !$this->validateRequiredColumnsPresent($row, $propertyColumns) || !$isIdPresent;
+    }
 
-    public function __construct(IGoogleServicesClient $googleClient)
+
+    public function __construct(IGoogleServicesClient $googleClient, SheetNames $sheetNames)
     {
         $this->googleClient = $googleClient;
+        $this->sheetNamesConfig = $sheetNames;
     }
 
     /**
-     * Generates XML for specified spreadsheet.
-     *
-     * @param string $spreadsheetId spreadsheet id.
-     * @return string|null generated xml.
+     * @inheritDoc
      */
-    public function generateAvitoXML(string $spreadsheetId) : string
+    public function generateAvitoXML(string $spreadsheetId, string $targetSheet) : string
     {
-        $headerRange = 'Avito!A1:FZ1';
+        $headerRange = $targetSheet.'!A1:FZ1';
         $headerResponse = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $headerRange);
         $propertyColumns = new TableHeader($headerResponse[0]);
 
-        $range = 'Avito!A2:FZ5001';
+        $range = $targetSheet.'!A2:FZ5001';
         $values = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range);
 
         $xml = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>'
@@ -72,8 +100,15 @@ class XmlGenerationService implements IXmlGenerationService
         }
         else
         {
+            $idValues = [];
+            if($targetSheet == $this->sheetNamesConfig->getYandex())
+            {
+                $range = $this->sheetNamesConfig->getYandexSettings().'!C2:C5001';
+                $idValues = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range);
+            }
+
             foreach ($values as $numRow => $row) {
-                if(!$this->validateRequiredColumnsPresent($row, $propertyColumns) || $row[$propertyColumns->ID] == '')
+                if($this->shouldSkipRow($row, $propertyColumns, $targetSheet, $idValues, $numRow))
                 {
                     continue;
                 }

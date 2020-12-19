@@ -18,7 +18,7 @@ class TableDtoBase
 
     public string $googleDriveUrl;
 
-    public array $generatorUrls;
+    public array $generators;
 
     public ?string $notes;
 
@@ -30,7 +30,7 @@ class TableDtoBase
      * @param string|null $userSocialNetworkUrl
      * @param string $googleSheetUrl
      * @param string $googleDriveUrl
-     * @param array $generatorUrls
+     * @param GeneratorDTO[] $generators
      * @param string|null $notes
      */
     public function __construct(
@@ -40,7 +40,7 @@ class TableDtoBase
         ?string $userSocialNetworkUrl,
         string $googleSheetUrl,
         string $googleDriveUrl,
-        array $generatorUrls,
+        array $generators,
         ?string $notes)
     {
         $this->tableId = $tableId;
@@ -49,7 +49,7 @@ class TableDtoBase
         $this->userSocialNetworkUrl = $userSocialNetworkUrl;
         $this->googleSheetUrl = $googleSheetUrl;
         $this->googleDriveUrl = $googleDriveUrl;
-        $this->generatorUrls = $generatorUrls;
+        $this->generators = $generators;
         $this->notes = $notes;
     }
 }
