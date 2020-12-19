@@ -19,14 +19,16 @@ use Illuminate\Support\Facades\Artisan;
 |
 */
 
-Artisan::command('FillImages {table}', function ($table) {
-    $table = json_decode($table);
+Artisan::command('job:FillImages {$tableId}', function ($tableId) {
+    $tableRepository = new TableRepository();
+    $table = $tableRepository->get($tableId);
     echo "Starting FillImagesJob for ".$table->getTableGuid();
     (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start($table);
 });
 
-Artisan::command('FillImages2 {table}', function ($table) {
-    $table = json_decode($table);
+Artisan::command('job:RandomizeText {$tableId}', function ($tableId) {
+    $tableRepository = new TableRepository();
+    $table = $tableRepository->get($tableId);
     echo "Starting RandomizeTextJob for ".$table->getTableGuid();
     (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))
         ->start($table);

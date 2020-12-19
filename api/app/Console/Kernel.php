@@ -40,12 +40,12 @@ class Kernel extends ConsoleKernel
         shuffle($tables);
         foreach ($tables as $table)
         {
-            $schedule->exec('php artisan FillImages ' . json_encode($table))
+            $schedule->exec('cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan job:FillImages ' . $table->getTableId())
                 ->name("Fill image links ".$table->getTableId())
                 ->everyTenMinutes()
                 ->withoutOverlapping();
     
-            $schedule->exec('php artisan FillImages2 ' . json_encode($table))
+            $schedule->exec('cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan job:RandomizeText ' . $table->getTableId())
                 ->name("Randomize text ".$table->getTableId())
                 ->everyFiveMinutes()
                 ->withoutOverlapping();
