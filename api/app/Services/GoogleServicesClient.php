@@ -190,7 +190,7 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         catch (Exception $exception)
         {
-            //sleep(100);
+            sleep(100);
             $result = $driveService->files->listFiles([
                 'q' => "('" . $folderID . "' in parents)" .
                     "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
@@ -348,5 +348,33 @@ class GoogleServicesClient implements IGoogleServicesClient
                 $params
             );
         }
+    }
+
+    /**
+     * Updates GoogleSheet cell content.
+     *
+     * @param string $tableID table id.
+     * @param string $targetSheet sheet name.
+     * @param string $cell cell name.
+     * @param string $content content to put in cell.
+     * @return void
+     */
+    public function updateCellContent(
+        string $tableID, string $targetSheet, string $cell, string $content): void
+    {
+        $range = $targetSheet.'!' . $cell . ':' . $cell;
+
+        $values = [
+            [$content]
+        ];
+        $params = [
+            'valueInputOption' => 'RAW'
+        ];
+        $this->updateSpreadsheetCellsRange(
+            $tableID,
+            $range,
+            $values,
+            $params
+        );
     }
 }

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Configuration\Spreadsheet;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Console\Jobs\FillImagesJob;
 use App\Console\Jobs\RandomizeTextJob;
+use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Helpers\LinkHelper;
 use App\Repositories\TableRepository;
 use App\Services\GoogleServicesClient;
@@ -120,8 +122,14 @@ class TableController extends BaseController
         $spintaxService = new RandomizeTextJob(
             new SpintaxService(),
             new GoogleServicesClient(),
-            new TableRepository()
-        );
+            new TableRepository());
+
+        $triggerService = new TriggerSpreadsheetJob(
+            new GoogleServicesClient(),
+            new Spreadsheet());
+
+        $triggerService->start();
+
         if(is_null($table))
         {
             echo $id;
@@ -129,7 +137,7 @@ class TableController extends BaseController
         else
         {
             //$service->start($table);
-            $spintaxService->start($table);
+            //$spintaxService->start($table);
         }
 
         return response("", 200);

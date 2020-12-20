@@ -7,14 +7,12 @@ namespace App\Console\Jobs;
 use App\Helpers\SpreadsheetHelper;
 use App\Models\Generator;
 use App\Models\Table;
-use App\Repositories\Interfaces\ITableRepository;
 use App\Services\Interfaces\IGoogleServicesClient;
-use App\Services\SpintaxService;
+use App\Services\Interfaces\ISpintaxService;
 
 class RandomizeTextJob extends JobBase
 {
-    private SpintaxService $spintaxService;
-    private ITableRepository $tableRepository;
+    private ISpintaxService $spintaxService;
 
     protected int $maxJobTime = 4*60;
 
@@ -39,11 +37,9 @@ class RandomizeTextJob extends JobBase
             return;
         }
 
-        $this->log("Randomizing row ".$numRow.", pattern is: ".$row[$patternCol]);
+        $this->log("Randomizing row ".$numRow);
 
         $text = $this->spintaxService->randomize($row[$patternCol]);
-
-        $this->log("Randomized text is: ".$text);
 
         // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
         $numRow += +2;
@@ -67,6 +63,7 @@ class RandomizeTextJob extends JobBase
         $sheetName = $generator->getTargetPlatform();
         [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
 
+        var_dump(count($values));
         if (empty($values))
         {
             return;
@@ -107,13 +104,11 @@ class RandomizeTextJob extends JobBase
     }
 
     public function __construct(
-        SpintaxService $spintaxService,
-        IGoogleServicesClient $googleClient,
-        ITableRepository $tableRepository
+        ISpintaxService $spintaxService,
+        IGoogleServicesClient $googleClient
     )
     {
         parent::__construct($googleClient);
-        $this->tableRepository = $tableRepository;
         $this->spintaxService = $spintaxService;
     }
 
@@ -136,5 +131,7 @@ class RandomizeTextJob extends JobBase
             $this->processSheet($tableID, $generator);
             $this->stopIfTimeout();
         }
+
+        $this->log("Finished processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
     }
 }

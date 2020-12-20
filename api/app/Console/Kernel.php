@@ -2,7 +2,9 @@
 
 namespace App\Console;
 
+use App\Configuration\Spreadsheet;
 use App\Console\Jobs\RandomizeTextJob;
+use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Repositories\TableRepository;
 use App\Services\GoogleServicesClient;
 use App\Services\SpintaxService;
@@ -32,29 +34,51 @@ class Kernel extends ConsoleKernel
         $startTime = time();
         $timeout = 540;
 
+        $schedule->call(function () {
+            echo "Starting TriggerSpreadsheetJob".PHP_EOL;
+            (new TriggerSpreadsheetJob(
+                new GoogleServicesClient(), new Spreadsheet()))->start();
+        })
+            ->cron("50 * * * *");
+            //->everyMinute();
+
         $tableRepository = new TableRepository();
         $tables = $tableRepository->getTables();
 
+        // TODO: migrate calls to commands
         // Shuffle, because all tasks are run synchronously and stops by timeout, and this
         // will allow tables from end to be processed too.
-        shuffle($tables);
+        //shuffle($tables);
         foreach ($tables as $table)
         {
+            /*$schedule->command("table:fillImages ".$table->getTableGuid())
+                ->name("Fill image links command ".$table->getTableId())
+                ->everyFiveMinutes()
+                ->runInBackground();
+
+            $schedule->command("table:randomizeText ".$table->getTableGuid())
+                ->name("Randomize text command ".$table->getTableId())
+                ->everyThreeMinutes()
+                ->runInBackground();*/
+
             $schedule->call(function () use($table) {
                 echo "Starting FillImagesJob for ".$table->getTableGuid();
-                (new FillImagesJob(new GoogleServicesClient(), new TableRepository()))->start($table);
+                (new FillImagesJob(new GoogleServicesClient()))
+                    ->start($table);
             })
-                ->name("Fill image links ".$table->getTableId())
-                ->everyTenMinutes()
+                ->name("Randomize images ".$table->getTableId())
+                ->everyFiveMinutes()
+                ->runInBackground()
                 ->withoutOverlapping();
 
             $schedule->call(function () use($table) {
                 echo "Starting RandomizeTextJob for ".$table->getTableGuid();
-                (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient(), new TableRepository()))
+                (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient()))
                     ->start($table);
             })
                 ->name("Randomize text ".$table->getTableId())
                 ->everyFiveMinutes()
+                ->runInBackground()
                 ->withoutOverlapping();
 
             if(time() >= $startTime + $timeout)

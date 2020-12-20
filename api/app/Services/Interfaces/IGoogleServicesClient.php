@@ -87,4 +87,16 @@ interface IGoogleServicesClient
         array $values,
         array $params
     ) : void;
+
+    /**
+     * Updates GoogleSheet cell content.
+     *
+     * @param string $tableID table id.
+     * @param string $targetSheet sheet name.
+     * @param string $cell cell name.
+     * @param string $content content to put in cell.
+     * @return void
+     */
+    function updateCellContent(
+        string $tableID, string $targetSheet, string $cell, string $content): void;
 }

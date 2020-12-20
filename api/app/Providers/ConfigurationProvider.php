@@ -4,6 +4,7 @@
 namespace App\Providers;
 
 use App\Configuration\Config;
+use App\Configuration\Spreadsheet;
 use App\Configuration\Spreadsheet\SheetNames;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,6 +22,9 @@ class ConfigurationProvider extends ServiceProvider
         });
         $this->app->bind(SheetNames::class, function () {
             return new SheetNames();
+        });
+        $this->app->bind(Spreadsheet::class, function () {
+            return new Spreadsheet();
         });
     }
 }

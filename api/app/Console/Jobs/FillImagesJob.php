@@ -8,14 +8,11 @@
     use App\Models\Generator;
     use App\Models\Table;
     use App\Models\TableHeader;
-    use App\Repositories\Interfaces\ITableRepository;
     use App\Services\Interfaces\IGoogleServicesClient;
     use Ramsey\Uuid\Guid\Guid;
 
     class FillImagesJob extends JobBase
     {
-        private ITableRepository $tableRepository;
-
         /**
          * @var int max time to execute job.
          */
@@ -182,7 +179,6 @@
 
             if (empty($values))
             {
-                $this->log("No values (sheetName: ".$sheetName.", tableID: ".$tableID.")");
                 return;
             }
 
@@ -198,7 +194,6 @@
                 $spreadsheetRowNum = $numRow + 2;
                 if($alreadyFilled || !$this->canFillImages($row, $propertyColumns))
                 {
-                    $this->log("Image fill is not required (sheetName: ".$sheetName.", tableID: ".$tableID.")");
                     continue;
                 }
 
@@ -250,13 +245,9 @@
             }
         }
 
-        public function __construct(
-            IGoogleServicesClient $googleClient,
-            ITableRepository $tableRepository
-        )
+        public function __construct(IGoogleServicesClient $googleClient)
         {
             parent::__construct($googleClient);
-            $this->tableRepository = $tableRepository;
         }
 
         /**
