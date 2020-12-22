@@ -6,6 +6,7 @@ use App\Configuration\Spreadsheet;
 use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Repositories\TableRepository;
+use App\Repositories\TableUpdateLockRepository;
 use App\Services\GoogleServicesClient;
 use App\Services\SpintaxService;
 use Illuminate\Console\Scheduling\Schedule;
@@ -14,6 +15,15 @@ use App\Console\Jobs\FillImagesJob;
 
 class Kernel extends ConsoleKernel
 {
+    private static function execInBackground($cmd) {
+        if (substr(php_uname(), 0, 7) == "Windows"){
+            pclose(popen("start /B ". $cmd, "r"));
+        }
+        else {
+            exec($cmd . " > /dev/null &");
+        }
+    }
+
     /**
      * The Artisan commands provided by your application.
      *
@@ -31,35 +41,33 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $startTime = time();
-        $timeout = 540;
-
         $schedule->call(function () {
             echo "Starting TriggerSpreadsheetJob".PHP_EOL;
             (new TriggerSpreadsheetJob(
                 new GoogleServicesClient(), new Spreadsheet()))->start();
         })
             ->cron("50 * * * *");
-            //->everyMinute();
 
-        $tableRepository = new TableRepository();
+        $tableRepository = new TableRepository(new TableUpdateLockRepository());
         $tables = $tableRepository->getTables();
 
-        // TODO: migrate calls to commands
-        // Shuffle, because all tasks are run synchronously and stops by timeout, and this
-        // will allow tables from end to be processed too.
-        //shuffle($tables);
         foreach ($tables as $table)
         {
-            /*$schedule->command("table:fillImages ".$table->getTableGuid())
+            /*$schedule->exec("cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan table:fillImages ".$table->getTableGuid())
                 ->name("Fill image links command ".$table->getTableId())
                 ->everyFiveMinutes()
                 ->runInBackground();
 
-            $schedule->command("table:randomizeText ".$table->getTableGuid())
+            $schedule->exec("cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan table:randomizeText ".$table->getTableGuid())
                 ->name("Randomize text command ".$table->getTableId())
-                ->everyThreeMinutes()
-                ->runInBackground();*/
+                ->everyFiveMinutes()
+                ->runInBackground();
+
+            $schedule->call(function() use($table) {
+                exec("cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan table:fillImages ".$table->getTableGuid()."  > /dev/null &");
+            })
+                ->name("Fill image links exec command ".$table->getTableId())
+                ->everyMinute();*/
 
             $schedule->call(function () use($table) {
                 echo "Starting FillImagesJob for ".$table->getTableGuid();
@@ -67,7 +75,7 @@ class Kernel extends ConsoleKernel
                     ->start($table);
             })
                 ->name("Randomize images ".$table->getTableId())
-                ->everyFiveMinutes()
+                ->everyTenMinutes()
                 ->runInBackground()
                 ->withoutOverlapping();
 
@@ -80,11 +88,6 @@ class Kernel extends ConsoleKernel
                 ->everyFiveMinutes()
                 ->runInBackground()
                 ->withoutOverlapping();
-
-            if(time() >= $startTime + $timeout)
-            {
-                break;
-            }
         }
     }
 

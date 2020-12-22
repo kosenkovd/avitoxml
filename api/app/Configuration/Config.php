@@ -9,9 +9,12 @@ class Config {
     private string $dbPassword;
     private string $usersTableName;
     private string $tablesTableName;
+    private string $tableUpdateLockTableName;
     private string $generatorsTableName;
     private string $copySpreadsheetId;
     private string $baseFolderId;
+    private string $rootDirectory;
+    private bool $isLoggingEnabled;
 
     public function __construct()
     {
@@ -95,5 +98,29 @@ class Config {
     public function getBaseFolderId(): string
     {
         return $this->baseFolderId;
+    }
+
+    /**
+     * @return string
+     */
+    public function getTableUpdateLockTableName(): string
+    {
+        return $this->tableUpdateLockTableName;
+    }
+
+    /**
+     * @return string
+     */
+    public function getRootDirectory(): string
+    {
+        return $this->rootDirectory;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isLoggingEnabled(): bool
+    {
+        return $this->isLoggingEnabled;
     }
 }

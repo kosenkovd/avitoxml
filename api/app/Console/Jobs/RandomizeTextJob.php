@@ -14,7 +14,7 @@ class RandomizeTextJob extends JobBase
 {
     private ISpintaxService $spintaxService;
 
-    protected int $maxJobTime = 4*60;
+    protected int $maxJobTime = 60*60;
 
     /**
      * Randomises text in specified result column based on pattern column and updates spreadsheet.
@@ -121,6 +121,7 @@ class RandomizeTextJob extends JobBase
      */
     public function start(Table $table) : void
     {
+        sleep(rand(1, 120));
         $this->startTimestamp = time();
         $tableID = $table->getGoogleSheetId();
         $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());

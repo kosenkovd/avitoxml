@@ -17,7 +17,7 @@ class TriggerSpreadsheetJob extends JobBase
     private Spreadsheet $spreadsheetConfig;
 
     private string $sheetName = "Инструкция";
-    private string $cellToChange = "A5";
+    private string $cellToChange = "B9";
 
     public function __construct(
         IGoogleServicesClient $googleClient,

@@ -9,6 +9,7 @@ use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Helpers\LinkHelper;
 use App\Repositories\TableRepository;
+use App\Repositories\TableUpdateLockRepository;
 use App\Services\GoogleServicesClient;
 use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\Interfaces\IMailService;
@@ -114,15 +115,11 @@ class TableController extends BaseController
     public function show(string $id)
     {
         $table = $this->tableRepository->get($id);
-        $service = new FillImagesJob(
-            new GoogleServicesClient(),
-            new TableRepository()
-        );
+        $service = new FillImagesJob(new GoogleServicesClient());
 
         $spintaxService = new RandomizeTextJob(
             new SpintaxService(),
-            new GoogleServicesClient(),
-            new TableRepository());
+            new GoogleServicesClient());
 
         $triggerService = new TriggerSpreadsheetJob(
             new GoogleServicesClient(),
@@ -200,20 +197,20 @@ class TableController extends BaseController
 
             $table->addGenerator($generator->setGeneratorId($newGeneratorId));
 
-            $this->googleServicesClient->updateSpreadsheetCellsRange(
+            $this->googleServicesClient->updateCellContent(
                 $googleTableId,
-                $this->sheetNamesConfig->getInformation()."!".$target["cell"].":".$target["cell"],
-                [[LinkHelper::getXmlGeneratorLink(
-                    $table->getTableGuid(), $generator->getGeneratorGuid())]],
-                [ 'valueInputOption' => 'RAW' ]
+                $this->sheetNamesConfig->getInformation(),
+                $target["cell"],
+                LinkHelper::getXmlGeneratorLink(
+                    $table->getTableGuid(), $generator->getGeneratorGuid())
             );
         }
 
-        $this->googleServicesClient->updateSpreadsheetCellsRange(
+        $this->googleServicesClient->updateCellContent(
             $googleTableId,
-            $this->sheetNamesConfig->getInformation()."!F7:F7",
-            [[LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId())]],
-            [ 'valueInputOption' => 'RAW' ]
+            $this->sheetNamesConfig->getInformation(),
+            "E7",
+            LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId())
         );
 
         $this->mailService->sendEmailWithTableData($table);

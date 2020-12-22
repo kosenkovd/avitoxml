@@ -16,7 +16,7 @@
         /**
          * @var int max time to execute job.
          */
-        protected int $maxJobTime = 9*60;
+        protected int $maxJobTime = 60*60;
 
         private array $images = [];
 
@@ -259,6 +259,7 @@
          */
         public function start(Table $table): void
         {
+            sleep(rand(1, 120));
             $this->log("Start fill images job");
 
             $this->startTimestamp = time();

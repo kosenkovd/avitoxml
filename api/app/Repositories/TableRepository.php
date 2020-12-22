@@ -6,14 +6,19 @@ use App\Configuration\Config;
 use App\Models\Generator;
 use App\Models\Table;
 use App\Repositories\Interfaces\ITableRepository;
+use App\Repositories\Interfaces\ITableUpdateLockRepository;
 use Exception;
 
 class TableRepository extends RepositoryBase implements ITableRepository
 {
-    function __construct()
+    private ITableUpdateLockRepository $tableUpdateLockRepository;
+
+    function __construct(ITableUpdateLockRepository $tableUpdateLockRepository)
     {
         parent::__construct();
         $this->config = new Config();
+
+        $this->tableUpdateLockRepository = $tableUpdateLockRepository;
     }
 
     /**
@@ -116,6 +121,8 @@ VALUES (
         $mysqli->query($statement);
         $tableId = $mysqli->insert_id;
         $mysqli->close();
+
+        $this->tableUpdateLockRepository->insert($tableId);
         return $tableId;
     }
 

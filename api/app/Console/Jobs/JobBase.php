@@ -17,7 +17,7 @@ abstract class JobBase
     /**
      * @var bool is logging enabled.
      */
-    protected bool $loggingEnabled = true;
+    protected bool $loggingEnabled = false;
 
     /**
      * @var int job execution time start epoch.
