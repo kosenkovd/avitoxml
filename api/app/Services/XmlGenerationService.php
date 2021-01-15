@@ -61,7 +61,10 @@ class XmlGenerationService implements IXmlGenerationService
      */
     private function isAutoPart(array $row, TableHeader $propertyColumns) : bool
     {
-        return isset($propertyColumns->autoPart) &&
+        return isset($propertyColumns->goodsType) &&
+            isset($row[$propertyColumns->goodsType]) &&
+            $row[$propertyColumns->goodsType] == "Запчасти" &&
+            isset($propertyColumns->autoPart) &&
             isset($row[$propertyColumns->autoPart]);
     }
 
@@ -99,11 +102,11 @@ class XmlGenerationService implements IXmlGenerationService
     public function generateAvitoXML(string $spreadsheetId, string $targetSheet) : string
     {
         $headerRange = $targetSheet.'!A1:FZ1';
-        $headerResponse = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $headerRange);
+        $headerResponse = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $headerRange, false);
         $propertyColumns = new TableHeader($headerResponse[0]);
 
         $range = $targetSheet.'!A2:FZ5001';
-        $values = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range);
+        $values = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range, false);
 
         $xml = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>'
             .PHP_EOL."<Ads formatVersion=\"3\" target=\"Avito.ru\">".PHP_EOL;
@@ -117,7 +120,7 @@ class XmlGenerationService implements IXmlGenerationService
             if($targetSheet == $this->sheetNamesConfig->getYandex())
             {
                 $range = $this->sheetNamesConfig->getYandexSettings().'!C2:C5001';
-                $idValues = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range);
+                $idValues = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range, false);
             }
 
             foreach ($values as $numRow => $row) {
@@ -149,6 +152,7 @@ class XmlGenerationService implements IXmlGenerationService
                             $ad = new Ads\ConstructionMaterialAd($row, $propertyColumns);
                             break;
                         }
+                    case "Запчасти и автотовары":
                         if($this->isAutoPart($row, $propertyColumns))
                         {
                             $ad = new Ads\AutoPartAd($row, $propertyColumns);

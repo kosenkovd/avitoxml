@@ -101,10 +101,11 @@ class GeneratorController extends BaseController
         $content = "";
 
         $timeModified = $this->googleClient->getFileModifiedTime($table->getGoogleSheetId());
+
         $toLoadLastGeneration = $table->isDeleted() ||
+            is_null($timeModified) ||
             (!is_null($table->getDateExpired()) && $table->getDateExpired() < time()) ||
             ($generator->getLastGenerated() > $timeModified->getTimestamp());
-
         if($toLoadLastGeneration)
         {
             $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());

@@ -25,7 +25,7 @@ class AutoPartAd extends AdBase
     <Ad>
 $defaultTags
 
-        <avtozapchasti_tip>$this->vehicleType</avtozapchasti_tip>
+        <avtozapchasti_tip>$this->autoPart</avtozapchasti_tip>
     </Ad>
 AVITOXML;
     }

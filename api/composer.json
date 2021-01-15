@@ -9,6 +9,8 @@
     "license": "MIT",
     "require": {
         "php": "^7.4|^8.0",
+        "ext-mysqli": "*",
+        "arhitector/yandex": "dev-master",
         "fideloper/proxy": "^4.4",
         "fruitcake/laravel-cors": "^2.0",
         "google/apiclient": "^2.7",

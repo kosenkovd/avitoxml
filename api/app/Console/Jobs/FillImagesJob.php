@@ -259,7 +259,6 @@
          */
         public function start(Table $table): void
         {
-            sleep(rand(1, 120));
             $this->log("Start fill images job");
 
             $this->startTimestamp = time();

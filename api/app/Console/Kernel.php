@@ -53,21 +53,25 @@ class Kernel extends ConsoleKernel
 
         foreach ($tables as $table)
         {
-            /*$schedule->exec("cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan table:fillImages ".$table->getTableGuid())
+            $schedule->exec("cd /var/www/agishev-xml.ru/api && php artisan table:fillImages ".$table->getTableGuid())
                 ->name("Fill image links command ".$table->getTableId())
                 ->everyFiveMinutes()
-                ->runInBackground();
+                ->runInBackground()
+                ->withoutOverlapping(60);
 
-            $schedule->exec("cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan table:randomizeText ".$table->getTableGuid())
+            $schedule->exec("cd /var/www/agishev-xml.ru/api && php artisan table:randomizeText ".$table->getTableGuid())
                 ->name("Randomize text command ".$table->getTableId())
                 ->everyFiveMinutes()
-                ->runInBackground();
+                ->runInBackground()
+                ->withoutOverlapping(60);
 
-            $schedule->call(function() use($table) {
+            sleep(1);
+
+            /*$schedule->call(function() use($table) {
                 exec("cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan table:fillImages ".$table->getTableGuid()."  > /dev/null &");
             })
                 ->name("Fill image links exec command ".$table->getTableId())
-                ->everyMinute();*/
+                ->everyMinute();
 
             $schedule->call(function () use($table) {
                 echo "Starting FillImagesJob for ".$table->getTableGuid();
@@ -87,7 +91,7 @@ class Kernel extends ConsoleKernel
                 ->name("Randomize text ".$table->getTableId())
                 ->everyFiveMinutes()
                 ->runInBackground()
-                ->withoutOverlapping();
+                ->withoutOverlapping();*/
         }
     }
 

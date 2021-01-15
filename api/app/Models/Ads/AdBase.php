@@ -10,6 +10,7 @@ abstract class AdBase
 {
     protected $id;
     protected $dateBegin;
+    protected $dateEnd;
     protected $managerName;
     protected $contactPhone;
     protected $category;
@@ -48,6 +49,29 @@ abstract class AdBase
         {
             $this->dateBegin = null;
         }
+
+        if(isset($row[$propertyColumns->dateEnd]))
+        {
+            if(strpos($row[$propertyColumns->dateEnd], ":"))
+            {
+                $date = DateTime::createFromFormat(
+                    'd.m.Y H:i', $row[$propertyColumns->dateEnd], new DateTimeZone("Europe/Moscow"));
+            }
+            else
+            {
+                $date = DateTime::createFromFormat(
+                    'd.m.Y', $row[$propertyColumns->dateEnd], new DateTimeZone("Europe/Moscow"));
+            }
+            if($date !== false)
+            {
+                $this->dateEnd = $date->format('Y-m-d\TH:i:sP');
+            }
+        }
+        else
+        {
+            $this->dateEnd = null;
+        }
+
         $this->managerName = isset($row[$propertyColumns->manager])
             ? htmlspecialchars($row[$propertyColumns->manager])
             : null;
@@ -66,8 +90,8 @@ abstract class AdBase
             : null;
         if(isset($row[$propertyColumns->description]))
         {
-            $this->description = preg_replace(
-                '#<br\s+/>#', '<br/>', nl2br($row[$propertyColumns->description], true));
+            $this->description = str_replace("\n\r", "\n", $row[$propertyColumns->description]);
+            $this->description = str_replace("\n", "<br/>", $this->description);
         }
         else
         {
@@ -135,6 +159,7 @@ abstract class AdBase
         return <<<AVITOXML
         <Id>$this->id</Id>
         <DateBegin>$this->dateBegin</DateBegin>
+        <DateEnd>$this->dateEnd</DateEnd>
         <ManagerName>$this->managerName</ManagerName>
         <ContactPhone>$this->contactPhone</ContactPhone>
         <Address>$this->address</Address>

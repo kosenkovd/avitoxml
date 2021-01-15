@@ -34,15 +34,16 @@ Artisan::command('table:fillImages {tableID}', function (
         "FillImagesBackground",
         new \App\Configuration\Config()
     );
+    sleep(rand(1, 60));
 
     $table = $tableRepository->get($tableID);
 
     $lock = $tableUpdateLockRepository->getByTableId($table->getTableId());
-    if($lock->getFillImagesLock() == 1)
+    /*if($lock->getFillImagesLock() == 1)
     {
         $logger->log("Lock is taken for ".$tableID);
         return;
-    }
+    }*/
 
     $logger->log("Setting lock for ".$tableID);
     $tableUpdateLockRepository->update($lock->setFillImagesLock(1));
@@ -78,15 +79,16 @@ Artisan::command('table:randomizeText {tableID}', function (
         "RandomizeTextBackground",
         new \App\Configuration\Config()
     );
+    sleep(rand(1, 60));
 
     $table = $tableRepository->get($tableID);
 
     $lock = $tableUpdateLockRepository->getByTableId($table->getTableId());
-    if($lock->getRandomizeTextLock() == 1)
+    /*if($lock->getRandomizeTextLock() == 1)
     {
         $logger->log("Lock is taken for ".$tableID);
         return;
-    }
+    }*/
 
     $logger->log("Setting lock for ".$tableID);
     $tableUpdateLockRepository->update($lock->setRandomizeTextLock(1));

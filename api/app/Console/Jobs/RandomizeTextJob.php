@@ -121,7 +121,6 @@ class RandomizeTextJob extends JobBase
      */
     public function start(Table $table) : void
     {
-        sleep(rand(1, 120));
         $this->startTimestamp = time();
         $tableID = $table->getGoogleSheetId();
         $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());

@@ -133,7 +133,7 @@ class TableController extends BaseController
         }
         else
         {
-            //$service->start($table);
+            $service->start($table);
             //$spintaxService->start($table);
         }
 
@@ -174,11 +174,11 @@ class TableController extends BaseController
             ],
             [
                 "cell" => "C4",
-                "target" =>$this->sheetNamesConfig->getYandex()
+                "target" =>$this->sheetNamesConfig->getYoula()
             ],
             [
                 "cell" => "C5",
-                "target" =>$this->sheetNamesConfig->getYoula()
+                "target" =>$this->sheetNamesConfig->getYandex()
             ]
         ];
 

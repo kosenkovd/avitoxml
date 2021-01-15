@@ -14,36 +14,40 @@ interface IGoogleServicesClient
      * @param string|null $name name of new folder.
      * @param string|null $parentId parent folder id.
      * @param bool $setPermissions whether to set default permissions to folder.
-     * @return string new folder id.
+     * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
+     * @return string|null new folder id.
      */
     public function createFolder(
         string $name = null,
         string $parentId = null,
-        bool $setPermissions = true): string;
+        bool $setPermissions = true,
+        bool $toRetry = true): ?string;
 
     /**
      * Retrieves subfolder id by parent folder id and subfolder name.
      *
      * @param string $folderID parent folder id.
      * @param string $subFolderName name of subfolder.
+     * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
      * @return string|null subfolder id, if subfolder with specified name exists.
      */
-    public function getChildFolderByName(string $folderID, string $subFolderName): ?string;
+    public function getChildFolderByName(string $folderID, string $subFolderName, bool $toRetry = true): ?string;
 
     /**
      * Gets images in specified folder.
      * @param string $folderID folder id.
+     * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
      * @return Google_Service_Drive_DriveFile[] images.
      */
-    public function listFolderImages(string $folderID): array;
+    public function listFolderImages(string $folderID, bool $toRetry = true): array;
 
     /**
      * Get last modified time for file.
      *
      * @param string $fileId file id.
-     * @return DateTime last modified time if file found.
+     * @return DateTime|null last modified time if file found.
      */
-    public function getFileModifiedTime(string $fileId) : DateTime;
+    public function getFileModifiedTime(string $fileId) : ?DateTime;
 
     /**
      * Move file to specified folder.
@@ -53,8 +57,13 @@ interface IGoogleServicesClient
      * @param Google_Service_Drive_DriveFile $file source file.
      * @param string $folderId destination folder id.
      * @param string|null $newName new file name, if needs to be updated.
+     * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
      */
-    public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId, string $newName = null): void;
+    public function moveFile(
+        Google_Service_Drive_DriveFile $file,
+        string $folderId,
+        string $newName = null,
+        bool $toRetry = true): void;
 
     /**
      * Create new GoogleSheet and new folder on GoogleDisk.
@@ -68,9 +77,10 @@ interface IGoogleServicesClient
      *
      * @param string $spreadsheetId spreadsheet id.
      * @param string $range range to get.
+     * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
      * @return array cells in chosen range.
      */
-    public function getSpreadsheetCellsRange(string $spreadsheetId, string $range) : array;
+    public function getSpreadsheetCellsRange(string $spreadsheetId, string $range, bool $toRetry = true) : array;
 
     /**
      * Update cells range for GoogleSheet.
@@ -79,13 +89,15 @@ interface IGoogleServicesClient
      * @param string $range range to update.
      * @param array $values values to update.
      * @param array $params params of request to update.
+     * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
      * @return void
      */
     public function updateSpreadsheetCellsRange(
         string $spreadsheetId,
         string $range,
         array $values,
-        array $params
+        array $params,
+        bool $toRetry = true
     ) : void;
 
     /**
@@ -95,8 +107,9 @@ interface IGoogleServicesClient
      * @param string $targetSheet sheet name.
      * @param string $cell cell name.
      * @param string $content content to put in cell.
+     * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
      * @return void
      */
     function updateCellContent(
-        string $tableID, string $targetSheet, string $cell, string $content): void;
+        string $tableID, string $targetSheet, string $cell, string $content, bool $toRetry = true): void;
 }

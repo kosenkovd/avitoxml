@@ -102,7 +102,8 @@ class GoogleServicesClient implements IGoogleServicesClient
     public function createFolder(
         string $name = null,
         string $parentId = null,
-        bool $setPermissions = true): string
+        bool $setPermissions = true,
+        bool $toRetry = true): ?string
     {
         if(is_null($name))
         {
@@ -124,7 +125,12 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         catch (Exception $exception)
         {
-            sleep(100);
+            if(!$toRetry)
+            {
+                throw $exception;
+            }
+
+            sleep(60);
             $result = $driveService->files->create($driveFolder);
         }
 
@@ -137,13 +143,9 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Retrieves subfolder id by parent folder id and subfolder name.
-     *
-     * @param string $folderID parent folder id.
-     * @param string $subFolderName name of subfolder.
-     * @return string|null subfolder id, if subfolder with specified name exists.
+     * @inheritDoc
      */
-    public function getChildFolderByName(string $folderID, string $subFolderName): ?string
+    public function getChildFolderByName(string $folderID, string $subFolderName, bool $toRetry = true): ?string
     {
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
@@ -156,7 +158,12 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         catch (Exception $exception)
         {
-            sleep(100);
+            if(!$toRetry)
+            {
+                return null;
+            }
+
+            sleep(60);
             $result = $driveService->files->listFiles(['q' =>
                 "('" . $folderID . "' in parents) and (mimeType = 'application/vnd.google-apps.folder')" .
                 " and (name='" . trim($subFolderName) . "')"]);
@@ -171,11 +178,9 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Gets images in specified folder.
-     * @param string $folderID folder id.
-     * @return Google_Service_Drive_DriveFile[] images.
+     * @inheritDoc
      */
-    public function listFolderImages(string $folderID): array
+    public function listFolderImages(string $folderID, bool $toRetry = true): array
     {
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
@@ -190,7 +195,12 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         catch (Exception $exception)
         {
-            sleep(100);
+            if(!$toRetry)
+            {
+                throw $exception;
+            }
+
+            sleep(60);
             $result = $driveService->files->listFiles([
                 'q' => "('" . $folderID . "' in parents)" .
                     "and ((mimeType = 'image/jpeg') or (mimeType = 'image/jpg') or (mimeType = 'image/png'))",
@@ -202,15 +212,13 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Move file to specified folder.
-     *
-     * PS. for now it only copies file, as it is no way to delete source one.
-     *
-     * @param Google_Service_Drive_DriveFile $file source file.
-     * @param string $folderId destination folder id.
-     * @param string|null $newName new file name, if needs to be updated.
+     * @inheritDoc
      */
-    public function moveFile(Google_Service_Drive_DriveFile $file, string $folderId, string $newName = null): void
+    public function moveFile(
+        Google_Service_Drive_DriveFile $file,
+        string $folderId,
+        string $newName = null,
+        bool $toRetry = true): void
     {
         $fileId = $file->getId();
         $newFile = new Google_Service_Drive_DriveFile();
@@ -229,18 +237,20 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         catch (Exception $exception)
         {
-            sleep(100);
+            if(!$toRetry)
+            {
+                throw $exception;
+            }
+
+            sleep(60);
             $driveService->files->copy($fileId, $newFile);
         }
     }
 
     /**
-     * Get last modified time for file.
-     *
-     * @param string $fileId file id.
-     * @return DateTime last modified time if file found.
+     * @inheritDoc
      */
-    public function getFileModifiedTime(string $fileId) : DateTime
+    public function getFileModifiedTime(string $fileId) : ?DateTime
     {
         $this->client->addScope(Google_Service_Drive::DRIVE);
         $driveService = new Google_Service_Drive($this->client);
@@ -253,10 +263,7 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         catch (Exception $exception)
         {
-            sleep(100);
-            $file = $driveService->files->get($fileId, [
-                'fields' => 'modifiedTime, createdTime'
-            ]);
+            throw $exception;
         }
 
         if(is_null($file->getModifiedTime()))
@@ -268,9 +275,7 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Create new GoogleSheet and new folder on GoogleDisk.
-     *
-     * @return string[] newTableId, newFolderId
+     * @inheritDoc
      */
     public function createTableInfrastructure(): array
     {
@@ -280,13 +285,9 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Get cells range for GoogleSheet.
-     *
-     * @param string $spreadsheetId spreadsheet id.
-     * @param string $range range to get.
-     * @return array cells in chosen range.
+     * @inheritDoc
      */
-    public function getSpreadsheetCellsRange(string $spreadsheetId, string $range) : array
+    public function getSpreadsheetCellsRange(string $spreadsheetId, string $range, bool $toRetry = true) : array
     {
         $service = new Google_Service_Sheets($this->client);
         try
@@ -295,7 +296,12 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         catch (Exception $exception)
         {
-            sleep(100);
+            if(!$toRetry)
+            {
+                throw $exception;
+            }
+
+            sleep(60);
             $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
         }
 
@@ -307,20 +313,14 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Update cells range for GoogleSheet.
-     *
-     * @param string $spreadsheetId spreadsheet id.
-     * @param string $range range to update.
-     * @param array $values values to update.
-     * @param array $params params of request to update.
-     * @return void
+     * @inheritDoc
      */
     public function updateSpreadsheetCellsRange(
         string $spreadsheetId,
         string $range,
         array $values,
-        array $params
-    ) : void
+        array $params,
+        bool $toRetry = true) : void
     {
         $body = new Google_Service_Sheets_ValueRange(
             [
@@ -340,7 +340,12 @@ class GoogleServicesClient implements IGoogleServicesClient
         }
         catch (Exception $exception)
         {
-            sleep(100);
+            if(!$toRetry)
+            {
+                throw $exception;
+            }
+
+            sleep(60);
             $service->spreadsheets_values->update(
                 $spreadsheetId,
                 $range,
@@ -351,16 +356,10 @@ class GoogleServicesClient implements IGoogleServicesClient
     }
 
     /**
-     * Updates GoogleSheet cell content.
-     *
-     * @param string $tableID table id.
-     * @param string $targetSheet sheet name.
-     * @param string $cell cell name.
-     * @param string $content content to put in cell.
-     * @return void
+     * @inheritDoc
      */
     public function updateCellContent(
-        string $tableID, string $targetSheet, string $cell, string $content): void
+        string $tableID, string $targetSheet, string $cell, string $content, bool $toRetry = true): void
     {
         $range = $targetSheet.'!' . $cell . ':' . $cell;
 
@@ -374,7 +373,8 @@ class GoogleServicesClient implements IGoogleServicesClient
             $tableID,
             $range,
             $values,
-            $params
+            $params,
+            $toRetry
         );
     }
 }
