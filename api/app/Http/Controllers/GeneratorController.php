@@ -100,7 +100,17 @@ class GeneratorController extends BaseController
 
         $content = "";
 
-        $timeModified = $this->googleClient->getFileModifiedTime($table->getGoogleSheetId());
+        try
+        {
+            $timeModified = $this->googleClient->getFileModifiedTime($table->getGoogleSheetId());
+        }
+        catch (\Exception $e)
+        {
+            $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
+
+            return response($content, 200)
+                ->header("Content-Type", "application/xml");
+        }
 
         $toLoadLastGeneration = $table->isDeleted() ||
             is_null($timeModified) ||
