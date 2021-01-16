@@ -4,12 +4,14 @@
 namespace App\Providers;
 
 use App\Configuration\Spreadsheet\SheetNames;
+use App\Services\GoogleDriveClientService;
+use App\Services\Interfaces\IGoogleDriveClientService;
+use App\Services\Interfaces\ISpreadsheetClientService;
+use App\Services\SpreadsheetClientService;
 use Illuminate\Support\ServiceProvider;
-use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\Interfaces\IXmlGenerationService;
 use App\Services\Interfaces\ISpintaxService;
 use App\Services\Interfaces\IMailService;
-use App\Services\GoogleServicesClient;
 use App\Services\XmlGenerationService;
 use App\Services\SpintaxService;
 use App\Services\MailService;
@@ -23,11 +25,14 @@ class ServicesProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->bind(IGoogleServicesClient::class, function () {
-            return new GoogleServicesClient();
+        $this->app->bind(IGoogleDriveClientService::class, function () {
+            return new GoogleDriveClientService();
         });
-        $this->app->bind(IXmlGenerationService::class, function ($app) {
-            return new XmlGenerationService(new GoogleServicesClient(), new SheetNames());
+        $this->app->bind(ISpreadsheetClientService::class, function () {
+            return new SpreadsheetClientService();
+        });
+        $this->app->bind(IXmlGenerationService::class, function () {
+            return new XmlGenerationService(new SpreadsheetClientService(), new SheetNames());
         });
         $this->app->bind(ISpintaxService::class, function () {
             return new SpintaxService();

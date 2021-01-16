@@ -3,8 +3,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Interfaces\IGoogleServicesClient;
+use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
@@ -37,20 +38,21 @@ class GeneratorController extends BaseController
     private IXmlGenerationService $xmlGenerator;
 
     /**
-     * @var IGoogleServicesClient GoogleServices client.
+     * @var ISpreadsheetClientService Google Spreadsheet client.
      */
-    private IGoogleServicesClient $googleClient;
-
+    private ISpreadsheetClientService $spreadsheetClientService;
+    
     public function __construct(
         Interfaces\ITableRepository $tablesRepository,
         Interfaces\IGeneratorRepository  $generatorsRepository,
         IXmlGenerationService $xmlGenerator,
-        IGoogleServicesClient $googleClient)
+        ISpreadsheetClientService $spreadsheetClientService
+    )
     {
         $this->tablesRepository = $tablesRepository;
         $this->generatorsRepository = $generatorsRepository;
         $this->xmlGenerator = $xmlGenerator;
-        $this->googleClient = $googleClient;
+        $this->spreadsheetClientService = $spreadsheetClientService;
     }
 
     /**
@@ -64,7 +66,7 @@ class GeneratorController extends BaseController
     {
         $tables = [];
         $table = new Models\Table();
-        $table->ti = $tableId;
+        $table->setTableId($tableId);
         $tables[] = $table;
         return response()->json($tables, 200);
     }
@@ -102,9 +104,9 @@ class GeneratorController extends BaseController
 
         try
         {
-            $timeModified = $this->googleClient->getFileModifiedTime($table->getGoogleSheetId());
+            $timeModified = $this->spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
         }
-        catch (\Exception $e)
+        catch (Exception $e)
         {
             $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
 
@@ -130,7 +132,7 @@ class GeneratorController extends BaseController
                 $this->generatorsRepository->update($generator);
                 $this->generatorsRepository->setLastGeneration($generator->getGeneratorId(), $content);
             }
-            catch(\Exception $e)
+            catch(Exception $e)
             {
                 $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
             }

@@ -7,8 +7,8 @@ namespace App\Console\Jobs;
 use App\Helpers\SpreadsheetHelper;
 use App\Models\Generator;
 use App\Models\Table;
-use App\Services\Interfaces\IGoogleServicesClient;
 use App\Services\Interfaces\ISpintaxService;
+use App\Services\Interfaces\ISpreadsheetClientService;
 
 class RandomizeTextJob extends JobBase
 {
@@ -48,7 +48,7 @@ class RandomizeTextJob extends JobBase
         $params = [
             'valueInputOption' => 'RAW'
         ];
-        $this->googleClient->updateSpreadsheetCellsRange($tableId, $range, [[$text]], $params);
+        $this->spreadsheetClientService->updateSpreadsheetCellsRange($tableId, $range, [[$text]], $params);
     }
 
 
@@ -105,10 +105,10 @@ class RandomizeTextJob extends JobBase
 
     public function __construct(
         ISpintaxService $spintaxService,
-        IGoogleServicesClient $googleClient
+        ISpreadsheetClientService $spreadsheetClientService
     )
     {
-        parent::__construct($googleClient);
+        parent::__construct($spreadsheetClientService);
         $this->spintaxService = $spintaxService;
     }
 

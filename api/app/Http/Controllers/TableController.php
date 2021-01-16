@@ -8,12 +8,11 @@ use App\Console\Jobs\FillImagesJob;
 use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Helpers\LinkHelper;
-use App\Repositories\TableRepository;
-use App\Repositories\TableUpdateLockRepository;
-use App\Services\GoogleServicesClient;
-use App\Services\Interfaces\IGoogleServicesClient;
+use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\IMailService;
+use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\SpintaxService;
+use App\Services\SpreadsheetClientService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
@@ -42,9 +41,14 @@ class TableController extends BaseController
     private Interfaces\IGeneratorRepository $generatorRepository;
 
     /**
-     * @var IGoogleServicesClient Google services client.
+     * @var IGoogleDriveClientService Google Drive services client.
      */
-    private IGoogleServicesClient $googleServicesClient;
+    private IGoogleDriveClientService $googleDriveClientService;
+
+    /**
+     * @var ISpreadsheetClientService Google Spreadsheet services client.
+     */
+    private ISpreadsheetClientService $spreadsheetClientService;
 
     /**
      * @var IMailService Mail service.
@@ -64,13 +68,15 @@ class TableController extends BaseController
     public function __construct(
         Interfaces\ITableRepository $tableRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
-        IGoogleServicesClient $googleServicesClient,
+        IGoogleDriveClientService $googleDriveClientService,
+        ISpreadsheetClientService $spreadsheetClientService,
         IMailService $mailService,
         SheetNames $sheetNames)
     {
         $this->tableRepository = $tableRepository;
         $this->generatorRepository = $generatorRepository;
-        $this->googleServicesClient = $googleServicesClient;
+        $this->googleDriveClientService = $googleDriveClientService;
+        $this->spreadsheetClientService = $spreadsheetClientService;
         $this->mailService = $mailService;
         $this->sheetNamesConfig = $sheetNames;
         $this->roles = new Roles();
@@ -80,6 +86,7 @@ class TableController extends BaseController
      * GET /
      *
      * Get all table instances.
+     * @param Request $request
      * @return JsonResponse all tables.
      */
     public function index(Request $request) : JsonResponse
@@ -115,14 +122,14 @@ class TableController extends BaseController
     public function show(string $id)
     {
         $table = $this->tableRepository->get($id);
-        $service = new FillImagesJob(new GoogleServicesClient());
+        $service = new FillImagesJob(new SpreadsheetClientService());
 
         $spintaxService = new RandomizeTextJob(
             new SpintaxService(),
-            new GoogleServicesClient());
+            new SpreadsheetClientService());
 
         $triggerService = new TriggerSpreadsheetJob(
-            new GoogleServicesClient(),
+            new SpreadsheetClientService(),
             new Spreadsheet());
 
         $triggerService->start();
@@ -151,7 +158,9 @@ class TableController extends BaseController
     {
         $user = $request->input("currentUser");
 
-        [$googleTableId, $googleFolderId] = $this->googleServicesClient->createTableInfrastructure();
+        $googleTableId = $this->spreadsheetClientService->copyTable();
+        $googleFolderId = $this->googleDriveClientService->createFolder();
+
         $table = new Models\Table(
             null,
             $user->getUserId(),
@@ -197,7 +206,7 @@ class TableController extends BaseController
 
             $table->addGenerator($generator->setGeneratorId($newGeneratorId));
 
-            $this->googleServicesClient->updateCellContent(
+            $this->spreadsheetClientService->updateCellContent(
                 $googleTableId,
                 $this->sheetNamesConfig->getInformation(),
                 $target["cell"],
@@ -206,7 +215,7 @@ class TableController extends BaseController
             );
         }
 
-        $this->googleServicesClient->updateCellContent(
+        $this->spreadsheetClientService->updateCellContent(
             $googleTableId,
             $this->sheetNamesConfig->getInformation(),
             "E7",
@@ -222,7 +231,7 @@ class TableController extends BaseController
      * PUT /$id
      *
      * Update table.
-     * @param $id table guid.
+     * @param string $id table guid.
      * @param $request Request update request.
      * @return JsonResponse updated table resource.
      */

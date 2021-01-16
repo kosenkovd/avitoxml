@@ -6,7 +6,7 @@ namespace App\Services;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Models\Ads;
 use App\Models\TableHeader;
-use App\Services\Interfaces\IGoogleServicesClient;
+use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
 
 /**
@@ -17,9 +17,9 @@ use App\Services\Interfaces\IXmlGenerationService;
 class XmlGenerationService implements IXmlGenerationService
 {
     /**
-     * @var IGoogleServicesClient Google services client.
+     * @var ISpreadsheetClientService Google Spreadsheet services client.
      */
-    private IGoogleServicesClient $googleClient;
+    private ISpreadsheetClientService $spreadsheetClientService;
 
     /**
      * @var SheetNames configuration with sheet names.
@@ -90,9 +90,9 @@ class XmlGenerationService implements IXmlGenerationService
     }
 
 
-    public function __construct(IGoogleServicesClient $googleClient, SheetNames $sheetNames)
+    public function __construct(ISpreadsheetClientService $spreadsheetClientService, SheetNames $sheetNames)
     {
-        $this->googleClient = $googleClient;
+        $this->spreadsheetClientService = $spreadsheetClientService;
         $this->sheetNamesConfig = $sheetNames;
     }
 
@@ -102,11 +102,11 @@ class XmlGenerationService implements IXmlGenerationService
     public function generateAvitoXML(string $spreadsheetId, string $targetSheet) : string
     {
         $headerRange = $targetSheet.'!A1:FZ1';
-        $headerResponse = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $headerRange, false);
+        $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange($spreadsheetId, $headerRange, false);
         $propertyColumns = new TableHeader($headerResponse[0]);
 
         $range = $targetSheet.'!A2:FZ5001';
-        $values = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range, false);
+        $values = $this->spreadsheetClientService->getSpreadsheetCellsRange($spreadsheetId, $range, false);
 
         $xml = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>'
             .PHP_EOL."<Ads formatVersion=\"3\" target=\"Avito.ru\">".PHP_EOL;
@@ -120,7 +120,7 @@ class XmlGenerationService implements IXmlGenerationService
             if($targetSheet == $this->sheetNamesConfig->getYandex())
             {
                 $range = $this->sheetNamesConfig->getYandexSettings().'!C2:C5001';
-                $idValues = $this->googleClient->getSpreadsheetCellsRange($spreadsheetId, $range, false);
+                $idValues = $this->spreadsheetClientService->getSpreadsheetCellsRange($spreadsheetId, $range, false);
             }
 
             foreach ($values as $numRow => $row) {
@@ -150,17 +150,16 @@ class XmlGenerationService implements IXmlGenerationService
                         if($this->isConstructionMaterial($row, $propertyColumns))
                         {
                             $ad = new Ads\ConstructionMaterialAd($row, $propertyColumns);
-                            break;
                         }
+                        break;
                     case "Запчасти и автотовары":
                         if($this->isAutoPart($row, $propertyColumns))
                         {
                             $ad = new Ads\AutoPartAd($row, $propertyColumns);
-                            break;
                         }
+                        break;
                     default:
                         $ad = new Ads\GeneralAd($row, $propertyColumns);
-                        break;
                 }
 
                 $xml.= $ad->toAvitoXml().PHP_EOL;

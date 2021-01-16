@@ -8,7 +8,7 @@
     use App\Models\Generator;
     use App\Models\Table;
     use App\Models\TableHeader;
-    use App\Services\Interfaces\IGoogleServicesClient;
+    use App\Services\Interfaces\ISpreadsheetClientService;
     use Ramsey\Uuid\Guid\Guid;
 
     class FillImagesJob extends JobBase
@@ -54,13 +54,13 @@
                 return [];
             }
 
-            $childFolder = $this->googleClient->getChildFolderByName($folderID, $subFolderName);
+            $childFolder = $this->googleDriveClientService->getChildFolderByName($folderID, $subFolderName);
 
             if ($childFolder == '') {
                 return [];
             }
 
-            return $this->googleClient->listFolderImages($childFolder);
+            return $this->googleDriveClientService->listFolderImages($childFolder);
         }
 
         /**
@@ -84,7 +84,7 @@
             $params = [
                 'valueInputOption' => 'RAW'
             ];
-            $this->googleClient->updateSpreadsheetCellsRange(
+            $this->spreadsheetClientService->updateSpreadsheetCellsRange(
                 $tableID,
                 $range,
                 $values,
@@ -115,7 +115,7 @@
             {
                 $sourceFolder = trim($sourceFolder);
                 $this->log("Processing ".$sourceFolder);
-                $sourceFolderId = $this->googleClient->getChildFolderByName($baseFolderId, $sourceFolder);
+                $sourceFolderId = $this->googleDriveClientService->getChildFolderByName($baseFolderId, $sourceFolder);
                 $image = null;
                 if(isset($this->images[$sourceFolderId]))
                 {
@@ -128,7 +128,7 @@
                 else
                 {
                     $this->log("Getting images from ".$sourceFolder);
-                    $this->images[$sourceFolderId] = $this->googleClient->listFolderImages($sourceFolderId);
+                    $this->images[$sourceFolderId] = $this->googleDriveClientService->listFolderImages($sourceFolderId);
                     if(count($this->images[$sourceFolderId]) == 0)
                     {
                         continue;
@@ -150,11 +150,11 @@
             if(count($imageCopyData) > 0)
             {
                 $newFolderName = crc32(Guid::uuid4()->toString());
-                $newFolderId = $this->googleClient->createFolder($newFolderName, $baseFolderId, false);
+                $newFolderId = $this->googleDriveClientService->createFolder($newFolderName, $baseFolderId, false);
 
                 foreach ($imageCopyData as $imageCopyDatum)
                 {
-                    $this->googleClient->moveFile(
+                    $this->googleDriveClientService->moveFile(
                         $imageCopyDatum["image"],
                         $newFolderId,
                         $imageCopyDatum["newName"]);
@@ -245,9 +245,9 @@
             }
         }
 
-        public function __construct(IGoogleServicesClient $googleClient)
+        public function __construct(ISpreadsheetClientService $spreadsheetClientService)
         {
-            parent::__construct($googleClient);
+            parent::__construct($spreadsheetClientService);
         }
 
         /**

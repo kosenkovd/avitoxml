@@ -5,12 +5,22 @@ namespace App\Console\Jobs;
 
 
 use App\Models\TableHeader;
-use App\Services\Interfaces\IGoogleServicesClient;
+use App\Services\Interfaces\IGoogleDriveClientService;
+use App\Services\Interfaces\ISpreadsheetClientService;
+use DateTime;
 use Ramsey\Uuid\Guid\Guid;
 
 abstract class JobBase
 {
-    protected IGoogleServicesClient $googleClient;
+    /**
+     * @var IGoogleDriveClientService Google Drive client.
+     */
+    protected IGoogleDriveClientService $googleDriveClientService;
+    
+    /**
+     * @var ISpreadsheetClientService Google Spreadsheet client.
+     */
+    protected ISpreadsheetClientService $spreadsheetClientService;
 
     protected string $jobId;
 
@@ -37,7 +47,7 @@ abstract class JobBase
             return;
         }
 
-        $timestamp = new \DateTime();
+        $timestamp = new DateTime();
         $timestamp->setTimestamp(time());
         $file = __DIR__."/../Logs/".get_class($this).".log";
         file_put_contents($file,
@@ -67,20 +77,22 @@ abstract class JobBase
     protected function getHeaderAndDataFromTable(string $tableID, string $sheetName) : array
     {
         $headerRange = $sheetName.'!A1:FZ1';
-        $headerResponse = $this->googleClient->getSpreadsheetCellsRange($tableID, $headerRange);
+        $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange($tableID, $headerRange);
         $propertyColumns = new TableHeader($headerResponse[0]);
 
         $range = $sheetName.'!A2:FZ5001';
-        $values = $this->googleClient->getSpreadsheetCellsRange($tableID, $range);
+        $values = $this->spreadsheetClientService->getSpreadsheetCellsRange($tableID, $range);
 
         return [ $propertyColumns, $values ];
     }
 
     public function __construct(
-        IGoogleServicesClient $googleClient
+        ISpreadsheetClientService $spreadsheetClientService,
+        IGoogleDriveClientService $googleDriveClientService
     )
     {
         $this->jobId = Guid::uuid4()->toString();
-        $this->googleClient = $googleClient;
+        $this->spreadsheetClientService = $spreadsheetClientService;
+        $this->googleDriveClientService = $googleDriveClientService;
     }
 }

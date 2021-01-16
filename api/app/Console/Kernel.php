@@ -3,15 +3,13 @@
 namespace App\Console;
 
 use App\Configuration\Spreadsheet;
-use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Repositories\TableRepository;
 use App\Repositories\TableUpdateLockRepository;
-use App\Services\GoogleServicesClient;
-use App\Services\SpintaxService;
+use App\Services\SpreadsheetClientService;
+use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
-use App\Console\Jobs\FillImagesJob;
 
 class Kernel extends ConsoleKernel
 {
@@ -36,15 +34,16 @@ class Kernel extends ConsoleKernel
     /**
      * Define the application's command schedule.
      *
-     * @param  \Illuminate\Console\Scheduling\Schedule  $schedule
+     * @param Schedule $schedule
      * @return void
+     * @throws Exception
      */
     protected function schedule(Schedule $schedule)
     {
         $schedule->call(function () {
             echo "Starting TriggerSpreadsheetJob".PHP_EOL;
             (new TriggerSpreadsheetJob(
-                new GoogleServicesClient(), new Spreadsheet()))->start();
+                new SpreadsheetClientService(), new Spreadsheet()))->start();
         })
             ->cron("50 * * * *");
 
