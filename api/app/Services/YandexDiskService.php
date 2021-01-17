@@ -1,8 +1,8 @@
 <?php
-    
-    
+
+
     namespace App\Services;
-    
+
     use App\Configuration\Config;
     use App\Services\Interfaces\IYandexDiskService;
     use Exception;
@@ -17,7 +17,7 @@
         private Config $config;
         private Disk $disk;
         private string $baseFolder;
-        
+
 //        /**
 //         * Sets default permissions to Yandex object.
 //         *
@@ -26,7 +26,7 @@
 //        private function setPermissions(string $id): void
 //        {
 //        }
-    
+
         /**
          * YandexDiskService constructor.
          */
@@ -34,7 +34,7 @@
         {
             $this->config = new Config();
         }
-    
+
         /**
          * @inheritDoc
          * @param string $baseFolder
@@ -46,7 +46,7 @@
             $this->baseFolder = $baseFolder;
             $this->disk = new Disk($token);
         }
-    
+
         /**
          * @inheritDoc
          * @throws Exception
@@ -67,87 +67,41 @@
             } else {
                 $folderPath = '/'.$parentId.'/'.$name.'/';
             }
-    
+
             $diskFolder = $this->disk->directory($folderPath);
-           
-            try
+
+            $result = $diskFolder->create();
+
+            if ($result)
             {
-                $result = $diskFolder->create();
-            }
-            catch (Exception $exception)
-            {
-                if(!$toRetry)
-                {
-                    throw $exception;
-                }
-            
-                sleep(60);
-                $result = $diskFolder->create();
-            }
-        
-            if ($result) {
                 return $folderPath;
-            } else {
+            }
+            else
+            {
                 throw new Exception('Can\'t Create disk folder');
             }
         }
-    
+
         /**
          * @inheritDoc
          */
         public function getChildFolderByName(string $folderID, string $subFolderName, bool $toRetry = true): ?string
         {
-            return '/'.$this->baseFolder.'/'.$subFolderName.'/';
+            return '/'.$subFolderName.'/';
         }
-    
+
         /**
          * @inheritDoc
          * @throws Exception
          */
         public function listFolderImages(string $folderID, bool $toRetry = true): array
         {
-//            $folderPath = '/'.$this->baseFolder.'/'.$folderID.'/'; сюда приходит сразу полный путь к папке
-            $folderPath = $folderID;
-            try
-            {
-                $directory = $this->disk->directory($folderPath);
-                $arChild = $directory->getChildren();
-                
-                return array_filter(array_map(function ($child) {
-                    if($child->isFile()) {
-                        /** @var Disk\Item\File $file */
-                        $file = $child;
-                        return $file;
-                    } else {
-                        return null;
-                    }
-                }, $arChild));
-            }
-            catch (Exception $exception)
-            {
-                if(!$toRetry)
-                {
-                    throw $exception;
-                }
-            
-                sleep(60);
-                // retry
-                $directory = $this->disk->directory('/'.$this->baseFolder.'/'.$folderID.'/');
-                $arChild = $directory->getChildren();
-    
-                
-                return array_filter(array_map(function ($child) {
-                    if($child->isFile()) {
-                        /** @var Disk\Item\File $file */
-                        $file = $child;
-                        return $file;
-                    } else {
-                        return null;
-                    }
-                }, $arChild));
-            }
+            $folderPath = "/".$folderID;
+
+            $directory = $this->disk->directory($folderPath);
+            return $directory->getChildren();
         }
-    
+
         /**
          * @inheritDoc
          * @throws Exception
@@ -158,28 +112,19 @@
             string $newName = null,
             bool $toRetry = true): void
         {
-            $folderPath = '/'.$this->baseFolder.'/'.$folderID.'/';
-    
+            $folderPath = '/'.$folderID.'/';
+
             if(!is_null($newName))
             {
                 $newFilePath = $folderPath.$newName;
-            } else {
-                $newFilePath = $folderPath;
             }
-            
-            try
+            else
             {
-                $file->move($newFilePath);
+                $filePathArray = explode('/', $file->getPath());
+                $fileName = $filePathArray[count($filePathArray) - 1];
+                $newFilePath = $folderPath.$fileName;
             }
-            catch (Exception $exception)
-            {
-                if(!$toRetry)
-                {
-                    throw $exception;
-                }
-            
-                sleep(60);
-                $file->move($newFilePath);
-            }
+
+            $file->move($newFilePath);
         }
     }
