@@ -20,7 +20,12 @@
         protected int $maxJobTime = 60*60;
 
         private array $images = [];
-
+        
+        /**
+         * @var IGoogleDriveClientService
+         */
+        private IGoogleDriveClientService $googleDriveClientService;
+    
         /**
          * Checks if it is possible to fill images in row.
          *
@@ -251,10 +256,8 @@
             IGoogleDriveClientService $googleDriveClientService
         )
         {
-            parent::__construct(
-                $spreadsheetClientService,
-                $googleDriveClientService
-            );
+            parent::__construct($spreadsheetClientService);
+            $this->googleDriveClientService = $googleDriveClientService;
         }
 
         /**

@@ -9,9 +9,9 @@
     use App\Models\Generator;
     use App\Models\Table;
     use App\Models\TableHeader;
-    use App\Services\Interfaces\IGoogleDriveClientService;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\Interfaces\IYandexDiskService;
+    use Leonied7\Yandex\Disk\Item\File;
     use Ramsey\Uuid\Guid\Guid;
 
     class FillImagesJobYandex extends JobBase
@@ -131,6 +131,7 @@
                 $sourceFolder = trim($sourceFolder);
                 $this->log("Processing ".$sourceFolder);
                 $sourceFolderId = $this->yandexDiskService->getChildFolderByName($baseFolderId, $sourceFolder);
+                /** @var $image File */
                 $image = null;
                 if(isset($this->images[$sourceFolderId]))
                 {
@@ -150,14 +151,14 @@
                     }
                     $image = array_shift($this->images[$sourceFolderId]);
                 }
-
+                
                 $imageCopyData[] = [
                     "image" => $image,
                     "newName" => str_pad(
                             $imageNumber,
                             $maxNumberOfSymbolsInFileNumber,
                             '0',
-                            STR_PAD_LEFT).$image->getName()
+                            STR_PAD_LEFT).$image->getProperties()->find('displayname')->getValue()
                 ];
                 $imageNumber++;
             }
@@ -165,27 +166,15 @@
             if(count($imageCopyData) > 0)
             {
                 $newFolderName = crc32(Guid::uuid4()->toString());
+                
+                $newFolderId = $this->yandexDiskService->createFolder($newFolderName, null, false);
     
-                if ($this->doesYandexTokenExist()) {
-                    $newFolderId = $this->yandexDiskService->createFolder($newFolderName, $baseFolderId, false);
-                    
-                    foreach ($imageCopyData as $imageCopyDatum)
-                    {
-                        $this->yandexDiskService->moveFile(
-                            $imageCopyDatum["image"],
-                            $newFolderId,
-                            $imageCopyDatum["newName"]);
-                    }
-                } else {
-                    $newFolderId = $this->yandexDiskService->createFolder($newFolderName, $baseFolderId, false);
-                    
-                    foreach ($imageCopyData as $imageCopyDatum)
-                    {
-                        $this->yandexDiskService->moveFile(
-                            $imageCopyDatum["image"],
-                            $newFolderId,
-                            $imageCopyDatum["newName"]);
-                    }
+                foreach ($imageCopyData as $imageCopyDatum)
+                {
+                    $this->yandexDiskService->moveFile(
+                        $imageCopyDatum["image"],
+                        $newFolderName,
+                        $imageCopyDatum["newName"]);
                 }
             }
 
@@ -256,9 +245,10 @@
 
                 if ($images !== []) {
                     $links = [];
+                    /** @var $image File */
                     foreach ($images as $image)
                     {
-                        $links[] = LinkHelper::getPictureDownloadLink($image->id);
+                        $links[] = $image->getProperties()->find('file_url')->getValue();
                     }
                     $imagesString = join(PHP_EOL, $links);
 
@@ -276,7 +266,7 @@
         private function init(string $tableID): void
         {
             $yandexConfigFrom = 'V5';
-            $yandexConfigTo = 'V6';
+            $yandexConfigTo = 'V5';
             
             $range = $this->sheetNamesConfig->getYandex().'!'.$yandexConfigFrom.':'.$yandexConfigTo;
             
@@ -285,10 +275,9 @@
                 $range
             );
             $this->yandexToken = $yandexConfig[0][0];
-            $baseFolder = $yandexConfig[1][0];
             
             if ($this->doesYandexTokenExist()) {
-                $this->yandexDiskService->init($baseFolder, $this->yandexToken);
+                $this->yandexDiskService->init($this->yandexToken);
             }
         }
     
@@ -299,14 +288,10 @@
 
         public function __construct(
             ISpreadsheetClientService $spreadsheetClientService,
-            IGoogleDriveClientService $googleDriveClientService,
             IYandexDiskService $yandexDiskService
         )
         {
-            parent::__construct(
-                $spreadsheetClientService,
-                $googleDriveClientService,
-            );
+            parent::__construct($spreadsheetClientService);
             $this->yandexDiskService = $yandexDiskService;
             $this->sheetNamesConfig = new SheetNames();
         }

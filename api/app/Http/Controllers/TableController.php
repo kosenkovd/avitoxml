@@ -73,8 +73,6 @@ class TableController extends BaseController
      * @var SheetNames configuration with sheet names.
      */
     private SheetNames $sheetNamesConfig;
-    
-    private string $yandexToken;
 
     public function __construct(
         Interfaces\ITableRepository $tableRepository,
@@ -124,29 +122,6 @@ class TableController extends BaseController
         }
         return response()->json($tableDtos, 200);
     }
-    
-    private function init(string $tableID): void
-    {
-        $yandexConfigFrom = 'V5';
-        $yandexConfigTo = 'V6';
-        $range = $this->sheetNamesConfig->getYandex().'!'.$yandexConfigFrom.':'.$yandexConfigTo;
-        
-        $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-            $tableID,
-            $range
-        );
-        $this->yandexToken = $yandexConfig[0];
-        $baseFolder = $yandexConfig[1];
-        
-        if ($this->doesYandexTokenExist()) {
-            $this->yandexDiskService->init($baseFolder, $this->yandexToken);
-        }
-    }
-    
-    private function doesYandexTokenExist(): bool
-    {
-        return !is_null($this->yandexToken) && ($this->yandexToken !== '');
-    }
 
     /**
      * GET /$id
@@ -158,44 +133,47 @@ class TableController extends BaseController
     public function show(string $id)
     {
         $table = $this->tableRepository->get($id);
-        $this->init($table->getGoogleSheetId());
-        if ($this->doesYandexTokenExist()) {
-            $service = new FillImagesJobYandex(
-                new SpreadsheetClientService(),
-                new GoogleDriveClientService(),
-                new YandexDiskService()
-            );
-        } else {
-            $service = new FillImagesJob(
-                new SpreadsheetClientService(),
-                new GoogleDriveClientService()
-            );
-        }
     
-        $spintaxService = new RandomizeTextJob(
-            new SpintaxService(),
+//        $this->yandexDiskService->init("AgAAAAAMMp_iAAbO9-TN2FLhf0a7kQr5Ju2mlII");
+        
+        $yaService = new FillImagesJobYandex(
             new SpreadsheetClientService(),
-            new GoogleDriveClientService()
+            new YandexDiskService()
         );
+        $yaService->start($table);
 
-        $triggerService = new TriggerSpreadsheetJob(
-            new SpreadsheetClientService(),
-            new GoogleDriveClientService(),
-            new Spreadsheet()
-        );
+//        $service = new FillImagesJob(
+//            new SpreadsheetClientService(),
+//            new GoogleDriveClientService()
+//        );
 
-        $triggerService->start();
+//        $spintaxService = new RandomizeTextJob(
+//            new SpintaxService(),
+//            new SpreadsheetClientService(),
+//        );
 
-        if(is_null($table))
-        {
-            echo $id;
-        }
-        else
-        {
-            $service->start($table);
-            //$spintaxService->start($table);
-        }
+//        $triggerService = new TriggerSpreadsheetJob(
+//            new SpreadsheetClientService(),
+//            new Spreadsheet()
+//        );
 
+//        $triggerService->start();
+
+//        if(is_null($table))
+//        {
+//            echo $id;
+//        }
+//        else
+//        {
+//            //$service->start($table);
+//            $yaService->start($table);
+//            //$spintaxService->start($table);
+//        }
+
+//        $client = new YandexDiskService();
+//        $client->init("AgAAAAAMMp_iAAbO9-TN2FLhf0a7kQr5Ju2mlII");
+//        $resp = $client->listFolderImages("Виджеты");
+//        dd($resp);
         return response("", 200);
     }
 

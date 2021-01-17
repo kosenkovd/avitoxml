@@ -9,10 +9,10 @@ interface IYandexDiskService
 {
     /**
      * Init Yandex Disk
-     * @param string $baseFolder root folder
+     *
      * @param string $token      yandex disk token
      */
-    public function init(string $baseFolder, string $token): void;
+    public function init(string $token): void;
     
     /**
      * Creates new folder on YandexDisk.

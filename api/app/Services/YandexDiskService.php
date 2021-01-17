@@ -16,16 +16,6 @@
     class YandexDiskService implements IYandexDiskService {
         private Config $config;
         private Disk $disk;
-        private string $baseFolder;
-
-//        /**
-//         * Sets default permissions to Yandex object.
-//         *
-//         * @param $id string Yandex resource id.
-//         */
-//        private function setPermissions(string $id): void
-//        {
-//        }
 
         /**
          * YandexDiskService constructor.
@@ -37,13 +27,10 @@
 
         /**
          * @inheritDoc
-         * @param string $baseFolder
-         * @param string $token
          * @throws Disk\Exception\InvalidArgumentException
          */
-        public function init(string $baseFolder, string $token): void
+        public function init(string $token): void
         {
-            $this->baseFolder = $baseFolder;
             $this->disk = new Disk($token);
         }
 
@@ -63,21 +50,18 @@
             }
             if(is_null($parentId))
             {
-                $folderPath = '/'.$name.'/';
+                $folderPath = '/'.$name;
             } else {
-                $folderPath = '/'.$parentId.'/'.$name.'/';
+                $folderPath = '/'.$parentId.'/'.$name;
             }
-
+            
             $diskFolder = $this->disk->directory($folderPath);
 
             $result = $diskFolder->create();
 
-            if ($result)
-            {
+            if ($result) {
                 return $folderPath;
-            }
-            else
-            {
+            } else {
                 throw new Exception('Can\'t Create disk folder');
             }
         }

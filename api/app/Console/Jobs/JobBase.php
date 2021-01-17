@@ -5,18 +5,12 @@ namespace App\Console\Jobs;
 
 
 use App\Models\TableHeader;
-use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use DateTime;
 use Ramsey\Uuid\Guid\Guid;
 
 abstract class JobBase
 {
-    /**
-     * @var IGoogleDriveClientService Google Drive client.
-     */
-    protected IGoogleDriveClientService $googleDriveClientService;
-    
     /**
      * @var ISpreadsheetClientService Google Spreadsheet client.
      */
@@ -86,13 +80,9 @@ abstract class JobBase
         return [ $propertyColumns, $values ];
     }
 
-    public function __construct(
-        ISpreadsheetClientService $spreadsheetClientService,
-        IGoogleDriveClientService $googleDriveClientService
-    )
+    public function __construct(ISpreadsheetClientService $spreadsheetClientService)
     {
         $this->jobId = Guid::uuid4()->toString();
         $this->spreadsheetClientService = $spreadsheetClientService;
-        $this->googleDriveClientService = $googleDriveClientService;
     }
 }
