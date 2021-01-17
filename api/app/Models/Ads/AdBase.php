@@ -24,6 +24,8 @@ abstract class AdBase
     protected $address;
     protected $avitoId;
     protected $adStatus;
+    protected $placementType;
+    protected $messages;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -140,6 +142,28 @@ abstract class AdBase
         $this->adStatus = isset($row[$propertyColumns->paidControl])
             ? htmlspecialchars($row[$propertyColumns->paidControl])
             : null;
+
+        if(isset($row[$propertyColumns->placementType]))
+        {
+            switch ($row[$propertyColumns->placementType])
+            {
+                case "Пакет":
+                    $this->placementType = "Package";
+                    break;
+                case "Пакет или кошелек":
+                    $this->placementType = "PackageSingle";
+                    break;
+                case "Кошелек":
+                    $this->placementType = "Single";
+                    break;
+                default:
+                    $this->placementType = null;
+            }
+        }
+
+        $this->messages = isset($row[$propertyColumns->messages])
+            ? htmlspecialchars($row[$propertyColumns->messages])
+            : null;
     }
 
     /**
@@ -173,6 +197,8 @@ abstract class AdBase
         <VideoURL>$this->videoURL</VideoURL>
         <AvitoId>$this->avitoId</AvitoId>
         <AdStatus>$this->adStatus</AdStatus>
+        <ListingFee>$this->placementType</ListingFee>
+        <AllowEmail>$this->messages</AllowEmail>
 AVITOXML;
     }
 

@@ -43,6 +43,9 @@ class TableHeader {
     public ?int $descriptionSpintax = null;
     public ?int $titleSpintax = null;
 
+    public ?int $placementType = null;
+    public ?int $messages = null;
+
 
     public function __construct(array $headers)
     {
@@ -160,6 +163,12 @@ class TableHeader {
                 case "управлениеплатнымиуслугами[?]":
                 case "управлениеплатнымиуслугами":
                     $this->paidControl = $colNum;
+                    break;
+                case "способразмещения":
+                    $this->placementType = $colNum;
+                    break;
+                case "сообщения":
+                    $this->messages = $colNum;
                     break;
             }
         }
