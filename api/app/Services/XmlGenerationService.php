@@ -8,6 +8,8 @@ use App\Models\Ads;
 use App\Models\TableHeader;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
+use DateTime;
+use DateTimeZone;
 
 /**
  * Handles XML generation.
@@ -81,12 +83,49 @@ class XmlGenerationService implements IXmlGenerationService
     private function shouldSkipRow(
         array $row, TableHeader $propertyColumns, string $sheetName, array $ids, int $numRow) : bool
     {
-        $isIdPresent = ($sheetName == $this->sheetNamesConfig->getYandex() &&
-                            isset($ids[$numRow]) &&
-                            $ids[$numRow] != '') ||
-                       ($sheetName != $this->sheetNamesConfig->getYandex() &&
-                            @$row[@$propertyColumns->ID] != '');
-        return !$this->validateRequiredColumnsPresent($row, $propertyColumns) || !$isIdPresent;
+        return !$this->validateRequiredColumnsPresent($row, $propertyColumns) ||
+            ($sheetName == $this->sheetNamesConfig->getYandex() &&
+                $this->shouldSkipYandexRow($row, $propertyColumns));
+    }
+
+    /**
+     * Should row from Yandex sheet be skipped.
+     *
+     * @param array $row
+     * @param TableHeader $propertyColumns
+     * @return bool
+     */
+    private function shouldSkipYandexRow(array $row, TableHeader $propertyColumns) : bool
+    {
+        $idFieldPresent = @$row[@$propertyColumns->ID] != '';
+
+        $dateCreated = @$row[@$propertyColumns->dateCreated];
+        if(is_null($dateCreated) || $dateCreated == '')
+        {
+            return !$idFieldPresent;
+        }
+        else
+        {
+            if(strpos($row[$propertyColumns->dateCreated], ":"))
+            {
+                $date = DateTime::createFromFormat(
+                    'd.m.Y H:i', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+            }
+            else
+            {
+                $date = DateTime::createFromFormat(
+                    'd.m.Y', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+            }
+
+            if($date !== false)
+            {
+                return !$idFieldPresent && $date->getTimestamp() <= time();
+            }
+            else
+            {
+                return !$idFieldPresent;
+            }
+        }
     }
 
 
@@ -120,6 +159,7 @@ class XmlGenerationService implements IXmlGenerationService
             if($targetSheet == $this->sheetNamesConfig->getYandex())
             {
                 $range = $this->sheetNamesConfig->getYandexSettings().'!C2:C5001';
+
                 $idValues = $this->spreadsheetClientService->getSpreadsheetCellsRange($spreadsheetId, $range, false);
             }
 
