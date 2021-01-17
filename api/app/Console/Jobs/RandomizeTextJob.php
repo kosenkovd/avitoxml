@@ -7,6 +7,7 @@ namespace App\Console\Jobs;
 use App\Helpers\SpreadsheetHelper;
 use App\Models\Generator;
 use App\Models\Table;
+use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\ISpintaxService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 
@@ -105,10 +106,14 @@ class RandomizeTextJob extends JobBase
 
     public function __construct(
         ISpintaxService $spintaxService,
-        ISpreadsheetClientService $spreadsheetClientService
+        ISpreadsheetClientService $spreadsheetClientService,
+        IGoogleDriveClientService $googleDriveClientService
     )
     {
-        parent::__construct($spreadsheetClientService);
+        parent::__construct(
+            $spreadsheetClientService,
+            $googleDriveClientService
+        );
         $this->spintaxService = $spintaxService;
     }
 

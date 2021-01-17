@@ -8,6 +8,7 @@ use App\Console\Jobs\FillImagesJob;
 use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Helpers\LinkHelper;
+use App\Services\GoogleDriveClientService;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\IMailService;
 use App\Services\Interfaces\ISpreadsheetClientService;
@@ -122,15 +123,22 @@ class TableController extends BaseController
     public function show(string $id)
     {
         $table = $this->tableRepository->get($id);
-        $service = new FillImagesJob(new SpreadsheetClientService());
+        $service = new FillImagesJob(
+            new SpreadsheetClientService(),
+            new GoogleDriveClientService()
+        );
 
         $spintaxService = new RandomizeTextJob(
             new SpintaxService(),
-            new SpreadsheetClientService());
+            new SpreadsheetClientService(),
+            new GoogleDriveClientService()
+        );
 
         $triggerService = new TriggerSpreadsheetJob(
             new SpreadsheetClientService(),
-            new Spreadsheet());
+            new GoogleDriveClientService(),
+            new Spreadsheet()
+        );
 
         $triggerService->start();
 

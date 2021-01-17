@@ -8,6 +8,7 @@
     use App\Models\Generator;
     use App\Models\Table;
     use App\Models\TableHeader;
+    use App\Services\Interfaces\IGoogleDriveClientService;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use Ramsey\Uuid\Guid\Guid;
 
@@ -245,9 +246,15 @@
             }
         }
 
-        public function __construct(ISpreadsheetClientService $spreadsheetClientService)
+        public function __construct(
+            ISpreadsheetClientService $spreadsheetClientService,
+            IGoogleDriveClientService $googleDriveClientService
+        )
         {
-            parent::__construct($spreadsheetClientService);
+            parent::__construct(
+                $spreadsheetClientService,
+                $googleDriveClientService
+            );
         }
 
         /**

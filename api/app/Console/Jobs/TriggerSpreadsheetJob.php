@@ -4,6 +4,7 @@
 namespace App\Console\Jobs;
 
 use App\Configuration\Spreadsheet;
+use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 
 /**
@@ -21,10 +22,14 @@ class TriggerSpreadsheetJob extends JobBase
 
     public function __construct(
         ISpreadsheetClientService $spreadsheetClientService,
+        IGoogleDriveClientService $googleDriveClientService,
         Spreadsheet $spreadsheet
     )
     {
-        parent::__construct($spreadsheetClientService);
+        parent::__construct(
+            $spreadsheetClientService,
+            $googleDriveClientService
+        );
         $this->spreadsheetConfig = $spreadsheet;
     }
 
