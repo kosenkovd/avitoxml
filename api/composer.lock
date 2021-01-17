@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f9071dd693a3abf2a73d220a60432a4a",
+    "content-hash": "34852e933e56dfcc352959981a9e504c",
     "packages": [
         {
             "name": "arhitector/yandex",
@@ -1410,16 +1410,16 @@
         },
         {
             "name": "laravel/framework",
-            "version": "v8.22.0",
+            "version": "v8.22.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/framework.git",
-                "reference": "dcc4b0da849bc8a869af1cf126da00265bd1165d"
+                "reference": "5c70991b96c5722afed541a996479b5112654c8b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/framework/zipball/dcc4b0da849bc8a869af1cf126da00265bd1165d",
-                "reference": "dcc4b0da849bc8a869af1cf126da00265bd1165d",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/5c70991b96c5722afed541a996479b5112654c8b",
+                "reference": "5c70991b96c5722afed541a996479b5112654c8b",
                 "shasum": ""
             },
             "require": {
@@ -1573,7 +1573,7 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
-            "time": "2021-01-12T15:30:54+00:00"
+            "time": "2021-01-13T13:37:56+00:00"
         },
         {
             "name": "laravel/tinker",
@@ -1947,6 +1947,63 @@
                 }
             ],
             "time": "2020-10-18T11:50:25+00:00"
+        },
+        {
+            "name": "leonied7/yandex-disk-api",
+            "version": "dev-master",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/leonied7/yandex-disk-api.git",
+                "reference": "094bdf05c2971098b41d73b795ffd0517fbe76b5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/leonied7/yandex-disk-api/zipball/094bdf05c2971098b41d73b795ffd0517fbe76b5",
+                "reference": "094bdf05c2971098b41d73b795ffd0517fbe76b5",
+                "shasum": ""
+            },
+            "require": {
+                "ext-curl": "*",
+                "ext-dom": "*",
+                "ext-fileinfo": "*",
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "php": ">=5.6",
+                "servo/fluidxml": "^1.21"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^5.7.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "./src/init.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "leonied7",
+                    "email": "kdnn@mail.ru"
+                }
+            ],
+            "description": "Библиотека для работы с Яндекс.диск API",
+            "keywords": [
+                "api",
+                "php",
+                "yandex",
+                "yandex-disk",
+                "yandex-disk-api"
+            ],
+            "support": {
+                "issues": "https://github.com/leonied7/yandex-disk-api/issues",
+                "source": "https://github.com/leonied7/yandex-disk-api/tree/2.0.0-beta"
+            },
+            "time": "2019-04-12T09:19:19+00:00"
         },
         {
             "name": "monolog/monolog",
@@ -3508,6 +3565,61 @@
                 }
             ],
             "time": "2020-08-18T17:17:46+00:00"
+        },
+        {
+            "name": "servo/fluidxml",
+            "version": "1.21",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/servo-php/fluidxml.git",
+                "reference": "b6fb8de6ff781479c9e4fb6e9f27b5af1e87dc4b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/servo-php/fluidxml/zipball/b6fb8de6ff781479c9e4fb6e9f27b5af1e87dc4b",
+                "reference": "b6fb8de6ff781479c9e4fb6e9f27b5af1e87dc4b",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.6"
+            },
+            "require-dev": {
+                "apigen/apigen": "4.*",
+                "peridot-php/peridot": "1.*",
+                "peridot-php/peridot-code-coverage-reporters": "1.*"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "./source/FluidXml/fluid.php"
+                ],
+                "psr-4": {
+                    "FluidXml\\": "./source/FluidXml/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-2-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Daniele Orlando",
+                    "email": "fluidxml@danieleorlando.com",
+                    "homepage": "https://github.com/servo-php/fluidxml",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Concise and fluent XML manipulation library",
+            "homepage": "https://github.com/servo-php/fluidxml",
+            "keywords": [
+                "templating",
+                "xml"
+            ],
+            "support": {
+                "issues": "https://github.com/servo-php/fluidxml/issues",
+                "source": "https://github.com/servo-php/fluidxml/tree/1.20.4"
+            },
+            "time": "2017-01-31T00:37:33+00:00"
         },
         {
             "name": "swiftmailer/swiftmailer",
@@ -6645,16 +6757,16 @@
         },
         {
             "name": "nunomaduro/collision",
-            "version": "v5.1.0",
+            "version": "v5.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nunomaduro/collision.git",
-                "reference": "7c2b95589bf81e274e61e47f7672a1b2c3e06eaa"
+                "reference": "aca954fd03414ba0dd85d7d8e42ba9b251893d1f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nunomaduro/collision/zipball/7c2b95589bf81e274e61e47f7672a1b2c3e06eaa",
-                "reference": "7c2b95589bf81e274e61e47f7672a1b2c3e06eaa",
+                "url": "https://api.github.com/repos/nunomaduro/collision/zipball/aca954fd03414ba0dd85d7d8e42ba9b251893d1f",
+                "reference": "aca954fd03414ba0dd85d7d8e42ba9b251893d1f",
                 "shasum": ""
             },
             "require": {
@@ -6664,16 +6776,16 @@
                 "symfony/console": "^5.0"
             },
             "require-dev": {
-                "fideloper/proxy": "^4.4.0",
-                "friendsofphp/php-cs-fixer": "^2.16.4",
-                "fruitcake/laravel-cors": "^2.0.1",
-                "laravel/framework": "^8.0",
-                "laravel/tinker": "^2.4.1",
+                "brianium/paratest": "^6.1",
+                "fideloper/proxy": "^4.4.1",
+                "friendsofphp/php-cs-fixer": "^2.17.3",
+                "fruitcake/laravel-cors": "^2.0.3",
+                "laravel/framework": "^9.0",
                 "nunomaduro/larastan": "^0.6.2",
                 "nunomaduro/mock-final-classes": "^1.0",
-                "orchestra/testbench": "^6.0",
-                "phpstan/phpstan": "^0.12.36",
-                "phpunit/phpunit": "^9.3.3"
+                "orchestra/testbench": "^7.0",
+                "phpstan/phpstan": "^0.12.64",
+                "phpunit/phpunit": "^9.5.0"
             },
             "type": "library",
             "extra": {
@@ -6729,7 +6841,7 @@
                     "type": "patreon"
                 }
             ],
-            "time": "2020-10-29T14:50:40+00:00"
+            "time": "2021-01-13T10:00:08+00:00"
         },
         {
             "name": "phar-io/manifest",
@@ -8506,7 +8618,8 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "arhitector/yandex": 20
+        "arhitector/yandex": 20,
+        "leonied7/yandex-disk-api": 20
     },
     "prefer-stable": true,
     "prefer-lowest": false,

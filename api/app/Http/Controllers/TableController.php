@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Configuration\Spreadsheet;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Console\Jobs\FillImagesJob;
+use App\Console\Jobs\FillImagesJobYandex;
 use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Helpers\LinkHelper;
@@ -12,8 +13,10 @@ use App\Services\GoogleDriveClientService;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\IMailService;
 use App\Services\Interfaces\ISpreadsheetClientService;
+use App\Services\Interfaces\IYandexDiskService;
 use App\Services\SpintaxService;
 use App\Services\SpreadsheetClientService;
+use App\Services\YandexDiskService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
@@ -52,6 +55,11 @@ class TableController extends BaseController
     private ISpreadsheetClientService $spreadsheetClientService;
 
     /**
+     * @var IYandexDiskService Yandex Disk Service.
+     */
+    private IYandexDiskService $yandexDiskService;
+
+    /**
      * @var IMailService Mail service.
      */
     private IMailService $mailService;
@@ -65,12 +73,15 @@ class TableController extends BaseController
      * @var SheetNames configuration with sheet names.
      */
     private SheetNames $sheetNamesConfig;
+    
+    private string $yandexToken;
 
     public function __construct(
         Interfaces\ITableRepository $tableRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
         IGoogleDriveClientService $googleDriveClientService,
         ISpreadsheetClientService $spreadsheetClientService,
+        IYandexDiskService $yandexDiskService,
         IMailService $mailService,
         SheetNames $sheetNames)
     {
@@ -78,6 +89,7 @@ class TableController extends BaseController
         $this->generatorRepository = $generatorRepository;
         $this->googleDriveClientService = $googleDriveClientService;
         $this->spreadsheetClientService = $spreadsheetClientService;
+        $this->yandexDiskService = $yandexDiskService;
         $this->mailService = $mailService;
         $this->sheetNamesConfig = $sheetNames;
         $this->roles = new Roles();
@@ -112,6 +124,29 @@ class TableController extends BaseController
         }
         return response()->json($tableDtos, 200);
     }
+    
+    private function init(string $tableID): void
+    {
+        $yandexConfigFrom = 'V5';
+        $yandexConfigTo = 'V6';
+        $range = $this->sheetNamesConfig->getYandex().'!'.$yandexConfigFrom.':'.$yandexConfigTo;
+        
+        $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+            $tableID,
+            $range
+        );
+        $this->yandexToken = $yandexConfig[0];
+        $baseFolder = $yandexConfig[1];
+        
+        if ($this->doesYandexTokenExist()) {
+            $this->yandexDiskService->init($baseFolder, $this->yandexToken);
+        }
+    }
+    
+    private function doesYandexTokenExist(): bool
+    {
+        return !is_null($this->yandexToken) && ($this->yandexToken !== '');
+    }
 
     /**
      * GET /$id
@@ -123,11 +158,20 @@ class TableController extends BaseController
     public function show(string $id)
     {
         $table = $this->tableRepository->get($id);
-        $service = new FillImagesJob(
-            new SpreadsheetClientService(),
-            new GoogleDriveClientService()
-        );
-
+        $this->init($table->getGoogleSheetId());
+        if ($this->doesYandexTokenExist()) {
+            $service = new FillImagesJobYandex(
+                new SpreadsheetClientService(),
+                new GoogleDriveClientService(),
+                new YandexDiskService()
+            );
+        } else {
+            $service = new FillImagesJob(
+                new SpreadsheetClientService(),
+                new GoogleDriveClientService()
+            );
+        }
+    
         $spintaxService = new RandomizeTextJob(
             new SpintaxService(),
             new SpreadsheetClientService(),

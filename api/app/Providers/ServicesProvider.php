@@ -30,6 +30,9 @@ class ServicesProvider extends ServiceProvider
         $this->app->bind(IGoogleDriveClientService::class, function () {
             return new GoogleDriveClientService();
         });
+        $this->app->bind(IYandexDiskService::class, function () {
+            return new YandexDiskService();
+        });
         $this->app->bind(ISpreadsheetClientService::class, function () {
             return new SpreadsheetClientService();
         });
