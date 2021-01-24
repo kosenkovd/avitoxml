@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Configuration\Spreadsheet\SheetNames;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
 use Exception;
@@ -41,18 +42,24 @@ class GeneratorController extends BaseController
      * @var ISpreadsheetClientService Google Spreadsheet client.
      */
     private ISpreadsheetClientService $spreadsheetClientService;
-    
+
+    /**
+     * @var SheetNames configuration with sheet names.
+     */
+    private SheetNames $sheetNamesConfig;
+
     public function __construct(
         Interfaces\ITableRepository $tablesRepository,
         Interfaces\IGeneratorRepository  $generatorsRepository,
         IXmlGenerationService $xmlGenerator,
-        ISpreadsheetClientService $spreadsheetClientService
-    )
+        ISpreadsheetClientService $spreadsheetClientService,
+        SheetNames $sheetNames)
     {
         $this->tablesRepository = $tablesRepository;
         $this->generatorsRepository = $generatorsRepository;
         $this->xmlGenerator = $xmlGenerator;
         $this->spreadsheetClientService = $spreadsheetClientService;
+        $this->sheetNamesConfig = $sheetNames;
     }
 
     /**
@@ -114,11 +121,17 @@ class GeneratorController extends BaseController
                 ->header("Content-Type", "application/xml");
         }
 
-        $toLoadLastGeneration = $table->isDeleted() ||
-            is_null($timeModified) ||
-            (!is_null($table->getDateExpired()) && $table->getDateExpired() < time()) ||
-            ($generator->getLastGenerated() > $timeModified->getTimestamp());
-        if($toLoadLastGeneration)
+        // Expired or deleted tables always return last generated XML
+        $isTableExpiredOrDeleted = $table->isDeleted() ||
+            (!is_null($table->getDateExpired()) && $table->getDateExpired() < time());
+
+        // Xml must be regenerated twice an hour to update yandex ads that rely on date created that can be set long
+        // before real actual date
+        $isXmlActual = ($generator->getTargetPlatform() != $this->sheetNamesConfig->getYandex() ||
+                time() - $generator->getLastGenerated() < 1800) &&
+            (is_null($timeModified) || ($generator->getLastGenerated() > $timeModified->getTimestamp()));
+
+        if($isTableExpiredOrDeleted || $isXmlActual)
         {
             $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
         }

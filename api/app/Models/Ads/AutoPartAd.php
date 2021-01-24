@@ -6,7 +6,7 @@ use App\Models\TableHeader;
 
 class AutoPartAd extends AdBase
 {
-    protected $autoPart;
+    protected ?string $autoPart = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -21,11 +21,12 @@ class AutoPartAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
+        $resultXml = $this->addTagIfPropertySet($this->autoPart, "avtozapchasti_tip");
+
         return <<<AVITOXML
     <Ad>
 $defaultTags
-
-        <avtozapchasti_tip>$this->autoPart</avtozapchasti_tip>
+$resultXml
     </Ad>
 AVITOXML;
     }

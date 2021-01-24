@@ -21,3 +21,4 @@ Route::apiResources([
 ]);
 
 Route::get('/users/myAccount', [C\UserController::class, 'myAccount']);
+Route::get('/tables/{tableId}/yandexFile', [C\FileWrapperController::class, 'yandexFile']);

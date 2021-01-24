@@ -15,7 +15,8 @@ class Authenticate
     private Interfaces\IUserRepository $userRepository;
 
     private static array $anonymousAllowed = [
-        "App\Http\Controllers\GeneratorController@show"
+        "App\Http\Controllers\GeneratorController@show",
+        "App\Http\Controllers\FileWrapperController@yandexFile"
     ];
 
     public function __construct(Interfaces\IUserRepository $userRepository)

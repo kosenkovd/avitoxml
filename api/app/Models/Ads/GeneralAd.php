@@ -6,7 +6,7 @@ use App\Models\TableHeader;
 
 class GeneralAd extends AdBase
 {
-    protected $goodsType;
+    protected ?string $goodsType = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -21,11 +21,12 @@ class GeneralAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
+        $resultXml = $this->addTagIfPropertySet($this->goodsType, "GoodsType");
+
         return <<<AVITOXML
     <Ad>
 $defaultTags
-
-        <GoodsType>$this->goodsType</GoodsType>
+$resultXml
     </Ad>
 AVITOXML;
     }

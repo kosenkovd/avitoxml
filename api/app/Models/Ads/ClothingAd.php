@@ -6,9 +6,9 @@ use App\Models\TableHeader;
 
 class ClothingAd extends AdBase
 {
-    protected $goodsType;
-    protected $apparel;
-    protected $size;
+    protected ?string $goodsType = null;
+    protected ?string $apparel = null;
+    protected ?string $size = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -29,13 +29,14 @@ class ClothingAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
+        $resultXml = $this->addTagIfPropertySet($this->goodsType, "GoodsType");
+        $resultXml.= $this->addTagIfPropertySet($this->apparel, "Apparel");
+        $resultXml.= $this->addTagIfPropertySet($this->size, "Size");
+
         return <<<AVITOXML
     <Ad>
 $defaultTags
-
-        <GoodsType>$this->goodsType</GoodsType>
-        <Apparel>$this->apparel</Apparel>
-        <Size>$this->size</Size>
+$resultXml
     </Ad>
 AVITOXML;
     }

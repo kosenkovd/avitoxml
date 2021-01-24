@@ -6,7 +6,7 @@ use App\Models\TableHeader;
 
 class PetAd extends AdBase
 {
-    protected $breed;
+    protected ?string $breed = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -21,11 +21,12 @@ class PetAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
+        $resultXml = $this->addTagIfPropertySet($this->breed, "Breed");
+
         return <<<AVITOXML
     <Ad>
 $defaultTags
-
-        <Breed>$this->breed</Breed>
+$resultXml
     </Ad>
 AVITOXML;
     }

@@ -19,17 +19,22 @@
         /**
          * @var int max time to execute job.
          */
-        protected int $maxJobTime = 60*60;
+        protected int $maxJobTime = 60*5;
+
+        /**
+         * @var bool is logging enabled.
+         */
+        protected bool $loggingEnabled = true;
 
         private array $images = [];
-        
+
         /**
          * @var IYandexDiskService Google Spreadsheet client.
          */
         protected IYandexDiskService $yandexDiskService;
-    
+
         protected string $yandexToken;
-    
+
         /**
          * @var SheetNames
          */
@@ -122,6 +127,7 @@
             $this->log("Source folders ".$row[$propertyColumns->photoSourceFolder]);
             $sourceFolders = explode(PHP_EOL, $row[$propertyColumns->photoSourceFolder]);
 
+            var_dump($sourceFolders);
             $maxNumberOfSymbolsInFileNumber = strlen(strval(count($sourceFolders)));
 
             $imageCopyData = [];
@@ -131,10 +137,13 @@
                 $sourceFolder = trim($sourceFolder);
                 $this->log("Processing ".$sourceFolder);
                 $sourceFolderId = $this->yandexDiskService->getChildFolderByName($baseFolderId, $sourceFolder);
+
+                var_dump($sourceFolderId);
                 /** @var $image File */
                 $image = null;
                 if(isset($this->images[$sourceFolderId]))
                 {
+                    $this->log("Num of images from ".$sourceFolderId." is ".count($this->images[$sourceFolderId]));
                     if(count($this->images[$sourceFolderId]) == 0)
                     {
                         continue;
@@ -143,15 +152,16 @@
                 }
                 else
                 {
-                    $this->log("Getting images from ".$sourceFolder);
+                    $this->log("Getting images from ".$sourceFolderId);
                     $this->images[$sourceFolderId] = $this->yandexDiskService->listFolderImages($sourceFolderId);
+
                     if(count($this->images[$sourceFolderId]) == 0)
                     {
                         continue;
                     }
                     $image = array_shift($this->images[$sourceFolderId]);
                 }
-                
+
                 $imageCopyData[] = [
                     "image" => $image,
                     "newName" => str_pad(
@@ -166,9 +176,9 @@
             if(count($imageCopyData) > 0)
             {
                 $newFolderName = crc32(Guid::uuid4()->toString());
-                
+
                 $newFolderId = $this->yandexDiskService->createFolder($newFolderName, null, false);
-    
+
                 foreach ($imageCopyData as $imageCopyDatum)
                 {
                     $this->yandexDiskService->moveFile(
@@ -184,11 +194,12 @@
         /**
          * Fills images for specified generator.
          *
+         * @param string $tableGuid table guid.
          * @param string $tableID Google spreadsheet id.
          * @param string $baseFolderID Google drive base folder id.
          * @param Generator $generator Generator.
          */
-        private function processSheet(string $tableID, string $baseFolderID, Generator $generator): void
+        private function processSheet(string $tableGuid, string $tableID, string $baseFolderID, Generator $generator): void
         {
             $sheetName = $generator->getTargetPlatform();
             $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
@@ -203,7 +214,6 @@
             {
                 $this->stopIfTimeout();
 
-                var_dump($numRow);
                 $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
                     $row[$propertyColumns->imagesRaw] != '';
 
@@ -217,7 +227,7 @@
                 $this->log("Filling row ".$spreadsheetRowNum);
 
                 if(!isset($row[$propertyColumns->subFolderName]) ||
-                    $row[$propertyColumns->subFolderName] == '')
+                    trim($row[$propertyColumns->subFolderName]) == '')
                 {
                     $subFolderName = $this->createSubFolderWithContent($baseFolderID, $row, $propertyColumns);
                     if(is_null($subFolderName))
@@ -248,7 +258,8 @@
                     /** @var $image File */
                     foreach ($images as $image)
                     {
-                        $links[] = $image->getProperties()->find('file_url')->getValue();
+                        $fileInfo = urlencode(base64_encode($image->getPath()."&&&".$this->yandexToken));
+                        $links[] = LinkHelper::getYandexPictureDownloadLink($tableGuid, $fileInfo);
                     }
                     $imagesString = join(PHP_EOL, $links);
 
@@ -262,25 +273,25 @@
                 }
             }
         }
-        
+
         private function init(string $tableID): void
         {
-            $yandexConfigFrom = 'V5';
-            $yandexConfigTo = 'V5';
-            
-            $range = $this->sheetNamesConfig->getYandex().'!'.$yandexConfigFrom.':'.$yandexConfigTo;
-            
+            $yandexConfigFrom = 'D7';
+            $yandexConfigTo = 'D7';
+
+            $range = $this->sheetNamesConfig->getInformation().'!'.$yandexConfigFrom.':'.$yandexConfigTo;
+
             $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                 $tableID,
                 $range
             );
             $this->yandexToken = $yandexConfig[0][0];
-            
+
             if ($this->doesYandexTokenExist()) {
                 $this->yandexDiskService->init($this->yandexToken);
             }
         }
-    
+
         private function doesYandexTokenExist(): bool
         {
             return !is_null($this->yandexToken) && ($this->yandexToken !== '');
@@ -312,12 +323,12 @@
             $tableID = $table->getGoogleSheetId();
             $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
             $baseFolderID = $table->getGoogleDriveId();
-            
+
             $this->init($tableID);
 
             foreach ($table->getGenerators() as $generator)
             {
-                $this->processSheet($tableID, $baseFolderID, $generator);
+                $this->processSheet($table->getTableGuid(), $tableID, $baseFolderID, $generator);
                 $this->stopIfTimeout();
             }
 

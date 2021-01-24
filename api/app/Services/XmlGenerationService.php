@@ -37,7 +37,10 @@ class XmlGenerationService implements IXmlGenerationService
      */
     private function validateRequiredColumnsPresent(array $row, TableHeader $propertyColumns) : bool
     {
-        return isset($row[$propertyColumns->ID]) && isset($row[$propertyColumns->category]);
+        return isset($row[$propertyColumns->ID]) &&
+            isset($row[$propertyColumns->category]) &&
+            !is_null($row[$propertyColumns->ID]) &&
+            trim($row[$propertyColumns->ID]) !== "";
     }
 
     /**
@@ -76,12 +79,10 @@ class XmlGenerationService implements IXmlGenerationService
      * @param array $row
      * @param TableHeader $propertyColumns
      * @param string $sheetName
-     * @param string[] $ids ad ids for yandex.
-     * @param int $numRow
      * @return bool
      */
     private function shouldSkipRow(
-        array $row, TableHeader $propertyColumns, string $sheetName, array $ids, int $numRow) : bool
+        array $row, TableHeader $propertyColumns, string $sheetName) : bool
     {
         return !$this->validateRequiredColumnsPresent($row, $propertyColumns) ||
             ($sheetName == $this->sheetNamesConfig->getYandex() &&
@@ -155,16 +156,8 @@ class XmlGenerationService implements IXmlGenerationService
         }
         else
         {
-            $idValues = [];
-            if($targetSheet == $this->sheetNamesConfig->getYandex())
-            {
-                $range = $this->sheetNamesConfig->getYandexSettings().'!C2:C5001';
-
-                $idValues = $this->spreadsheetClientService->getSpreadsheetCellsRange($spreadsheetId, $range, false);
-            }
-
             foreach ($values as $numRow => $row) {
-                if($this->shouldSkipRow($row, $propertyColumns, $targetSheet, $idValues, $numRow))
+                if($this->shouldSkipRow($row, $propertyColumns, $targetSheet))
                 {
                     continue;
                 }

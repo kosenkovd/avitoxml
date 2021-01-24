@@ -6,8 +6,8 @@ use App\Models\TableHeader;
 
 class ServiceAd extends AdBase
 {
-    protected $serviceType;
-    protected $serviceSubtype;
+    protected ?string $serviceType = null;
+    protected ?string $serviceSubtype = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -25,12 +25,13 @@ class ServiceAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
+        $resultXml = $this->addTagIfPropertySet($this->serviceType, "ServiceType");
+        $resultXml.= $this->addTagIfPropertySet($this->serviceSubtype, "ServiceSubtype");
+
         return <<<AVITOXML
     <Ad>
 $defaultTags
-
-        <ServiceType>$this->serviceType</ServiceType>
-        <ServiceSubtype>$this->serviceSubtype</ServiceSubtype>
+$resultXml
     </Ad>
 AVITOXML;
     }

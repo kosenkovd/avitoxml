@@ -105,10 +105,10 @@ class RandomizeTextJob extends JobBase
 
     public function __construct(
         ISpintaxService $spintaxService,
-        ISpreadsheetClientService $spreadsheetClientService,
+        ISpreadsheetClientService $spreadsheetClientService
     )
     {
-        parent::__construct($spreadsheetClientService,);
+        parent::__construct($spreadsheetClientService);
         $this->spintaxService = $spintaxService;
     }
 

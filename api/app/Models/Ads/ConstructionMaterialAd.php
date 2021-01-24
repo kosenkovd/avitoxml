@@ -8,8 +8,8 @@ use App\Models\TableHeader;
 
 class ConstructionMaterialAd extends AdBase
 {
-    protected $goodsType;
-    protected $goodsSubType;
+    protected ?string $goodsType = null;
+    protected ?string $goodsSubType = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -27,12 +27,13 @@ class ConstructionMaterialAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
+        $resultXml = $this->addTagIfPropertySet($this->goodsType, "GoodsType");
+        $resultXml.= $this->addTagIfPropertySet($this->goodsSubType, "GoodsSubType");
+
         return <<<AVITOXML
     <Ad>
 $defaultTags
-
-        <GoodsType>$this->goodsType</GoodsType>
-        <GoodsSubType>$this->goodsSubType</GoodsSubType>
+$resultXml
     </Ad>
 AVITOXML;
     }

@@ -13,7 +13,7 @@ interface IYandexDiskService
      * @param string $token      yandex disk token
      */
     public function init(string $token): void;
-    
+
     /**
      * Creates new folder on YandexDisk.
      *
@@ -62,4 +62,12 @@ interface IYandexDiskService
         string $folderID,
         string $newName = null,
         bool $toRetry = true): void;
+
+    /**
+     * Download file by its identifier.
+     *
+     * @param string $fileID file identificator.
+     * @return mixed|null file content.
+     */
+    public function downloadFile(string $fileID);
 }

@@ -3,10 +3,16 @@
 namespace App\Console;
 
 use App\Configuration\Spreadsheet;
+use App\Console\Jobs\FillImagesJob;
+use App\Console\Jobs\FillImagesJobYandex;
+use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Repositories\TableRepository;
 use App\Repositories\TableUpdateLockRepository;
+use App\Services\GoogleDriveClientService;
+use App\Services\SpintaxService;
 use App\Services\SpreadsheetClientService;
+use App\Services\YandexDiskService;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
@@ -40,19 +46,12 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $schedule->call(function () {
-            echo "Starting TriggerSpreadsheetJob".PHP_EOL;
-            (new TriggerSpreadsheetJob(
-                new SpreadsheetClientService(), new Spreadsheet()))->start();
-        })
-            ->cron("50 * * * *");
-
         $tableRepository = new TableRepository(new TableUpdateLockRepository());
         $tables = $tableRepository->getTables();
 
         foreach ($tables as $table)
         {
-            $schedule->exec("cd /var/www/agishev-xml.ru/api && php artisan table:fillImages ".$table->getTableGuid())
+            /*$schedule->exec("cd /var/www/agishev-xml.ru/api && php artisan table:fillImages ".$table->getTableGuid())
                 ->name("Fill image links command ".$table->getTableId())
                 ->everyFiveMinutes()
                 ->runInBackground()
@@ -64,33 +63,28 @@ class Kernel extends ConsoleKernel
                 ->runInBackground()
                 ->withoutOverlapping(60);
 
-            sleep(1);
-
-            /*$schedule->call(function() use($table) {
-                exec("cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 artisan table:fillImages ".$table->getTableGuid()."  > /dev/null &");
-            })
-                ->name("Fill image links exec command ".$table->getTableId())
-                ->everyMinute();
+            sleep(1);*/
 
             $schedule->call(function () use($table) {
                 echo "Starting FillImagesJob for ".$table->getTableGuid();
-                (new FillImagesJob(new GoogleServicesClient()))
+                (new FillImagesJobYandex(new SpreadsheetClientService(), new YandexDiskService()))
                     ->start($table);
             })
-                ->name("Randomize images ".$table->getTableId())
-                ->everyTenMinutes()
+                ->name("Randomize yandex images ".$table->getTableId())
+                ->everyFiveMinutes()
                 ->runInBackground()
                 ->withoutOverlapping();
 
+
             $schedule->call(function () use($table) {
                 echo "Starting RandomizeTextJob for ".$table->getTableGuid();
-                (new RandomizeTextJob(new SpintaxService(), new GoogleServicesClient()))
+                (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService()))
                     ->start($table);
             })
                 ->name("Randomize text ".$table->getTableId())
                 ->everyFiveMinutes()
                 ->runInBackground()
-                ->withoutOverlapping();*/
+                ->withoutOverlapping();
         }
     }
 

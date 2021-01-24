@@ -24,7 +24,7 @@ class TriggerSpreadsheetJob extends JobBase
         Spreadsheet $spreadsheet
     )
     {
-        parent::__construct($spreadsheetClientService,);
+        parent::__construct($spreadsheetClientService);
         $this->spreadsheetConfig = $spreadsheet;
     }
 

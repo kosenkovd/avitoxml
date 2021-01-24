@@ -32,4 +32,9 @@ class LinkHelper
     {
         return "http://avitoxml.beget.tech/pictures/pictureWrapper.php?fileID=".$fileID;
     }
+
+    public static function getYandexPictureDownloadLink(string $tableId, string $fileInfo) : string
+    {
+        return "http://avitoxml.beget.tech/api/tables/".$tableId."/yandexFile?fileInfo=".$fileInfo;
+    }
 }

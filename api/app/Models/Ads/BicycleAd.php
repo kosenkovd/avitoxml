@@ -6,7 +6,7 @@ use App\Models\TableHeader;
 
 class BicycleAd extends AdBase
 {
-    protected $vehicleType;
+    protected ?string $vehicleType = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -21,11 +21,12 @@ class BicycleAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
+        $resultXml = $this->addTagIfPropertySet($this->vehicleType, "VehicleType");
+
         return <<<AVITOXML
     <Ad>
 $defaultTags
-
-        <VehicleType>$this->vehicleType</VehicleType>
+$resultXml
     </Ad>
 AVITOXML;
     }

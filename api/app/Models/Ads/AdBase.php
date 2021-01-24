@@ -8,24 +8,24 @@ use DateTimeZone;
 
 abstract class AdBase
 {
-    protected $id;
-    protected $dateBegin;
-    protected $dateEnd;
-    protected $managerName;
-    protected $contactPhone;
-    protected $category;
-    protected $adType;
-    protected $condition;
-    protected $title;
-    protected $description;
-    protected $price;
-    protected $images;
-    protected $videoURL;
-    protected $address;
-    protected $avitoId;
-    protected $adStatus;
-    protected $placementType;
-    protected $messages;
+    protected ?string $id = null;
+    protected ?string $dateBegin = null;
+    protected ?string $dateEnd = null;
+    protected ?string $managerName = null;
+    protected ?string $contactPhone = null;
+    protected ?string $category = null;
+    protected ?string $adType = null;
+    protected ?string $condition = null;
+    protected ?string $title = null;
+    protected ?string $description = null;
+    protected ?string $price = null;
+    protected array $images;
+    protected ?string $videoURL = null;
+    protected ?string $address = null;
+    protected ?string $avitoId = null;
+    protected ?string $adStatus = null;
+    protected ?string $placementType = null;
+    protected ?string $messages = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -180,26 +180,44 @@ abstract class AdBase
             $this->condition = "inapplicable";
         }
 
-        return <<<AVITOXML
-        <Id>$this->id</Id>
-        <DateBegin>$this->dateBegin</DateBegin>
-        <DateEnd>$this->dateEnd</DateEnd>
-        <ManagerName>$this->managerName</ManagerName>
-        <ContactPhone>$this->contactPhone</ContactPhone>
-        <Address>$this->address</Address>
-        <Category>$this->category</Category>
-        <AdType>$this->adType</AdType>
-        <Condition>$this->condition</Condition>
-        <Title>$this->title</Title>
-        <Description><![CDATA[$this->description]]></Description>
-        <Price>$this->price</Price>
-        <Images>$imageTags</Images>
-        <VideoURL>$this->videoURL</VideoURL>
-        <AvitoId>$this->avitoId</AvitoId>
-        <AdStatus>$this->adStatus</AdStatus>
-        <ListingFee>$this->placementType</ListingFee>
-        <AllowEmail>$this->messages</AllowEmail>
-AVITOXML;
+        $resultXml = $this->addTagIfPropertySet($this->id, "Id");
+        $resultXml.= $this->addTagIfPropertySet($this->dateBegin, "DateBegin");
+        $resultXml.= $this->addTagIfPropertySet($this->dateEnd, "DateEnd");
+        $resultXml.= $this->addTagIfPropertySet($this->managerName, "ManagerName");
+        $resultXml.= $this->addTagIfPropertySet($this->contactPhone, "ContactPhone");
+        $resultXml.= $this->addTagIfPropertySet($this->address, "Address");
+        $resultXml.= $this->addTagIfPropertySet($this->category, "Category");
+        $resultXml.= $this->addTagIfPropertySet($this->adType, "AdType");
+        $resultXml.= $this->addTagIfPropertySet($this->condition, "Condition");
+        $resultXml.= $this->addTagIfPropertySet($this->title, "Title");
+        $resultXml.= $this->addTagIfPropertySet("<![CDATA[$this->description]]>", "Description");
+        $resultXml.= $this->addTagIfPropertySet($this->price, "Price");
+        $resultXml.= $this->addTagIfPropertySet($imageTags, "Images");
+        $resultXml.= $this->addTagIfPropertySet($this->videoURL, "VideoURL");
+        $resultXml.= $this->addTagIfPropertySet($this->avitoId, "AvitoId");
+        $resultXml.= $this->addTagIfPropertySet($this->adStatus, "AdStatus");
+        $resultXml.= $this->addTagIfPropertySet($this->placementType, "ListingFee");
+        $resultXml.= $this->addTagIfPropertySet($this->messages, "AllowEmail");
+
+        return $resultXml;
+    }
+
+    /**
+     * Create tag if property is not null or empty.
+     *
+     * @param $property
+     * @param string $tagName
+     * @return string
+     */
+    protected function addTagIfPropertySet($property, string $tagName) : string
+    {
+        if($property == null || trim($property) == "")
+        {
+            return "";
+        }
+
+        return "
+        <$tagName>$property</$tagName>";
     }
 
     protected function generateImageAvitoTags(array $images)

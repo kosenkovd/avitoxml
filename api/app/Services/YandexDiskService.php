@@ -54,7 +54,7 @@
             } else {
                 $folderPath = '/'.$parentId.'/'.$name;
             }
-            
+
             $diskFolder = $this->disk->directory($folderPath);
 
             $result = $diskFolder->create();
@@ -83,6 +83,7 @@
             $folderPath = "/".$folderID;
 
             $directory = $this->disk->directory($folderPath);
+
             return $directory->getChildren();
         }
 
@@ -108,7 +109,25 @@
                 $fileName = $filePathArray[count($filePathArray) - 1];
                 $newFilePath = $folderPath.$fileName;
             }
+            $newFilePath = preg_replace('/\s/', '', $newFilePath);
+            echo "Save to ".$newFilePath.PHP_EOL;
 
-            $file->move($newFilePath);
+            if(!$file->move($newFilePath))
+            {
+                echo "Move error!!!!!!".PHP_EOL;
+                var_dump(Disk\Collection\ResultList::getInstance()->getLast());
+            }
+        }
+
+        /**
+         * @inheritDoc
+         */
+        public function downloadFile(string $fileID)
+        {
+            $file = $this->disk->file($fileID);
+            $file->download(); //bool
+            // получение последнего результата запроса
+            $result = Disk\Collection\ResultList::getInstance()->getLast();
+            return $result->getActualResult();
         }
     }
