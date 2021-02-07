@@ -11,14 +11,10 @@ use Exception;
 
 class TableRepository extends RepositoryBase implements ITableRepository
 {
-    private ITableUpdateLockRepository $tableUpdateLockRepository;
-
-    function __construct(ITableUpdateLockRepository $tableUpdateLockRepository)
+    function __construct()
     {
         parent::__construct();
         $this->config = new Config();
-
-        $this->tableUpdateLockRepository = $tableUpdateLockRepository;
     }
 
     /**
@@ -36,6 +32,7 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`userId` AS `userId`,
        `t`.`googleSheetId`,
        `t`.`googleDriveId`,
+       `t`.`yandexToken`,
        `t`.`dateExpired`,
        `t`.`isDeleted`,
        `t`.`dateDeleted`,
@@ -74,6 +71,7 @@ WHERE 1";
                     $row["userId"],
                     $row["googleSheetId"],
                     $row["googleDriveId"],
+                    $row["yandexToken"],
                     $row["dateExpired"],
                     $row["isDeleted"],
                     $row["dateDeleted"],
@@ -107,13 +105,11 @@ WHERE 1";
 INSERT INTO `".$this->config->getTablesTableName()."`(
     `userId`,
     `googleSheetId`,
-    `googleDriveId`,
     `dateExpired`,
     `tableGuid`)
 VALUES (
     ".$table->getUserId().",
     '".$table->getGoogleSheetId()."',
-    '".$table->getGoogleDriveId()."',
     ".$dateExpired.",
     '".$table->getTableGuid()."')";
 
@@ -122,7 +118,6 @@ VALUES (
         $tableId = $mysqli->insert_id;
         $mysqli->close();
 
-        $this->tableUpdateLockRepository->insert($tableId);
         return $tableId;
     }
 
@@ -142,6 +137,7 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`userId` AS `userId`,
        `t`.`googleSheetId`,
        `t`.`googleDriveId`,
+       `t`.`yandexToken`,
        `t`.`dateExpired`,
        `t`.`isDeleted`,
        `t`.`dateDeleted`,
@@ -181,6 +177,7 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
                     $row["userId"],
                     $row["googleSheetId"],
                     $row["googleDriveId"],
+                    $row["yandexToken"],
                     $row["dateExpired"],
                     $row["isDeleted"],
                     $row["dateDeleted"],
@@ -195,5 +192,26 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
         }
 
         return $table;
+    }
+
+    /**
+     * Update yandex token for table.
+     *
+     * @param int $tableId
+     * @param string $yandexToken
+     * @throws Exception
+     */
+    public function updateYandexToken(int $tableId, string $yandexToken) : void
+    {
+        $query = "
+UPDATE `".$this->config->getTablesTableName()."`
+SET `yandexToken`=?
+WHERE `id`=?";
+
+        $mysqli = $this->connect();
+        $statement = $mysqli->prepare($query);
+        $statement->bind_param('si', $yandexToken, $tableId);
+
+        $statement->execute();
     }
 }

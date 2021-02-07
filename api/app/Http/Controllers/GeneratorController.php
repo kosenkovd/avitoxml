@@ -14,6 +14,7 @@ use Illuminate\Routing\Controller as BaseController;
 
 use App\Models;
 use App\Repositories\Interfaces;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Class GeneratorController
@@ -130,7 +131,6 @@ class GeneratorController extends BaseController
         $isXmlActual = ($generator->getTargetPlatform() != $this->sheetNamesConfig->getYandex() ||
                 time() - $generator->getLastGenerated() < 1800) &&
             (is_null($timeModified) || ($generator->getLastGenerated() > $timeModified->getTimestamp()));
-
         if($isTableExpiredOrDeleted || $isXmlActual)
         {
             $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
@@ -147,6 +147,7 @@ class GeneratorController extends BaseController
             }
             catch(Exception $e)
             {
+                Log::error($e);
                 $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
             }
         }

@@ -16,7 +16,7 @@ class TableDtoBase
 
     public string $googleSheetUrl;
 
-    public string $googleDriveUrl;
+    public ?string $googleDriveUrl;
 
     public array $generators;
 
@@ -29,7 +29,7 @@ class TableDtoBase
      * @param string|null $userPhoneNumber
      * @param string|null $userSocialNetworkUrl
      * @param string $googleSheetUrl
-     * @param string $googleDriveUrl
+     * @param string|null $googleDriveUrl
      * @param GeneratorDTO[] $generators
      * @param string|null $notes
      */
@@ -39,7 +39,7 @@ class TableDtoBase
         ?string $userPhoneNumber,
         ?string $userSocialNetworkUrl,
         string $googleSheetUrl,
-        string $googleDriveUrl,
+        ?string $googleDriveUrl,
         array $generators,
         ?string $notes)
     {

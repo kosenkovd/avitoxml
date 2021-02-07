@@ -10,6 +10,8 @@ class TableDTO extends TableDtoBase
 
     public bool $isActive;
 
+    public bool $isYandexTokenPresent;
+
     /**
      * TableDTO constructor.
      * @param int $tableId
@@ -17,11 +19,12 @@ class TableDTO extends TableDtoBase
      * @param string|null $userPhoneNumber
      * @param string|null $userSocialNetworkUrl
      * @param string $googleSheetUrl
-     * @param string $googleDriveUrl
+     * @param string|null $googleDriveUrl
      * @param GeneratorDTO[] $generators
      * @param string|null $notes
      * @param string|null $dateExpired
      * @param bool $isActive
+     * @param bool $isYandexTokenPresent
      */
     public function __construct(
         int $tableId,
@@ -29,11 +32,12 @@ class TableDTO extends TableDtoBase
         ?string $userPhoneNumber,
         ?string $userSocialNetworkUrl,
         string $googleSheetUrl,
-        string $googleDriveUrl,
+        ?string $googleDriveUrl,
         array $generators,
         ?string $notes,
         ?string $dateExpired,
-        bool $isActive)
+        bool $isActive,
+        bool $isYandexTokenPresent)
     {
         parent::__construct(
             $tableId,
@@ -47,5 +51,6 @@ class TableDTO extends TableDtoBase
 
         $this->dateExpired = $dateExpired;
         $this->isActive = $isActive;
+        $this->isYandexTokenPresent = $isYandexTokenPresent;
     }
 }

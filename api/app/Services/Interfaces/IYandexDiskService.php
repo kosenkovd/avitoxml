@@ -66,8 +66,16 @@ interface IYandexDiskService
     /**
      * Download file by its identifier.
      *
-     * @param string $fileID file identificator.
+     * @param string $fileID file identifier.
      * @return mixed|null file content.
      */
     public function downloadFile(string $fileID);
+
+    /**
+     * Does folder exist.
+     *
+     * @param string $folderID folder identifier.
+     * @return bool does folder exist.
+     */
+    public function exists(string $folderID): bool;
 }

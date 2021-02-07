@@ -130,4 +130,14 @@
             $result = Disk\Collection\ResultList::getInstance()->getLast();
             return $result->getActualResult();
         }
+
+        /**
+         * @inheritDoc
+         */
+        public function exists(string $folderID): bool
+        {
+            $folderPath = "/".$folderID;
+
+            return $this->disk->directory($folderPath)->has();
+        }
     }

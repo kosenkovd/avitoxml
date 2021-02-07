@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Configuration\Spreadsheet\SheetNames;
+use App\Repositories\Interfaces\ITableRepository;
 use App\Services\Interfaces\IYandexDiskService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -24,10 +25,14 @@ class FileWrapperController extends BaseController
      */
     private IYandexDiskService $yandexDiskService;
 
+    private ITableRepository $tableRespository;
+
     public function __construct(
-        IYandexDiskService $yandexDiskService)
+        IYandexDiskService $yandexDiskService,
+        ITableRepository $tableRepository)
     {
         $this->yandexDiskService = $yandexDiskService;
+        $this->tableRespository = $tableRepository;
     }
 
     /**
@@ -41,13 +46,29 @@ class FileWrapperController extends BaseController
      */
     public function yandexFile(string $tableId, Request $request) : Response
     {
+        $table = $this->tableRespository->get($tableId);
+        if($table == null)
+        {
+            return response("Not found", 404);
+        }
+
         $fileInfo = $request->query("fileInfo");
-        $decodedFileInfo = base64_decode($fileInfo);
+        $decodedFileInfo = base64_decode(urldecode($fileInfo));
+
+        $token = "";
         if(strpos($decodedFileInfo, "&&&") === false)
         {
-            $decodedFileInfo = base64_decode(urldecode($fileInfo));
+            $fileID = $decodedFileInfo;
         }
-        [$fileID, $token] = explode("&&&", $decodedFileInfo);
+        else
+        {
+            [$fileID, $token] = explode("&&&", $decodedFileInfo);
+        }
+
+        $token = $table->getYandexToken() != null
+            ? $table->getYandexToken()
+            : $token;
+
         $this->yandexDiskService->init($token);
 
         $explodedFileName = explode(".", $fileID);

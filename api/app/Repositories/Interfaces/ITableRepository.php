@@ -29,4 +29,13 @@ interface ITableRepository
      * @return Table|null table, if found, otherwise null.
      */
     public function get(string $tableGuid) : ?Table;
+
+    /**
+     * Update yandex token for table.
+     *
+     * @param int $tableId
+     * @param string $yandexToken
+     * @throws Exception
+     */
+    public function updateYandexToken(int $tableId, string $yandexToken) : void;
 }

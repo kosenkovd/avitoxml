@@ -19,13 +19,18 @@
          */
         protected int $maxJobTime = 60*60;
 
+        /**
+         * @var bool is logging enabled.
+         */
+        protected bool $loggingEnabled = true;
+
         private array $images = [];
-        
+
         /**
          * @var IGoogleDriveClientService
          */
         private IGoogleDriveClientService $googleDriveClientService;
-    
+
         /**
          * Checks if it is possible to fill images in row.
          *

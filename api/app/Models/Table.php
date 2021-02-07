@@ -7,7 +7,9 @@ class Table {
 
     private int $userId;
 
-    private string $googleSheetId;
+    private ?string $googleSheetId;
+
+    private ?string $yandexToken;
 
     private string $googleDriveId;
 
@@ -31,7 +33,8 @@ class Table {
      * @param ?int $tableId
      * @param int $userId
      * @param string $googleSheetId
-     * @param string $googleDriveId
+     * @param ?string $googleDriveId
+     * @param ?string $yandexToken
      * @param int|null $dateExpired
      * @param bool $isDeleted
      * @param int|null $dateDeleted
@@ -43,7 +46,8 @@ class Table {
         ?int $tableId,
         int $userId,
         string $googleSheetId,
-        string $googleDriveId,
+        ?string $googleDriveId,
+        ?string $yandexToken,
         ?int $dateExpired,
         bool $isDeleted,
         ?int $dateDeleted,
@@ -55,12 +59,31 @@ class Table {
         $this->userId = $userId;
         $this->googleSheetId = $googleSheetId;
         $this->googleDriveId = $googleDriveId;
+        $this->yandexToken = $yandexToken;
         $this->dateExpired = $dateExpired;
         $this->isDeleted = $isDeleted;
         $this->dateDeleted = $dateDeleted;
         $this->notes = $notes;
         $this->tableGuid = $tableGuid;
         $this->generators = $generators;
+    }
+
+    /**
+     * @return ?string
+     */
+    public function getYandexToken(): ?string
+    {
+        return $this->yandexToken;
+    }
+
+    /**
+     * @param ?string $yandexToken
+     * @return Table
+     */
+    public function setYandexToken(?string $yandexToken): Table
+    {
+        $this->yandexToken = $yandexToken;
+        return $this;
     }
 
     /**
@@ -88,9 +111,9 @@ class Table {
     }
 
     /**
-     * @return string
+     * @return ?string
      */
-    public function getGoogleDriveId(): string
+    public function getGoogleDriveId(): ?string
     {
         return $this->googleDriveId;
     }

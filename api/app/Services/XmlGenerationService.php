@@ -184,11 +184,19 @@ class XmlGenerationService implements IXmlGenerationService
                         {
                             $ad = new Ads\ConstructionMaterialAd($row, $propertyColumns);
                         }
+                        else
+                        {
+                            $ad = new Ads\GeneralAd($row, $propertyColumns);
+                        }
                         break;
                     case "Запчасти и автотовары":
                         if($this->isAutoPart($row, $propertyColumns))
                         {
                             $ad = new Ads\AutoPartAd($row, $propertyColumns);
+                        }
+                        else
+                        {
+                            $ad = new Ads\GeneralAd($row, $propertyColumns);
                         }
                         break;
                     default:

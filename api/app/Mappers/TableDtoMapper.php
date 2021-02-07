@@ -44,17 +44,22 @@ class TableDtoMapper
 
         $isActive = !$user->isBlocked() && (is_null($table->getDateExpired()) || $table->getDateExpired() > time());
 
+        $googleDriveUrl = $table->getGoogleDriveId() != null
+            ? LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId())
+            : null;
+
         return new DTOs\TableDTO(
             $table->getTableId(),
             $user->getUserId(),
             $user->getPhoneNumber(),
             $user->getSocialNetworkUrl(),
             LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
-            LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId()),
+            $googleDriveUrl,
             self::GetGenerators($table->getTableGuid(), $table->getGenerators()),
             $table->getNotes(),
             $dateExpiredString,
-            $isActive);
+            $isActive,
+            $table->getYandexToken() != null);
     }
 
     public static function MapDeletedTableDTO(Models\Table $table, Models\User $user)

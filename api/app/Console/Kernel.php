@@ -65,15 +65,28 @@ class Kernel extends ConsoleKernel
 
             sleep(1);*/
 
-            $schedule->call(function () use($table) {
-                echo "Starting FillImagesJob for ".$table->getTableGuid();
-                (new FillImagesJobYandex(new SpreadsheetClientService(), new YandexDiskService()))
-                    ->start($table);
-            })
-                ->name("Randomize yandex images ".$table->getTableId())
-                ->everyFiveMinutes()
-                ->runInBackground()
-                ->withoutOverlapping();
+            if($table->getTableId() == 148)
+            {
+                $schedule->call(function () use($table) {
+                    echo "Starting FillImagesJob for ".$table->getTableGuid();
+                    (new FillImagesJob(new SpreadsheetClientService(), new GoogleDriveClientService()))
+                        ->start($table);
+                })
+                    ->name("Randomize Google images ".$table->getTableId())
+                    ->everyTenMinutes()
+                    ->withoutOverlapping();
+            }
+            else
+            {
+                $schedule->call(function () use($table) {
+                    echo "Starting FillImagesJob for ".$table->getTableGuid();
+                    (new FillImagesJobYandex(new SpreadsheetClientService(), new YandexDiskService(), new TableRepository()))
+                        ->start($table);
+                })
+                    ->name("Randomize yandex images ".$table->getTableId())
+                    ->everyFiveMinutes()
+                    ->withoutOverlapping();
+            }
 
 
             $schedule->call(function () use($table) {
@@ -83,7 +96,6 @@ class Kernel extends ConsoleKernel
             })
                 ->name("Randomize text ".$table->getTableId())
                 ->everyFiveMinutes()
-                ->runInBackground()
                 ->withoutOverlapping();
         }
     }

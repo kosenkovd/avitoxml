@@ -27,8 +27,7 @@
             $message = "Создана новая таблица с автогенерацией XML файла.
 
 Ссылки на новые ресурсы:
-    Таблица: " . LinkHelper::getGoogleSpreadsheetLink($dataForEmail->getGoogleSheetId()) . "
-    Папка: " . LinkHelper::getGoogleDriveFolderLink($dataForEmail->getGoogleDriveId()) .
+    Таблица: " . LinkHelper::getGoogleSpreadsheetLink($dataForEmail->getGoogleSheetId()) .
                 $files . "
 
 С уважением,

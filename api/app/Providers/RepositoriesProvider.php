@@ -20,7 +20,7 @@ class RepositoriesProvider extends ServiceProvider
             return new Repositories\UserRepository();
         });
         $this->app->bind(Interfaces\ITableRepository::class, function () {
-            return new Repositories\TableRepository(new Repositories\TableUpdateLockRepository());
+            return new Repositories\TableRepository();
         });
         $this->app->bind(Interfaces\IGeneratorRepository::class, function () {
             return new Repositories\GeneratorRepository();

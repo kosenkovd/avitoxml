@@ -9,6 +9,7 @@ use App\Console\Jobs\FillImagesJobYandex;
 use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Helpers\LinkHelper;
+use App\Repositories\TableRepository;
 use App\Services\GoogleDriveClientService;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\IMailService;
@@ -133,12 +134,13 @@ class TableController extends BaseController
     public function show(string $id)
     {
         $table = $this->tableRepository->get($id);
-    
+
 //        $this->yandexDiskService->init("AgAAAAAMMp_iAAbO9-TN2FLhf0a7kQr5Ju2mlII");
-        
+
         $yaService = new FillImagesJobYandex(
             new SpreadsheetClientService(),
-            new YandexDiskService()
+            new YandexDiskService(),
+            new TableRepository()
         );
         $yaService->start($table);
 
@@ -189,13 +191,13 @@ class TableController extends BaseController
         $user = $request->input("currentUser");
 
         $googleTableId = $this->spreadsheetClientService->copyTable();
-        $googleFolderId = $this->googleDriveClientService->createFolder();
 
         $table = new Models\Table(
             null,
             $user->getUserId(),
             $googleTableId,
-            $googleFolderId,
+            null,
+            null,
             null,
             false,
             null,

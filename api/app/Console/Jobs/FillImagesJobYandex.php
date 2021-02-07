@@ -9,6 +9,7 @@
     use App\Models\Generator;
     use App\Models\Table;
     use App\Models\TableHeader;
+    use App\Repositories\Interfaces\ITableRepository;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\Interfaces\IYandexDiskService;
     use Leonied7\Yandex\Disk\Item\File;
@@ -33,12 +34,12 @@
          */
         protected IYandexDiskService $yandexDiskService;
 
-        protected string $yandexToken;
-
         /**
          * @var SheetNames
          */
         protected SheetNames $sheetNamesConfig;
+
+        private ITableRepository $tableRepository;
 
         /**
          * Checks if it is possible to fill images in row.
@@ -135,6 +136,11 @@
             foreach ($sourceFolders as $sourceFolder)
             {
                 $sourceFolder = trim($sourceFolder);
+                if($sourceFolder === "")
+                {
+                    continue;
+                }
+
                 $this->log("Processing ".$sourceFolder);
                 $sourceFolderId = $this->yandexDiskService->getChildFolderByName($baseFolderId, $sourceFolder);
 
@@ -153,8 +159,9 @@
                 else
                 {
                     $this->log("Getting images from ".$sourceFolderId);
+                    $this->log("Does folder ".$sourceFolderId." exist: ".$this->yandexDiskService->exists($sourceFolderId));
                     $this->images[$sourceFolderId] = $this->yandexDiskService->listFolderImages($sourceFolderId);
-
+                    $this->log($sourceFolderId." contains ".count($this->images["$sourceFolderId"])." images. Loaded them into cache.");
                     if(count($this->images[$sourceFolderId]) == 0)
                     {
                         continue;
@@ -258,7 +265,7 @@
                     /** @var $image File */
                     foreach ($images as $image)
                     {
-                        $fileInfo = urlencode(base64_encode($image->getPath()."&&&".$this->yandexToken));
+                        $fileInfo = urlencode(base64_encode($image->getPath()));
                         $links[] = LinkHelper::getYandexPictureDownloadLink($tableGuid, $fileInfo);
                     }
                     $imagesString = join(PHP_EOL, $links);
@@ -274,36 +281,48 @@
             }
         }
 
-        private function init(string $tableID): void
+        /**
+         * Tries to init yandex disk service for table.
+         *
+         * @param Table $table
+         * @return bool is init successful.
+         */
+        private function init(Table $table): bool
         {
-            $yandexConfigFrom = 'D7';
-            $yandexConfigTo = 'D7';
+            $yandexTokenCell = 'D7';
 
-            $range = $this->sheetNamesConfig->getInformation().'!'.$yandexConfigFrom.':'.$yandexConfigTo;
+            $range = $this->sheetNamesConfig->getInformation().'!'.$yandexTokenCell.':'.$yandexTokenCell;
 
             $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                $tableID,
+                $table->getGoogleSheetId(),
                 $range
             );
-            $this->yandexToken = $yandexConfig[0][0];
+            $yandexToken = @$yandexConfig[0][0];
 
-            if ($this->doesYandexTokenExist()) {
-                $this->yandexDiskService->init($this->yandexToken);
+            if (!is_null($yandexToken) && ($yandexToken !== ''))
+            {
+                $this->tableRepository->updateYandexToken($table->getTableId(), $yandexToken);
+                $table->setYandexToken($yandexToken);
+                $this->spreadsheetClientService->updateCellContent(
+                    $table->getGoogleSheetId(),
+                    $this->sheetNamesConfig->getInformation(),
+                    $yandexTokenCell,
+                    "");
             }
-        }
+            $this->yandexDiskService->init($table->getYandexToken());
 
-        private function doesYandexTokenExist(): bool
-        {
-            return !is_null($this->yandexToken) && ($this->yandexToken !== '');
+            return !is_null($table->getYandexToken()) && $table->getYandexToken() != "";
         }
 
         public function __construct(
             ISpreadsheetClientService $spreadsheetClientService,
-            IYandexDiskService $yandexDiskService
+            IYandexDiskService $yandexDiskService,
+            ITableRepository $tableRepository
         )
         {
             parent::__construct($spreadsheetClientService);
             $this->yandexDiskService = $yandexDiskService;
+            $this->tableRepository = $tableRepository;
             $this->sheetNamesConfig = new SheetNames();
         }
 
@@ -322,9 +341,13 @@
 
             $tableID = $table->getGoogleSheetId();
             $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
-            $baseFolderID = $table->getGoogleDriveId();
+            $baseFolderID = "";
 
-            $this->init($tableID);
+            if(!$this->init($table))
+            {
+                $this->log("No token found for spreadsheet, stop execution.");
+                return;
+            }
 
             foreach ($table->getGenerators() as $generator)
             {
