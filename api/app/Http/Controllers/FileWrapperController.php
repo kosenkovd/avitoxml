@@ -53,7 +53,7 @@ class FileWrapperController extends BaseController
         }
 
         $fileInfo = $request->query("fileInfo");
-        $decodedFileInfo = base64_decode(urldecode($fileInfo));
+        $decodedFileInfo = base64_decode($fileInfo);
 
         $token = "";
         if(strpos($decodedFileInfo, "&&&") === false)
@@ -65,6 +65,8 @@ class FileWrapperController extends BaseController
             [$fileID, $token] = explode("&&&", $decodedFileInfo);
         }
 
+        /*$fileID = mb_convert_encoding($fileID, "UTF8");
+        var_dump($fileID);*/
         $token = $table->getYandexToken() != null
             ? $table->getYandexToken()
             : $token;
@@ -72,6 +74,8 @@ class FileWrapperController extends BaseController
         $this->yandexDiskService->init($token);
 
         $explodedFileName = explode(".", $fileID);
+        /*var_dump($explodedFileName);
+        return response("asdf")->header("Content-Type", "text/html; charset=utf-8");*/
         $fileExtension = $explodedFileName[count($explodedFileName) - 1];
 
         return response($this->yandexDiskService->downloadFile($fileID), 200)

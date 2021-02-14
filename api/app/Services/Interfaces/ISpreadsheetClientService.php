@@ -13,7 +13,7 @@ interface ISpreadsheetClientService
      * @return string new GoogleSheet id.
      */
     public function copyTable(): string;
-    
+
     /**
      * Get last modified time for file.
      *
@@ -62,4 +62,12 @@ interface ISpreadsheetClientService
      */
     function updateCellContent(
         string $tableID, string $targetSheet, string $cell, string $content, bool $toRetry = true): void;
+
+    /**
+     * Get all sheets that are present in spreadsheet.
+     *
+     * @param string $tableId table id.
+     * @return array list of sheet names.
+     */
+    public function getSheets(string $tableId): array;
 }

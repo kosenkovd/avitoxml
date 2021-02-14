@@ -11,7 +11,7 @@ class Table {
 
     private ?string $yandexToken;
 
-    private string $googleDriveId;
+    private ?string $googleDriveId;
 
     private ?int $dateExpired;
 

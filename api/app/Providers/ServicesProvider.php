@@ -4,6 +4,7 @@
 namespace App\Providers;
 
 use App\Configuration\Spreadsheet\SheetNames;
+use App\Configuration\XmlGeneration;
 use App\Services\GoogleDriveClientService;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\ISpreadsheetClientService;
@@ -37,7 +38,7 @@ class ServicesProvider extends ServiceProvider
             return new SpreadsheetClientService();
         });
         $this->app->bind(IXmlGenerationService::class, function () {
-            return new XmlGenerationService(new SpreadsheetClientService(), new SheetNames());
+            return new XmlGenerationService(new SpreadsheetClientService(), new SheetNames(), new XmlGeneration());
         });
         $this->app->bind(ISpintaxService::class, function () {
             return new SpintaxService();

@@ -14,6 +14,7 @@ class Config {
     private string $copySpreadsheetId;
     private string $baseFolderId;
     private string $rootDirectory;
+    private string $dbCertificateName;
     private bool $isLoggingEnabled;
 
     public function __construct()
@@ -122,5 +123,13 @@ class Config {
     public function isLoggingEnabled(): bool
     {
         return $this->isLoggingEnabled;
+    }
+
+    /**
+     * @return string
+     */
+    public function getDbCertificateName(): string
+    {
+        return $this->dbCertificateName;
     }
 }

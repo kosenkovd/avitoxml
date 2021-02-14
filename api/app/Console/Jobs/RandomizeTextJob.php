@@ -4,6 +4,7 @@
 namespace App\Console\Jobs;
 
 
+use App\Configuration\XmlGeneration;
 use App\Helpers\SpreadsheetHelper;
 use App\Models\Generator;
 use App\Models\Table;
@@ -14,7 +15,14 @@ class RandomizeTextJob extends JobBase
 {
     private ISpintaxService $spintaxService;
 
+    /**
+     * @var bool is logging enabled.
+     */
+    protected bool $loggingEnabled = true;
+
     protected int $maxJobTime = 60*60;
+
+    private XmlGeneration $xmlGeneration;
 
     /**
      * Randomises text in specified result column based on pattern column and updates spreadsheet.
@@ -56,14 +64,12 @@ class RandomizeTextJob extends JobBase
      * Randomize text for specified generator.
      *
      * @param string $tableID Google spreadsheet id.
-     * @param Generator $generator Generator.
+     * @param string $sheetName sheet name.
      */
-    private function processSheet(string $tableID, Generator $generator): void
+    private function processSheet(string $tableID, string $sheetName): void
     {
-        $sheetName = $generator->getTargetPlatform();
         [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
 
-        var_dump(count($values));
         if (empty($values))
         {
             return;
@@ -80,7 +86,7 @@ class RandomizeTextJob extends JobBase
             ],
             [
                 "pattern" => $propertyColumns->priceSpintax,
-                "result" => $propertyColumns->price
+                "result" => is_null($propertyColumns->price) ? $propertyColumns->salary : $propertyColumns->price
             ]
         ];
         foreach ($values as $numRow => $row)
@@ -105,11 +111,12 @@ class RandomizeTextJob extends JobBase
 
     public function __construct(
         ISpintaxService $spintaxService,
-        ISpreadsheetClientService $spreadsheetClientService
-    )
+        ISpreadsheetClientService $spreadsheetClientService,
+        XmlGeneration $xmlGeneration)
     {
         parent::__construct($spreadsheetClientService);
         $this->spintaxService = $spintaxService;
+        $this->xmlGeneration = $xmlGeneration;
     }
 
     /**
@@ -125,11 +132,36 @@ class RandomizeTextJob extends JobBase
         $tableID = $table->getGoogleSheetId();
         $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
 
+        $existingSheets = $this->spreadsheetClientService->getSheets($table->getGoogleSheetId());
+
         foreach ($table->getGenerators() as $generator)
         {
-            $this->log("Processing table ".$table->getTableId().", sheet ".$generator->getTargetPlatform().", spreadsheet id ".$table->getGoogleSheetId());
-            $this->processSheet($tableID, $generator);
-            $this->stopIfTimeout();
+            switch($generator->getTargetPlatform())
+            {
+                case "Avito":
+                    $targetSheets = $this->xmlGeneration->getAvitoTabs();
+                    break;
+                case "Юла":
+                    $targetSheets = $this->xmlGeneration->getYoulaTabs();
+                    break;
+                case "Яндекс":
+                    $targetSheets = $this->xmlGeneration->getYandexTabs();
+                    break;
+            }
+
+            $splitTargetSheets = explode(",", $targetSheets);
+            foreach ($splitTargetSheets as $targetSheet)
+            {
+                $targetSheet = trim($targetSheet);
+                if(!in_array($targetSheet, $existingSheets))
+                {
+                    continue;
+                }
+
+                $this->log("Processing table ".$table->getTableId().", sheet ".$targetSheet.", spreadsheet id ".$table->getGoogleSheetId());
+                $this->processSheet($tableID, $targetSheet);
+                $this->stopIfTimeout();
+            }
         }
 
         $this->log("Finished processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());

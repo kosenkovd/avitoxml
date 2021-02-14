@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Configuration\Spreadsheet;
 use App\Configuration\Spreadsheet\SheetNames;
+use App\Configuration\XmlGeneration;
 use App\Console\Jobs\FillImagesJob;
 use App\Console\Jobs\FillImagesJobYandex;
 use App\Console\Jobs\RandomizeTextJob;
@@ -131,28 +132,29 @@ class TableController extends BaseController
      * @param $id string table guid.
      * @return JsonResponse json table resource.
      */
-    public function show(string $id)
+    public function show(string $id, Request $request)
     {
         $table = $this->tableRepository->get($id);
 
 //        $this->yandexDiskService->init("AgAAAAAMMp_iAAbO9-TN2FLhf0a7kQr5Ju2mlII");
 
-        $yaService = new FillImagesJobYandex(
+        /*$yaService = new FillImagesJobYandex(
             new SpreadsheetClientService(),
             new YandexDiskService(),
-            new TableRepository()
-        );
-        $yaService->start($table);
+            new TableRepository(),
+            new XmlGeneration());
+        $yaService->start($table);*/
 
 //        $service = new FillImagesJob(
 //            new SpreadsheetClientService(),
 //            new GoogleDriveClientService()
 //        );
 
-//        $spintaxService = new RandomizeTextJob(
-//            new SpintaxService(),
-//            new SpreadsheetClientService(),
-//        );
+        $spintaxService = new RandomizeTextJob(
+            new SpintaxService(),
+            new SpreadsheetClientService(),
+            new XmlGeneration());
+        $spintaxService->start($table);
 
 //        $triggerService = new TriggerSpreadsheetJob(
 //            new SpreadsheetClientService(),
@@ -246,13 +248,6 @@ class TableController extends BaseController
                     $table->getTableGuid(), $generator->getGeneratorGuid())
             );
         }
-
-        $this->spreadsheetClientService->updateCellContent(
-            $googleTableId,
-            $this->sheetNamesConfig->getInformation(),
-            "E7",
-            LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId())
-        );
 
         $this->mailService->sendEmailWithTableData($table);
 

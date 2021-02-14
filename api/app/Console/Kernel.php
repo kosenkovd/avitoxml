@@ -3,6 +3,7 @@
 namespace App\Console;
 
 use App\Configuration\Spreadsheet;
+use App\Configuration\XmlGeneration;
 use App\Console\Jobs\FillImagesJob;
 use App\Console\Jobs\FillImagesJobYandex;
 use App\Console\Jobs\RandomizeTextJob;
@@ -46,7 +47,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule)
     {
-        $tableRepository = new TableRepository(new TableUpdateLockRepository());
+        $tableRepository = new TableRepository();
         $tables = $tableRepository->getTables();
 
         foreach ($tables as $table)
@@ -80,7 +81,8 @@ class Kernel extends ConsoleKernel
             {
                 $schedule->call(function () use($table) {
                     echo "Starting FillImagesJob for ".$table->getTableGuid();
-                    (new FillImagesJobYandex(new SpreadsheetClientService(), new YandexDiskService(), new TableRepository()))
+                    (new FillImagesJobYandex(
+                        new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
                         ->start($table);
                 })
                     ->name("Randomize yandex images ".$table->getTableId())
@@ -91,11 +93,11 @@ class Kernel extends ConsoleKernel
 
             $schedule->call(function () use($table) {
                 echo "Starting RandomizeTextJob for ".$table->getTableGuid();
-                (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService()))
+                (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService(), new XmlGeneration()))
                     ->start($table);
             })
                 ->name("Randomize text ".$table->getTableId())
-                ->everyFiveMinutes()
+                ->everyThreeMinutes()
                 ->withoutOverlapping();
         }
     }

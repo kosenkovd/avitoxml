@@ -39,9 +39,25 @@ class TableHeader {
     public ?int $photoCount = null;
     public ?int $autoPart = null;
 
+    public ?int $industry = null;
+    public ?int $workSchedule = null;
+    public ?int $experience = null;
+    public ?int $salary = null;
+
     public ?int $priceSpintax = null;
     public ?int $descriptionSpintax = null;
     public ?int $titleSpintax = null;
+
+    public ?int $autoPartOem = null;
+    public ?int $brand = null;
+    public ?int $rimDiameter = null;
+    public ?int $tireType = null;
+    public ?int $wheelAxle = null;
+    public ?int $rimType = null;
+    public ?int $tireSectionWidth = null;
+    public ?int $tireAspectRatio = null;
+    public ?int $rimBolts = null;
+    public ?int $rimBoltsDiameter = null;
 
     public ?int $placementType = null;
     public ?int $messages = null;
@@ -74,6 +90,8 @@ class TableHeader {
                     $this->condition = $colNum;
                     break;
                 case "заголовокобъявления":
+                case "названиевакансии":
+                case "названиезапчасти":
                     $this->title = $colNum;
                     break;
                 case "рандомизаторзаголовка":
@@ -169,6 +187,48 @@ class TableHeader {
                     break;
                 case "сообщения":
                     $this->messages = $colNum;
+                    break;
+                case "сферадеятельности":
+                    $this->industry = $colNum;
+                    break;
+                case "графикработы":
+                    $this->workSchedule = $colNum;
+                    break;
+                case "опытработы":
+                    $this->experience = $colNum;
+                    break;
+                case "зарплата":
+                    $this->salary = $colNum;
+                    break;
+                case "номердеталиoem":
+                    $this->autoPartOem = $colNum;
+                    break;
+                case "производитель":
+                    $this->brand = $colNum;
+                    break;
+                case "диаметрвдюймах":
+                    $this->rimDiameter = $colNum;
+                    break;
+                case "сезонностьшиниликолес":
+                    $this->tireType = $colNum;
+                    break;
+                case "осьмотошины":
+                    $this->wheelAxle = $colNum;
+                    break;
+                case "типдиска":
+                    $this->rimType = $colNum;
+                    break;
+                case "ширинапрофиляшины":
+                    $this->tireSectionWidth = $colNum;
+                    break;
+                case "высотапрофиляшины":
+                    $this->tireAspectRatio = $colNum;
+                    break;
+                case "ширинаобода,дюймов":
+                    $this->rimBolts = $colNum;
+                    break;
+                case "диаметрподболты,дюймов":
+                    $this->rimBoltsDiameter = $colNum;
                     break;
             }
         }

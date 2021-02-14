@@ -4,6 +4,7 @@
     namespace App\Console\Jobs;
 
     use App\Configuration\Spreadsheet\SheetNames;
+    use App\Configuration\XmlGeneration;
     use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
     use App\Models\Generator;
@@ -12,6 +13,8 @@
     use App\Repositories\Interfaces\ITableRepository;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\Interfaces\IYandexDiskService;
+    use http\Exception;
+    use Illuminate\Support\Facades\Log;
     use Leonied7\Yandex\Disk\Item\File;
     use Ramsey\Uuid\Guid\Guid;
 
@@ -40,6 +43,8 @@
         protected SheetNames $sheetNamesConfig;
 
         private ITableRepository $tableRepository;
+
+        private XmlGeneration $xmlGeneration;
 
         /**
          * Checks if it is possible to fill images in row.
@@ -204,11 +209,10 @@
          * @param string $tableGuid table guid.
          * @param string $tableID Google spreadsheet id.
          * @param string $baseFolderID Google drive base folder id.
-         * @param Generator $generator Generator.
+         * @param string $sheetName target sheet.
          */
-        private function processSheet(string $tableGuid, string $tableID, string $baseFolderID, Generator $generator): void
+        private function processSheet(string $tableGuid, string $tableID, string $baseFolderID, string $sheetName): void
         {
-            $sheetName = $generator->getTargetPlatform();
             $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
             [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
 
@@ -276,7 +280,7 @@
                         $spreadsheetRowNum,
                         $tableID,
                         SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw),
-                        $generator->getTargetPlatform());
+                        $sheetName);
                 }
             }
         }
@@ -299,6 +303,7 @@
             );
             $yandexToken = @$yandexConfig[0][0];
 
+            // If there is a token in spreadsheet, renew token in database and remove token from spreadsheet
             if (!is_null($yandexToken) && ($yandexToken !== ''))
             {
                 $this->tableRepository->updateYandexToken($table->getTableId(), $yandexToken);
@@ -317,13 +322,14 @@
         public function __construct(
             ISpreadsheetClientService $spreadsheetClientService,
             IYandexDiskService $yandexDiskService,
-            ITableRepository $tableRepository
-        )
+            ITableRepository $tableRepository,
+            XmlGeneration  $xmlGeneration)
         {
             parent::__construct($spreadsheetClientService);
             $this->yandexDiskService = $yandexDiskService;
             $this->tableRepository = $tableRepository;
             $this->sheetNamesConfig = new SheetNames();
+            $this->xmlGeneration = $xmlGeneration;
         }
 
         /**
@@ -349,10 +355,35 @@
                 return;
             }
 
+            $existingSheets = $this->spreadsheetClientService->getSheets($table->getGoogleSheetId());
+
             foreach ($table->getGenerators() as $generator)
             {
-                $this->processSheet($table->getTableGuid(), $tableID, $baseFolderID, $generator);
-                $this->stopIfTimeout();
+                switch($generator->getTargetPlatform())
+                {
+                    case "Avito":
+                        $targetSheets = $this->xmlGeneration->getAvitoTabs();
+                        break;
+                    case "Юла":
+                        $targetSheets = $this->xmlGeneration->getYoulaTabs();
+                        break;
+                    case "Яндекс":
+                        $targetSheets = $this->xmlGeneration->getYandexTabs();
+                        break;
+                }
+
+                $splitTargetSheets = explode(",", $targetSheets);
+                foreach ($splitTargetSheets as $targetSheet)
+                {
+                    $targetSheet = trim($targetSheet);
+                    if(!in_array($targetSheet, $existingSheets))
+                    {
+                        continue;
+                    }
+
+                    $this->processSheet($table->getTableGuid(), $tableID, $baseFolderID, $targetSheet);
+                    $this->stopIfTimeout();
+                }
             }
 
             $this->log("Finished fill images job.");
