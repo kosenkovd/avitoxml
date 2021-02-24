@@ -97,7 +97,7 @@
          * @inheritDoc
          * @throws Exception
          */
-        public function getFileModifiedTime(string $fileId) : ?DateTime
+        public function getFileModifiedTime(string $fileId, string $quotaUser) : ?DateTime
         {
             $this->client->addScope(Google_Service_Drive::DRIVE);
             $driveService = new Google_Service_Drive($this->client);
@@ -105,7 +105,8 @@
             try
             {
                 $file = $driveService->files->get($fileId, [
-                    'fields' => 'modifiedTime, createdTime'
+                    'fields' => 'modifiedTime, createdTime',
+                    'quotaUser' => $quotaUser
                 ]);
             }
             catch (Exception $exception)
@@ -125,12 +126,14 @@
          * @inheritDoc
          * @throws Exception
          */
-        public function getSpreadsheetCellsRange(string $spreadsheetId, string $range, bool $toRetry = true) : array
+        public function getSpreadsheetCellsRange(string $spreadsheetId, string $range, string $quotaUser, bool $toRetry = true) : array
         {
+            $optParams = [ 'quotaUser' => $quotaUser ];
+
             $service = new Google_Service_Sheets($this->client);
             try
             {
-                $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+                $values = $service->spreadsheets_values->get($spreadsheetId, $range, $optParams)->getValues();
             }
             catch (Exception $exception)
             {
@@ -140,7 +143,7 @@
                 }
 
                 sleep(60);
-                $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+                $values = $service->spreadsheets_values->get($spreadsheetId, $range, $optParams)->getValues();
             }
 
             if(is_null($values))
@@ -159,8 +162,11 @@
             string $range,
             array $values,
             array $params,
+            string $quotaUser,
             bool $toRetry = true) : void
         {
+            $params['quotaUser'] = $quotaUser;
+
             $body = new Google_Service_Sheets_ValueRange(
                 [
                     'values' => $values
@@ -199,7 +205,12 @@
          * @throws Exception
          */
         public function updateCellContent(
-            string $tableID, string $targetSheet, string $cell, string $content, bool $toRetry = true): void
+            string $tableID,
+            string $targetSheet,
+            string $cell,
+            string $content,
+            string $quotaUser,
+            bool $toRetry = true): void
         {
             $range = $targetSheet.'!' . $cell . ':' . $cell;
 
@@ -214,6 +225,7 @@
                 $range,
                 $values,
                 $params,
+                $quotaUser,
                 $toRetry
             );
         }
@@ -221,12 +233,14 @@
         /**
          * @inheritDoc
          */
-        public function getSheets(string $tableId): array
+        public function getSheets(string $tableId, string $quotaUser): array
         {
+            $optParams = [ 'quotaUser' => $quotaUser ];
+
             $sheets = [];
             $service = new Google_Service_Sheets($this->client);
 
-            $response = $service->spreadsheets->get($tableId);
+            $response = $service->spreadsheets->get($tableId, $optParams);
             foreach($response->getSheets() as $s) {
                 $sheets[] = $s['properties']['title'];
             }

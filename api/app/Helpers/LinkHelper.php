@@ -25,7 +25,7 @@ class LinkHelper
      */
     public static function getXmlGeneratorLink(string $tableGuid, string $generatorGuid) : string
     {
-        return "http://avitoxml.beget.tech/api/tables/".$tableGuid."/generators/".$generatorGuid;
+        return "https://avitoxml-t-win-api.azurewebsites.net/api/tables/".$tableGuid."/generators/".$generatorGuid;
     }
 
     public static function getPictureDownloadLink(string $fileID) : string
@@ -35,6 +35,6 @@ class LinkHelper
 
     public static function getYandexPictureDownloadLink(string $tableId, string $fileInfo) : string
     {
-        return "http://avitoxml.beget.tech/api/tables/".$tableId."/yandexFile?fileInfo=".$fileInfo;
+        return "https://avitoxml-t-win-api.azurewebsites.net/api/tables/".$tableId."/yandexFile?fileInfo=".$fileInfo;
     }
 }

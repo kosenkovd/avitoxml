@@ -245,8 +245,8 @@ class TableController extends BaseController
                 $this->sheetNamesConfig->getInformation(),
                 $target["cell"],
                 LinkHelper::getXmlGeneratorLink(
-                    $table->getTableGuid(), $generator->getGeneratorGuid())
-            );
+                    $table->getTableGuid(), $generator->getGeneratorGuid()),
+                $table->getTableGuid()."sgen");
         }
 
         $this->mailService->sendEmailWithTableData($table);

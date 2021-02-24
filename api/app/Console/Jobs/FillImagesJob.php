@@ -22,7 +22,7 @@
         /**
          * @var bool is logging enabled.
          */
-        protected bool $loggingEnabled = true;
+        protected bool $loggingEnabled = false;
 
         private array $images = [];
 
@@ -99,8 +99,8 @@
                 $tableID,
                 $range,
                 $values,
-                $params
-            );
+                $params,
+                substr($tableID, 0, 20)."FillImagesGoogle".$numRow);
         }
 
         /**
@@ -186,7 +186,7 @@
         {
             $sheetName = $generator->getTargetPlatform();
             $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
-            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
+            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, substr($tableID, 0, 15));
 
             if (empty($values))
             {

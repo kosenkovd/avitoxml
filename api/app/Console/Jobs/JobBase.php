@@ -66,16 +66,19 @@ abstract class JobBase
      *
      * @param string $tableID
      * @param string $sheetName
+     * @param string $quotaUserPrefix
      * @return array [ TableHeader, values ]
      */
-    protected function getHeaderAndDataFromTable(string $tableID, string $sheetName) : array
+    protected function getHeaderAndDataFromTable(string $tableID, string $sheetName, string $quotaUserPrefix) : array
     {
         $headerRange = $sheetName.'!A1:FZ1';
-        $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange($tableID, $headerRange);
+        $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+            $tableID, $headerRange, $quotaUserPrefix."GH");
         $propertyColumns = new TableHeader($headerResponse[0]);
 
         $range = $sheetName.'!A2:FZ5001';
-        $values = $this->spreadsheetClientService->getSpreadsheetCellsRange($tableID, $range);
+        $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+            $tableID, $range, $quotaUserPrefix."GB");
 
         return [ $propertyColumns, $values ];
     }

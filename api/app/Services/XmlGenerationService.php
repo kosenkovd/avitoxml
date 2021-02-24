@@ -222,6 +222,8 @@ class XmlGenerationService implements IXmlGenerationService
      */
     public function generateAvitoXML(string $spreadsheetId, string $targetSheet) : string
     {
+        $quotaUserPrefix = substr($spreadsheetId, 0, 10);
+
         $xml = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>'
             .PHP_EOL."<Ads formatVersion=\"3\" target=\"Avito.ru\">".PHP_EOL;
 
@@ -242,10 +244,13 @@ class XmlGenerationService implements IXmlGenerationService
 
         $splitTargetSheets = explode(",", $targetSheets);
 
-        $existingSheets = $this->spreadsheetClientService->getSheets($spreadsheetId);
+        $existingSheets = $this->spreadsheetClientService->getSheets(
+            $spreadsheetId, $quotaUserPrefix."XmlGetSheets");
         foreach ($splitTargetSheets as $targetSheet)
         {
             $targetSheet = trim($targetSheet);
+            $targetSheetQuotaUserPrefix =
+                $quotaUserPrefix.(strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet);
             if(!in_array($targetSheet, $existingSheets))
             {
                 continue;
@@ -253,11 +258,13 @@ class XmlGenerationService implements IXmlGenerationService
 
             $targetSheet = trim($targetSheet);
             $headerRange = $targetSheet.'!A1:FZ1';
-            $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange($spreadsheetId, $headerRange, false);
+            $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                $spreadsheetId, $headerRange, $targetSheetQuotaUserPrefix."XmlGetHeader", false);
             $propertyColumns = new TableHeader($headerResponse[0]);
 
             $range = $targetSheet.'!A2:FZ5001';
-            $values = $this->spreadsheetClientService->getSpreadsheetCellsRange($spreadsheetId, $range, false);
+            $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                $spreadsheetId, $range, $targetSheetQuotaUserPrefix."XmlGetContent", false);
 
             $xml.= $this->createAdsForSheet($values, $propertyColumns, $targetSheet);
         }

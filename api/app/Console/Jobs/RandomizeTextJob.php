@@ -6,7 +6,6 @@ namespace App\Console\Jobs;
 
 use App\Configuration\XmlGeneration;
 use App\Helpers\SpreadsheetHelper;
-use App\Models\Generator;
 use App\Models\Table;
 use App\Services\Interfaces\ISpintaxService;
 use App\Services\Interfaces\ISpreadsheetClientService;
@@ -18,7 +17,7 @@ class RandomizeTextJob extends JobBase
     /**
      * @var bool is logging enabled.
      */
-    protected bool $loggingEnabled = true;
+    protected bool $loggingEnabled = false;
 
     protected int $maxJobTime = 60*60;
 
@@ -33,9 +32,16 @@ class RandomizeTextJob extends JobBase
      * @param int $numRow row number, required for spreadsheet update.
      * @param string $sheetName sheet name, required for spreadsheet update.
      * @param array $row row data.
+     * @param string $quotaUser quota user.
      */
     private function randomizeText(
-        string $tableId, int $patternCol, int $resultCol, int $numRow, array $row, string $sheetName) : void
+        string $tableId,
+        int $patternCol,
+        int $resultCol,
+        int $numRow,
+        array $row,
+        string $sheetName,
+        string $quotaUser) : void
     {
         $alreadyFilled = isset($row[$resultCol]) && $row[$resultCol] != '';
         $noSource = !isset($row[$patternCol]) || $row[$patternCol] == '';
@@ -52,11 +58,8 @@ class RandomizeTextJob extends JobBase
         // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
         $numRow += +2;
         $columnName = SpreadsheetHelper::getColumnLetterByNumber($resultCol);
-        $range = $sheetName.'!' . $columnName . $numRow . ':' . $columnName . $numRow;
-        $params = [
-            'valueInputOption' => 'RAW'
-        ];
-        $this->spreadsheetClientService->updateSpreadsheetCellsRange($tableId, $range, [[$text]], $params);
+        $this->spreadsheetClientService->updateCellContent(
+            $tableId, $sheetName, $columnName.$numRow, $text, $quotaUser);
     }
 
 
@@ -65,10 +68,11 @@ class RandomizeTextJob extends JobBase
      *
      * @param string $tableID Google spreadsheet id.
      * @param string $sheetName sheet name.
+     * @param string $quotaUserPrefix quota user prefix.
      */
-    private function processSheet(string $tableID, string $sheetName): void
+    private function processSheet(string $tableID, string $sheetName, string $quotaUserPrefix): void
     {
-        [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
+        [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, $quotaUserPrefix);
 
         if (empty($values))
         {
@@ -104,7 +108,8 @@ class RandomizeTextJob extends JobBase
                     $randomizer["result"],
                     $numRow,
                     $row,
-                    $sheetName);
+                    $sheetName,
+                    $quotaUserPrefix."randText".$randomizer["result"]);
             }
         }
     }
@@ -132,7 +137,8 @@ class RandomizeTextJob extends JobBase
         $tableID = $table->getGoogleSheetId();
         $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
 
-        $existingSheets = $this->spreadsheetClientService->getSheets($table->getGoogleSheetId());
+        $existingSheets = $this->spreadsheetClientService->getSheets(
+            $table->getGoogleSheetId(), $table->getTableGuid()."rtj");
 
         foreach ($table->getGenerators() as $generator)
         {
@@ -158,8 +164,12 @@ class RandomizeTextJob extends JobBase
                     continue;
                 }
 
+                $quotaUserPrefix = substr($table->getTableGuid(), 0, 10).
+                    (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
+                    "RTJ";
+
                 $this->log("Processing table ".$table->getTableId().", sheet ".$targetSheet.", spreadsheet id ".$table->getGoogleSheetId());
-                $this->processSheet($tableID, $targetSheet);
+                $this->processSheet($tableID, $targetSheet, $quotaUserPrefix);
                 $this->stopIfTimeout();
             }
         }

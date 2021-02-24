@@ -112,7 +112,8 @@ class GeneratorController extends BaseController
 
         try
         {
-            $timeModified = $this->spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
+            $timeModified = $this->spreadsheetClientService->getFileModifiedTime(
+                $table->getGoogleSheetId(), $table->getTableGuid()."gfmt");
         }
         catch (Exception $e)
         {

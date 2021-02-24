@@ -41,12 +41,12 @@ class TriggerSpreadsheetJob extends JobBase
         $range = $this->sheetName.'!'.$this->cellToChange.':'.$this->cellToChange;
 
         $cellValue = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-            $tableID, $range);
+            $tableID, $range, "TriggerSpreadsheet");
 
         $newCellValue = @$cellValue[0][0] == 2 ? "1" : "2";
 
         $this->spreadsheetClientService->updateCellContent(
-            $tableID, $this->sheetName, $this->cellToChange, $newCellValue);
+            $tableID, $this->sheetName, $this->cellToChange, $newCellValue, "TriggerSpreadsheet");
     }
 
 }

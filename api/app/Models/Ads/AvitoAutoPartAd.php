@@ -18,6 +18,165 @@ class AvitoAutoPartAd extends AdBase
     protected ?string $rimBolts = null;
     protected ?string $rimBoltsDiameter = null;
 
+    private function mapTypeId(?string $goodsType) : ?string
+    {
+        if(is_null($goodsType))
+        {
+            return null;
+        }
+
+        switch($goodsType)
+        {
+            case "Автосвет":
+                return "11-618";
+            case "Автомобиль на запчасти":
+                return "19-2855";
+            case "Аккумуляторы":
+                return "11-619";
+            case "Блок цилиндров, головка, картер":
+                return "116-827";
+            case "Вакуумная система":
+                return "16-828";
+            case "Генераторы, стартеры":
+                return "16-829";
+            case "Двигатель в сборе":
+                return "16-830";
+            case "Катушка зажигания, свечи, электрика":
+                return "16-831";
+            case "Клапанная крышка":
+                return "16-832";
+            case "Коленвал, маховик":
+                return "16-833";
+            case "Коллекторы":
+                return "16-834";
+            case "Крепление двигателя":
+                return "16-835";
+            case "Масляный насос, система смазки":
+                return "16-836";
+            case "Патрубки вентиляции":
+                return "16-837";
+            case "Поршни, шатуны, кольца":
+                return "16-838";
+            case "Приводные ремни, натяжители":
+                return "16-839";
+            case "Прокладки и ремкомплекты":
+                return "16-840";
+            case "Ремни, цепи, элементы ГРМ":
+                return "16-841";
+            case "Турбины, компрессоры":
+                return "16-842";
+            case "Электродвигатели и компоненты":
+                return "16-843";
+            case "Запчасти для ТО":
+                return "11-621";
+            case "Балки, лонжероны":
+                return "16-805";
+            case "Бамперы":
+                return "16-806";
+            case "Брызговики":
+                return "16-807";
+            case "Двери":
+                return "16-808";
+            case "Заглушки":
+                return "16-809";
+            case "Замки":
+                return "16-810";
+            case "Защита":
+                return "16-811";
+            case "Зеркала":
+                return "16-812";
+            case "Кабина":
+                return "16-813";
+            case "Капот":
+                return "16-814";
+            case "Крепления":
+                return "16-815";
+            case "Крылья":
+                return "16-816";
+            case "Крыша":
+                return "16-817";
+            case "Крышка, дверь багажника":
+                return "16-818";
+            case "Кузов по частям":
+                return "16-819";
+            case "Кузов целиком":
+                return "16-820";
+            case "Лючок бензобака":
+                return "16-821";
+            case "Молдинги, накладки":
+                return "16-822";
+            case "Пороги":
+                return "16-823";
+            case "Рама":
+                return "16-824";
+            case "Решетка радиатора":
+                return "16-825";
+            case "Стойка кузова":
+                return "16-826";
+            case "Подвеска":
+                return "11-623";
+            case "Рулевое управление":
+                return "11-624";
+            case "Салон":
+                return "11-625";
+            case "Система охлаждения":
+                return "16-521";
+            case "Стекла":
+                return "11-626";
+            case "Топливная и выхлопная системы":
+                return "11-627";
+            case "Тормозная система":
+                return "11-628";
+            case "Трансмиссия и привод":
+                return "11-629";
+            case "Электрооборудование":
+                return "11-630";
+            case "Для мототехники":
+                return "6-401";
+            case "Для спецтехники":
+                return "6-406";
+            case "Для водного транспорта":
+                return "6-411";
+            case "Аксессуары":
+                return "4-943";
+            case "GPS-навигаторы":
+                return "21";
+            case "Автокосметика и автохимия":
+                return "4-942";
+            case "Аудио- и видеотехника":
+                return "20";
+            case "Багажники и фаркопы":
+                return "4-964";
+            case "Инструменты":
+                return "4-963";
+            case "Прицепы":
+                return "4-965";
+            case "Автосигнализации":
+                return "11-631";
+            case "Иммобилайзеры":
+                return "11-632";
+            case "Механические блокираторы":
+                return "11-633";
+            case "Спутниковые системы":
+                return "11-634";
+            case "Тюнинг":
+                return "22";
+            case "Шины":
+                return "10-048";
+            case "Мотошины":
+                return "10-047";
+            case "Диски":
+                return "10-046";
+            case "Колёса":
+                return "10-045";
+            case "Колпаки":
+                return "10-044";
+            case "Экипировка":
+                return "6-416";
+            default:
+                return null;
+        }
+    }
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
@@ -62,7 +221,7 @@ class AvitoAutoPartAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
-        $resultXml = $this->addTagIfPropertySet($this->goodsType, "TypeId");
+        $resultXml = $this->addTagIfPropertySet($this->mapTypeId($this->goodsType), "TypeId");
         $resultXml.= $this->addTagIfPropertySet($this->autoPartOem, "OEM");
         $resultXml.= $this->addTagIfPropertySet($this->brand, "Brand");
         $resultXml.= $this->addTagIfPropertySet($this->rimDiameter, "RimDiameter");

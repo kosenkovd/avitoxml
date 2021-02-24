@@ -7,14 +7,11 @@
     use App\Configuration\XmlGeneration;
     use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
-    use App\Models\Generator;
     use App\Models\Table;
     use App\Models\TableHeader;
     use App\Repositories\Interfaces\ITableRepository;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\Interfaces\IYandexDiskService;
-    use http\Exception;
-    use Illuminate\Support\Facades\Log;
     use Leonied7\Yandex\Disk\Item\File;
     use Ramsey\Uuid\Guid\Guid;
 
@@ -28,7 +25,7 @@
         /**
          * @var bool is logging enabled.
          */
-        protected bool $loggingEnabled = true;
+        protected bool $loggingEnabled = false;
 
         private array $images = [];
 
@@ -87,35 +84,6 @@
             }
 
             return $this->yandexDiskService->listFolderImages($childFolder);
-        }
-
-        /**
-         * Updates GoogleSheet cell content.
-         *
-         * @param string $content content to put in cell.
-         * @param int $numRow number of row.
-         * @param string $tableID table id.
-         * @param string $columnName col name.
-         * @param string $targetSheet sheet name.
-         * @return void
-         */
-        private function updateCellContent(
-            string $content, int $numRow, string $tableID, string $columnName, string $targetSheet): void
-        {
-            $range = $targetSheet.'!' . $columnName . $numRow . ':' . $columnName . $numRow;
-
-            $values = [
-                [$content]
-            ];
-            $params = [
-                'valueInputOption' => 'RAW'
-            ];
-            $this->spreadsheetClientService->updateSpreadsheetCellsRange(
-                $tableID,
-                $range,
-                $values,
-                $params
-            );
         }
 
         /**
@@ -189,8 +157,6 @@
             {
                 $newFolderName = crc32(Guid::uuid4()->toString());
 
-                $newFolderId = $this->yandexDiskService->createFolder($newFolderName, null, false);
-
                 foreach ($imageCopyData as $imageCopyDatum)
                 {
                     $this->yandexDiskService->moveFile(
@@ -210,11 +176,13 @@
          * @param string $tableID Google spreadsheet id.
          * @param string $baseFolderID Google drive base folder id.
          * @param string $sheetName target sheet.
+         * @param string $quotaUserPrefix quota user prefix.
          */
-        private function processSheet(string $tableGuid, string $tableID, string $baseFolderID, string $sheetName): void
+        private function processSheet(
+            string $tableGuid, string $tableID, string $baseFolderID, string $sheetName, string $quotaUserPrefix): void
         {
             $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
-            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
+            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, $quotaUserPrefix);
 
             if (empty($values))
             {
@@ -246,12 +214,12 @@
                         continue;
                     }
 
-                    $this->updateCellContent(
-                        $subFolderName,
-                        $spreadsheetRowNum,
+                    $this->spreadsheetClientService->updateCellContent(
                         $tableID,
-                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName),
-                        $sheetName);
+                        $sheetName,
+                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName).$spreadsheetRowNum,
+                        $subFolderName,
+                        $quotaUserPrefix."NewFolder".$spreadsheetRowNum);
                 }
                 else
                 {
@@ -275,12 +243,12 @@
                     $imagesString = join(PHP_EOL, $links);
 
                     $this->log("Images string ".$imagesString);
-                    $this->updateCellContent(
-                        $imagesString,
-                        $spreadsheetRowNum,
+                    $this->spreadsheetClientService->updateCellContent(
                         $tableID,
-                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw),
-                        $sheetName);
+                        $sheetName,
+                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw).$spreadsheetRowNum,
+                        $imagesString,
+                        $quotaUserPrefix."NewImages".$spreadsheetRowNum);
                 }
             }
         }
@@ -299,8 +267,8 @@
 
             $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                 $table->getGoogleSheetId(),
-                $range
-            );
+                $range,
+                $table->getTableGuid()."fijy");
             $yandexToken = @$yandexConfig[0][0];
 
             // If there is a token in spreadsheet, renew token in database and remove token from spreadsheet
@@ -312,7 +280,8 @@
                     $table->getGoogleSheetId(),
                     $this->sheetNamesConfig->getInformation(),
                     $yandexTokenCell,
-                    "");
+                    "",
+                    $table->getTableGuid()."figt");
             }
             $this->yandexDiskService->init($table->getYandexToken());
 
@@ -355,7 +324,8 @@
                 return;
             }
 
-            $existingSheets = $this->spreadsheetClientService->getSheets($table->getGoogleSheetId());
+            $existingSheets = $this->spreadsheetClientService->getSheets(
+                $table->getGoogleSheetId(), $table->getTableGuid()."fijy");
 
             foreach ($table->getGenerators() as $generator)
             {
@@ -381,7 +351,11 @@
                         continue;
                     }
 
-                    $this->processSheet($table->getTableGuid(), $tableID, $baseFolderID, $targetSheet);
+                    $quotaUserPrefix = substr($table->getTableGuid(), 0, 10).
+                        (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
+                        "RTJ";
+
+                    $this->processSheet($table->getTableGuid(), $tableID, $baseFolderID, $targetSheet, $quotaUserPrefix);
                     $this->stopIfTimeout();
                 }
             }
