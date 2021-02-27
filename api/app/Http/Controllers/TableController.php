@@ -2,21 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Configuration\Spreadsheet;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
-use App\Console\Jobs\FillImagesJob;
 use App\Console\Jobs\FillImagesJobYandex;
-use App\Console\Jobs\RandomizeTextJob;
-use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Helpers\LinkHelper;
 use App\Repositories\TableRepository;
-use App\Services\GoogleDriveClientService;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\IMailService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IYandexDiskService;
-use App\Services\SpintaxService;
 use App\Services\SpreadsheetClientService;
 use App\Services\YandexDiskService;
 use Illuminate\Http\Request;
@@ -144,17 +138,24 @@ class TableController extends BaseController
             new TableRepository(),
             new XmlGeneration());
         $yaService->start($table);*/
+        $yad = new YandexDiskService();
+        $yaService = new FillImagesJobYandex(
+            new SpreadsheetClientService(),
+            new YandexDiskService(),
+            new TableRepository(),
+            new XmlGeneration());
+        $yaService->start($table);
 
 //        $service = new FillImagesJob(
 //            new SpreadsheetClientService(),
 //            new GoogleDriveClientService()
 //        );
 
-        $spintaxService = new RandomizeTextJob(
+        /*$spintaxService = new RandomizeTextJob(
             new SpintaxService(),
             new SpreadsheetClientService(),
             new XmlGeneration());
-        $spintaxService->start($table);
+        $spintaxService->start($table);*/
 
 //        $triggerService = new TriggerSpreadsheetJob(
 //            new SpreadsheetClientService(),

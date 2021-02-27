@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Repositories\Interfaces\ITableRepository;
 use App\Services\Interfaces\IYandexDiskService;
+use App\Services\Interfaces\IYandexFileDownloader;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
@@ -21,14 +22,14 @@ use Illuminate\Routing\Controller as BaseController;
 class FileWrapperController extends BaseController
 {
     /**
-     * @var IYandexDiskService Yandex Disk Service.
+     * @var IYandexFileDownloader Yandex Disk Service.
      */
-    private IYandexDiskService $yandexDiskService;
+    private IYandexFileDownloader $yandexDiskService;
 
     private ITableRepository $tableRespository;
 
     public function __construct(
-        IYandexDiskService $yandexDiskService,
+        IYandexFileDownloader $yandexDiskService,
         ITableRepository $tableRepository)
     {
         $this->yandexDiskService = $yandexDiskService;

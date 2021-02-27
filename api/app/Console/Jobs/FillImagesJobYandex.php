@@ -5,7 +5,6 @@
 
     use App\Configuration\Spreadsheet\SheetNames;
     use App\Configuration\XmlGeneration;
-    use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
     use App\Models\Table;
     use App\Models\TableHeader;
@@ -30,7 +29,7 @@
         private array $images = [];
 
         /**
-         * @var IYandexDiskService Google Spreadsheet client.
+         * @var IYandexDiskService Yandex Disk client.
          */
         protected IYandexDiskService $yandexDiskService;
 
@@ -142,13 +141,15 @@
                     $image = array_shift($this->images[$sourceFolderId]);
                 }
 
+                $filePathArray = explode('/', $image);
+                $imageName = $filePathArray[count($filePathArray) - 1];
                 $imageCopyData[] = [
                     "image" => $image,
                     "newName" => str_pad(
                             $imageNumber,
                             $maxNumberOfSymbolsInFileNumber,
                             '0',
-                            STR_PAD_LEFT).$image->getProperties()->find('displayname')->getValue()
+                            STR_PAD_LEFT).$imageName
                 ];
                 $imageNumber++;
             }
@@ -234,11 +235,9 @@
 
                 if ($images !== []) {
                     $links = [];
-                    /** @var $image File */
                     foreach ($images as $image)
                     {
-                        $fileInfo = urlencode(base64_encode($image->getPath()));
-                        $links[] = LinkHelper::getYandexPictureDownloadLink($tableGuid, $fileInfo);
+                        $links[] = $this->yandexDiskService->getFileUrl($image)." ";
                     }
                     $imagesString = join(PHP_EOL, $links);
 

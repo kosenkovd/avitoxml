@@ -6,14 +6,13 @@
     use App\Configuration\Config;
     use App\Services\Interfaces\IYandexDiskService;
     use Exception;
-    use \Leonied7\Yandex\Disk;
-    use \Leonied7\Yandex\Disk\Item\File;
+    use \Arhitector\Yandex\Disk;
 
     /**
      * Handles communication with Yandex Drive services.
      * @package App\Services
      */
-    class YandexDiskService implements IYandexDiskService {
+    class YandexDiskService implements IYandexDiskService{
         private Config $config;
         private Disk $disk;
 
@@ -27,7 +26,6 @@
 
         /**
          * @inheritDoc
-         * @throws Disk\Exception\InvalidArgumentException
          */
         public function init(string $token): void
         {
@@ -55,10 +53,9 @@
                 $folderPath = '/'.$parentId.'/'.$name;
             }
 
-            $diskFolder = $this->disk->directory($folderPath);
+            $result = $this->disk->getResource($folderPath)->create();
 
-            $result = $diskFolder->create();
-
+            var_dump($result->toArray());
             if ($result) {
                 return $folderPath;
             } else {
@@ -82,9 +79,21 @@
         {
             $folderPath = "/".$folderID;
 
-            $directory = $this->disk->directory($folderPath);
+            try
+            {
+                $directory = $this->disk->getResource($folderPath);
 
-            return $directory->getChildren();
+                $imageNames = [];
+                foreach ($directory->items as $item)
+                {
+                    $imageNames[] = $item->get('path');
+                }
+                return $imageNames;
+            }
+            catch (Exception $exc)
+            {
+                return [];
+            }
         }
 
         /**
@@ -92,7 +101,7 @@
          * @throws Exception
          */
         public function moveFile(
-            File $file,
+            string $currentPath,
             string $folderID,
             string $newName = null,
             bool $toRetry = true): void
@@ -105,30 +114,26 @@
             }
             else
             {
-                $filePathArray = explode('/', $file->getPath());
+                $filePathArray = explode('/', $currentPath);
                 $fileName = $filePathArray[count($filePathArray) - 1];
                 $newFilePath = $folderPath.$fileName;
             }
             $newFilePath = preg_replace('/\s/', '', $newFilePath);
-            echo "Save to ".$newFilePath.PHP_EOL;
 
-            if(!$file->move($newFilePath))
+            $folder = $this->disk->getResource("/".$folderID);
+            if(!$folder->has())
             {
-                echo "Move error!!!!!!".PHP_EOL;
-                var_dump(Disk\Collection\ResultList::getInstance()->getLast());
+                $folder->create();
             }
-        }
 
-        /**
-         * @inheritDoc
-         */
-        public function downloadFile(string $fileID)
-        {
-            $file = $this->disk->file($fileID);
-            $file->download(); //bool
-            // получение последнего результата запроса
-            $result = Disk\Collection\ResultList::getInstance()->getLast();
-            return $result->getActualResult();
+            $file = $this->disk->getResource($currentPath);
+            echo "Save to ".$newFilePath." from ".$currentPath.PHP_EOL;
+            $result = $file->move($newFilePath);
+            if(!$result)
+            {
+                var_dump($result->getStatus());
+                echo "Move error!!!!!!".PHP_EOL;
+            }
         }
 
         /**
@@ -138,6 +143,20 @@
         {
             $folderPath = "/".$folderID;
 
-            return $this->disk->directory($folderPath)->has();
+            return $this->disk->getResource($folderPath)->has();
+        }
+
+        /**
+         * @inheritDoc
+         */
+        public function getFileUrl(string $filePath) : ?string
+        {
+            $file = $this->disk->getResource($filePath);
+            if(!$file->has())
+            {
+                return null;
+            }
+
+            return $file->get('file');
         }
     }

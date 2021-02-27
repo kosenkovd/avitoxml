@@ -128,7 +128,7 @@ class XmlGenerationService implements IXmlGenerationService
 
             if($date !== false)
             {
-                return !$idFieldPresent && $date->getTimestamp() <= time();
+                return !$idFieldPresent || $date->getTimestamp() <= time();
             }
             else
             {

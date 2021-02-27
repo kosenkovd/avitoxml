@@ -27,6 +27,39 @@ abstract class AdBase
     protected ?string $placementType = null;
     protected ?string $messages = null;
 
+    /**
+     * Create tag if property is not null or empty.
+     *
+     * @param $property
+     * @param string $tagName
+     * @return string
+     */
+    protected function addTagIfPropertySet($property, string $tagName) : string
+    {
+        if($property == null || trim($property) == "")
+        {
+            return "";
+        }
+
+        return "
+        <$tagName>$property</$tagName>";
+    }
+
+    protected function generateImageAvitoTags(array $images)
+    {
+        if(count($images) == 0 || (count($images) == 1 && $images[0] == ""))
+        {
+            return "";
+        }
+        $imageTags = PHP_EOL;
+        foreach($images as $image)
+        {
+            $image = trim($image);
+            $imageTags.= "\t\t\t<Image url=\"" . str_replace('&', '&amp;', $image) . '"/>'.PHP_EOL;
+        }
+        return $imageTags."\t\t";
+    }
+
     public function __construct(array $row, TableHeader $propertyColumns)
     {
         $this->id = htmlspecialchars($row[$propertyColumns->ID]);
@@ -200,38 +233,6 @@ abstract class AdBase
         $resultXml.= $this->addTagIfPropertySet($this->messages, "AllowEmail");
 
         return $resultXml;
-    }
-
-    /**
-     * Create tag if property is not null or empty.
-     *
-     * @param $property
-     * @param string $tagName
-     * @return string
-     */
-    protected function addTagIfPropertySet($property, string $tagName) : string
-    {
-        if($property == null || trim($property) == "")
-        {
-            return "";
-        }
-
-        return "
-        <$tagName>$property</$tagName>";
-    }
-
-    protected function generateImageAvitoTags(array $images)
-    {
-        if(count($images) == 0 || (count($images) == 1 && $images[0] == ""))
-        {
-            return "";
-        }
-        $imageTags = PHP_EOL;
-        foreach($images as $image)
-        {
-            $imageTags.= "\t\t\t<Image url=\"" . str_replace('&', '&amp;', $image) . '"/>'.PHP_EOL;
-        }
-        return $imageTags."\t\t";
     }
 
     public abstract function toAvitoXml() : string;

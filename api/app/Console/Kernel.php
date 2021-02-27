@@ -2,14 +2,11 @@
 
 namespace App\Console;
 
-use App\Configuration\Spreadsheet;
 use App\Configuration\XmlGeneration;
 use App\Console\Jobs\FillImagesJob;
 use App\Console\Jobs\FillImagesJobYandex;
 use App\Console\Jobs\RandomizeTextJob;
-use App\Console\Jobs\TriggerSpreadsheetJob;
 use App\Repositories\TableRepository;
-use App\Repositories\TableUpdateLockRepository;
 use App\Services\GoogleDriveClientService;
 use App\Services\SpintaxService;
 use App\Services\SpreadsheetClientService;
@@ -66,28 +63,28 @@ class Kernel extends ConsoleKernel
 
             sleep(1);*/
 
-            if($table->getTableId() == 148)
+            switch($table->getTableId())
             {
-                $schedule->call(function () use($table) {
-                    echo "Starting FillImagesJob for ".$table->getTableGuid();
-                    (new FillImagesJob(new SpreadsheetClientService(), new GoogleDriveClientService()))
-                        ->start($table);
-                })
-                    ->name("Randomize Google images ".$table->getTableId())
-                    ->everyTenMinutes()
-                    ->withoutOverlapping();
-            }
-            else
-            {
-                $schedule->call(function () use($table) {
-                    echo "Starting FillImagesJob for ".$table->getTableGuid();
-                    (new FillImagesJobYandex(
-                        new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
-                        ->start($table);
-                })
-                    ->name("Randomize yandex images ".$table->getTableId())
-                    ->everyFiveMinutes()
-                    ->withoutOverlapping();
+                case 99999:
+                    $schedule->call(function () use($table) {
+                        echo "Starting FillImagesJob for ".$table->getTableGuid();
+                        (new FillImagesJob(new SpreadsheetClientService(), new GoogleDriveClientService()))
+                            ->start($table);
+                    })
+                        ->name("Randomize Google images ".$table->getTableId())
+                        ->everyTenMinutes()
+                        ->withoutOverlapping();
+                    break;
+                default:
+                    $schedule->call(function () use($table) {
+                        echo "Starting FillImagesJob for ".$table->getTableGuid();
+                        (new FillImagesJobYandex(
+                            new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
+                            ->start($table);
+                    })
+                        ->name("Randomize yandex images ".$table->getTableId())
+                        ->everyFiveMinutes()
+                        ->withoutOverlapping();
             }
 
 

@@ -17,6 +17,7 @@ class AvitoAutoPartAd extends AdBase
     protected ?string $tireAspectRatio = null;
     protected ?string $rimBolts = null;
     protected ?string $rimBoltsDiameter = null;
+    protected array $displayAreas = [];
 
     private function mapTypeId(?string $goodsType) : ?string
     {
@@ -25,7 +26,10 @@ class AvitoAutoPartAd extends AdBase
             return null;
         }
 
-        switch($goodsType)
+        $kindParts = explode("/", $goodsType);
+        $lastKind = trim($kindParts[count($kindParts) - 1]);
+
+        switch($lastKind)
         {
             case "Автосвет":
                 return "11-618";
@@ -178,6 +182,20 @@ class AvitoAutoPartAd extends AdBase
         }
     }
 
+    private function generateDisplayAreaAvitoTags(array $displayAreas) : ?string
+    {
+        if(count($displayAreas) == 0 || (count($displayAreas) == 1 && $displayAreas[0] == ""))
+        {
+            return "";
+        }
+        $displayAreaTags = PHP_EOL;
+        foreach($displayAreas as $displayArea)
+        {
+            $displayAreaTags.= '\t\t\t<Area>' . $displayArea . '</Area>'.PHP_EOL;
+        }
+        return $displayAreaTags."\t\t";
+    }
+
     public function __construct(array $row, TableHeader $propertyColumns)
     {
         parent::__construct($row, $propertyColumns);
@@ -215,6 +233,9 @@ class AvitoAutoPartAd extends AdBase
         $this->rimBoltsDiameter = isset($row[$propertyColumns->rimBoltsDiameter])
             ? htmlspecialchars($row[$propertyColumns->rimBoltsDiameter])
             : null;
+        $this->displayAreas = isset($row[$propertyColumns->displayAreas])
+            ? explode(PHP_EOL, $row[$propertyColumns->displayAreas])
+            : [];
     }
 
     public function toAvitoXml() : string
@@ -232,6 +253,8 @@ class AvitoAutoPartAd extends AdBase
         $resultXml.= $this->addTagIfPropertySet($this->tireAspectRatio, "TireAspectRatio");
         $resultXml.= $this->addTagIfPropertySet($this->rimBolts, "RimBolts");
         $resultXml.= $this->addTagIfPropertySet($this->rimBoltsDiameter, "RimBoltsDiameter");
+        $resultXml.= $this->addTagIfPropertySet(
+            $this->generateDisplayAreaAvitoTags($this->displayAreas), "DisplayAreas");
 
         return <<<AVITOXML
     <Ad>

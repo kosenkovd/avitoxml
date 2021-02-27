@@ -52,24 +52,16 @@ interface IYandexDiskService
      *
      * PS. for now it only copies file, as it is no way to delete source one.
      *
-     * @param File $file source file.
+     * @param string $currentPath source file absolute path.
      * @param string $folderID destination folder id.
      * @param string|null $newName new file name, if needs to be updated.
      * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
      */
     public function moveFile(
-        File $file,
+        string $currentPath,
         string $folderID,
         string $newName = null,
         bool $toRetry = true): void;
-
-    /**
-     * Download file by its identifier.
-     *
-     * @param string $fileID file identifier.
-     * @return mixed|null file content.
-     */
-    public function downloadFile(string $fileID);
 
     /**
      * Does folder exist.
@@ -78,4 +70,12 @@ interface IYandexDiskService
      * @return bool does folder exist.
      */
     public function exists(string $folderID): bool;
+
+    /**
+     * Get file download url if it exists.
+     *
+     * @param string $filePath absolute path to file.
+     * @return string|null file download url.
+     */
+    public function getFileUrl(string $filePath) : ?string;
 }

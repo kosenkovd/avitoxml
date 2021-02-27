@@ -9,8 +9,10 @@ use App\Services\GoogleDriveClientService;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IYandexDiskService;
+use App\Services\Interfaces\IYandexFileDownloader;
 use App\Services\SpreadsheetClientService;
 use App\Services\YandexDiskService;
+use App\Services\YandexFileDownloader;
 use Illuminate\Support\ServiceProvider;
 use App\Services\Interfaces\IXmlGenerationService;
 use App\Services\Interfaces\ISpintaxService;
@@ -45,6 +47,9 @@ class ServicesProvider extends ServiceProvider
         });
         $this->app->bind(IMailService::class, function () {
             return new MailService();
+        });
+        $this->app->bind(IYandexFileDownloader::class, function () {
+            return new YandexFileDownloader();
         });
     }
 }

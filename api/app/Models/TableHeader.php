@@ -58,6 +58,7 @@ class TableHeader {
     public ?int $tireAspectRatio = null;
     public ?int $rimBolts = null;
     public ?int $rimBoltsDiameter = null;
+    public ?int $displayAreas = null;
 
     public ?int $placementType = null;
     public ?int $messages = null;
@@ -229,6 +230,9 @@ class TableHeader {
                     break;
                 case "диаметрподболты,дюймов":
                     $this->rimBoltsDiameter = $colNum;
+                    break;
+                case "зоныпоказа(встолбик)":
+                    $this->displayAreas = $colNum;
                     break;
             }
         }
