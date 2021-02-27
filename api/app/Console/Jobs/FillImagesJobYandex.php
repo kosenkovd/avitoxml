@@ -24,7 +24,7 @@
         /**
          * @var bool is logging enabled.
          */
-        protected bool $loggingEnabled = false;
+        protected bool $loggingEnabled = true;
 
         private array $images = [];
 
@@ -282,9 +282,15 @@
                     "",
                     $table->getTableGuid()."figt");
             }
+
+            if(is_null($table->getYandexToken()) || $table->getYandexToken() == "")
+            {
+                return false;
+            }
+
             $this->yandexDiskService->init($table->getYandexToken());
 
-            return !is_null($table->getYandexToken()) && $table->getYandexToken() != "";
+            return true;
         }
 
         public function __construct(

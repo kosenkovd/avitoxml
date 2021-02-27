@@ -15,6 +15,13 @@ interface ITableRepository
     public function getTables(?int $userId = null) : array;
 
     /**
+     * Get all tables that does not have generators.
+     *
+     * @return Table[] found tables.
+     */
+    public function getGeneratorlessTables(): array;
+
+    /**
      * Persist new table in database.
      *
      * @param Table $table table data to insert.

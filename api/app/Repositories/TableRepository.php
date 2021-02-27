@@ -91,6 +91,53 @@ WHERE 1";
     }
 
     /**
+     * @inheritDoc
+     */
+    public function getGeneratorlessTables(): array
+    {
+        $mysqli = $this->connect();
+        $statement = "
+SELECT `t`.`id` AS `tableId`,
+       `t`.`userId` AS `userId`,
+       `t`.`googleSheetId`,
+       `t`.`googleDriveId`,
+       `t`.`yandexToken`,
+       `t`.`dateExpired`,
+       `t`.`isDeleted`,
+       `t`.`dateDeleted`,
+       `t`.`notes`,
+       `t`.`tableGuid`,
+       `g`.`generatorGuid`
+FROM `".$this->config->getTablesTableName()."` `t`
+LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
+WHERE generatorGuid IS NULL";
+
+        $res = $mysqli->query($statement);
+
+        $tables = [];
+        while($row = $res->fetch_assoc())
+        {
+            $tableId = $row["tableId"];
+            $tables["table".$tableId] = new Table(
+                $tableId,
+                $row["userId"],
+                $row["googleSheetId"],
+                $row["googleDriveId"],
+                $row["yandexToken"],
+                $row["dateExpired"],
+                $row["isDeleted"],
+                $row["dateDeleted"],
+                $row["notes"],
+                $row["tableGuid"],
+                []);
+        }
+
+        $mysqli->close();
+
+        return array_values($tables);
+    }
+
+    /**
      * Persist new table in database.
      *
      * @param Table $table table data to insert.

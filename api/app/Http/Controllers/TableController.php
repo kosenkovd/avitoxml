@@ -120,6 +120,47 @@ class TableController extends BaseController
     }
 
     /**
+     * GET /tables/fixGenerators
+     *
+     * Adds generators to all tables that miss one. Probably should be deleted, as it serves too specific problem, that should not be repeated.
+     */
+    public function fixGenerators()
+    {
+        $tables = $this->tableRepository->getGeneratorlessTables();
+        $targetsToAdd = [
+            [
+                "cell" => "C3",
+                "target" =>$this->sheetNamesConfig->getAvito()
+            ],
+            [
+                "cell" => "C4",
+                "target" =>$this->sheetNamesConfig->getYoula()
+            ],
+            [
+                "cell" => "C5",
+                "target" =>$this->sheetNamesConfig->getYandex()
+            ]
+        ];
+
+        foreach ($tables as $table)
+        {
+            foreach ($targetsToAdd as $target)
+            {
+                $generator = new Models\Generator(
+                    null,
+                    $table->getTableId(),
+                    Guid::uuid4()->toString(),
+                    0,
+                    $target["target"]);
+
+                $newGeneratorId = $this->generatorRepository->insert($generator);
+
+                $table->addGenerator($generator->setGeneratorId($newGeneratorId));
+            }
+        }
+    }
+
+    /**
      * GET /$id
      *
      * Read table.
@@ -130,15 +171,6 @@ class TableController extends BaseController
     {
         $table = $this->tableRepository->get($id);
 
-//        $this->yandexDiskService->init("AgAAAAAMMp_iAAbO9-TN2FLhf0a7kQr5Ju2mlII");
-
-        /*$yaService = new FillImagesJobYandex(
-            new SpreadsheetClientService(),
-            new YandexDiskService(),
-            new TableRepository(),
-            new XmlGeneration());
-        $yaService->start($table);*/
-        $yad = new YandexDiskService();
         $yaService = new FillImagesJobYandex(
             new SpreadsheetClientService(),
             new YandexDiskService(),
