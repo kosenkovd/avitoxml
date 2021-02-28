@@ -249,6 +249,8 @@
                         $imagesString,
                         $quotaUserPrefix."NewImages".$spreadsheetRowNum);
                 }
+
+                sleep(1);
             }
         }
 

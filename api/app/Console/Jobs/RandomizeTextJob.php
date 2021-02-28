@@ -110,6 +110,8 @@ class RandomizeTextJob extends JobBase
                     $row,
                     $sheetName,
                     $quotaUserPrefix."randText".$randomizer["result"]);
+
+                sleep(1);
             }
         }
     }

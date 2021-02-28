@@ -188,11 +188,13 @@ class AvitoAutoPartAd extends AdBase
         {
             return "";
         }
+
         $displayAreaTags = PHP_EOL;
         foreach($displayAreas as $displayArea)
         {
-            $displayAreaTags.= '\t\t\t<Area>' . $displayArea . '</Area>'.PHP_EOL;
+            $displayAreaTags.= "\t\t\t<Area>" . $displayArea . "</Area>".PHP_EOL;
         }
+
         return $displayAreaTags."\t\t";
     }
 
@@ -241,7 +243,6 @@ class AvitoAutoPartAd extends AdBase
     public function toAvitoXml() : string
     {
         $defaultTags = $this->generateDefaultXML();
-
         $resultXml = $this->addTagIfPropertySet($this->mapTypeId($this->goodsType), "TypeId");
         $resultXml.= $this->addTagIfPropertySet($this->autoPartOem, "OEM");
         $resultXml.= $this->addTagIfPropertySet($this->brand, "Brand");

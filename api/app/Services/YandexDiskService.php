@@ -7,6 +7,7 @@
     use App\Services\Interfaces\IYandexDiskService;
     use Exception;
     use \Arhitector\Yandex\Disk;
+    use Illuminate\Support\Facades\Log;
 
     /**
      * Handles communication with Yandex Drive services.
@@ -15,6 +16,11 @@
     class YandexDiskService implements IYandexDiskService{
         private Config $config;
         private Disk $disk;
+
+        private function cleanupPath(string $path) : string
+        {
+            return preg_replace('/\/+/', '/', $path);
+        }
 
         /**
          * YandexDiskService constructor.
@@ -77,7 +83,7 @@
          */
         public function listFolderImages(string $folderID, bool $toRetry = true): array
         {
-            $folderPath = "/".$folderID;
+            $folderPath = $this->cleanupPath("/".$folderID);
 
             try
             {
@@ -92,6 +98,8 @@
             }
             catch (Exception $exc)
             {
+                Log::error("Error during image list: (folderId: ".$folderPath.", exception: ".$exc->getMessage().")");
+                echo "Error during image list: (folderId: ".$folderPath.", exception: ".$exc->getMessage().")".PHP_EOL;
                 return [];
             }
         }
@@ -120,15 +128,15 @@
             }
             $newFilePath = preg_replace('/\s/', '', $newFilePath);
 
-            $folder = $this->disk->getResource("/".$folderID);
+            $folder = $this->disk->getResource($this->cleanupPath("/".$folderID));
             if(!$folder->has())
             {
                 $folder->create();
             }
 
-            $file = $this->disk->getResource($currentPath);
+            $file = $this->disk->getResource($this->cleanupPath($currentPath));
             echo "Save to ".$newFilePath." from ".$currentPath.PHP_EOL;
-            $result = $file->move($newFilePath);
+            $result = $file->move($this->cleanupPath($newFilePath));
             if(!$result)
             {
                 var_dump($result->getStatus());
