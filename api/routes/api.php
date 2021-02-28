@@ -21,5 +21,6 @@ Route::apiResources([
 ]);
 
 Route::get('/users/myAccount', [C\UserController::class, 'myAccount']);
+Route::get('/users/', [C\UserController::class, 'index']);
 Route::get('/tables/fixGenerators', [C\TableController::class, 'fixGenerators']);
 Route::get('/tables/{tableId}/yandexFile', [C\FileWrapperController::class, 'yandexFile'])->withoutMiddleware([\Illuminate\Routing\Middleware\ThrottleRequests::class]);

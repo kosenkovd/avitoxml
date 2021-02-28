@@ -19,7 +19,11 @@ class User
     private string $apiKey;
 
     private ?string $notes;
-
+    
+    private ?string $name;
+    
+    private ?string $token;
+    
     /**
      * User constructor.
      * @param int $userId
@@ -30,6 +34,8 @@ class User
      * @param bool $isBlocked
      * @param string $apiKey
      * @param string|null $notes
+     * @param string|null $name
+     * @param string|null $token
      */
     public function __construct(
         int $userId,
@@ -39,7 +45,10 @@ class User
         ?string $socialNetworkUrl,
         bool $isBlocked,
         string $apiKey,
-        ?string $notes)
+        ?string $notes,
+        ?string $name,
+        ?string $token
+    )
     {
         $this->userId = $userId;
         $this->roleId = $roleId;
@@ -49,6 +58,8 @@ class User
         $this->isBlocked = $isBlocked;
         $this->apiKey = $apiKey;
         $this->notes = $notes;
+        $this->name = $name;
+        $this->token = $token;
     }
 
     /**
@@ -113,5 +124,15 @@ class User
     public function getNotes(): ?string
     {
         return $this->notes;
+    }
+    
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+    
+    public function getToken(): ?string
+    {
+        return $this->token;
     }
 }

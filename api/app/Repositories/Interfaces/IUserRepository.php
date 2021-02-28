@@ -3,6 +3,7 @@
 namespace App\Repositories\Interfaces;
 
 use App\Models\User;
+use Exception;
 
 interface IUserRepository
 {
@@ -11,7 +12,15 @@ interface IUserRepository
      *
      * @param string $apiKey user api key
      * @return User|null user if found, otherwise null.
-     * @throws \Exception in case of DB connection failure.
+     * @throws Exception in case of DB connection failure.
      */
     public function getUserByApiKey(string $apiKey) : ?User;
+    
+    /**
+     * Get all users.
+     *
+     * @return User[]|null
+     * @throws Exception in case of DB connection failure.
+     */
+    public function getUsers() : ?array;
 }

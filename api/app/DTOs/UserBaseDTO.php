@@ -4,7 +4,7 @@
 namespace App\DTOs;
 
 
-class UserDTO
+class UserBaseDTO
 {
     public int $userId;
 
@@ -19,7 +19,9 @@ class UserDTO
     public bool $isBlocked;
 
     public ?string $notes;
-
+    
+    public ?string $name;
+    
     /**
      * UserDTO constructor.
      * @param int $userId
@@ -29,6 +31,7 @@ class UserDTO
      * @param string|null $socialNetworkUrl
      * @param bool $isBlocked
      * @param string|null $notes
+     * @param string|null $name
      */
     public function __construct(
         int $userId,
@@ -37,7 +40,9 @@ class UserDTO
         ?string $phoneNumber,
         ?string $socialNetworkUrl,
         bool $isBlocked,
-        ?string $notes)
+        ?string $notes,
+        ?string $name
+    )
     {
         $this->userId = $userId;
         $this->roleId = $roleId;
@@ -46,6 +51,7 @@ class UserDTO
         $this->socialNetworkUrl = $socialNetworkUrl;
         $this->isBlocked = $isBlocked;
         $this->notes = $notes;
+        $this->name = $name;
     }
 
 
