@@ -22,8 +22,6 @@ class User
     
     private ?string $name;
     
-    private ?string $token;
-    
     /**
      * User constructor.
      * @param int $userId
@@ -35,7 +33,6 @@ class User
      * @param string $apiKey
      * @param string|null $notes
      * @param string|null $name
-     * @param string|null $token
      */
     public function __construct(
         int $userId,
@@ -46,8 +43,7 @@ class User
         bool $isBlocked,
         string $apiKey,
         ?string $notes,
-        ?string $name,
-        ?string $token
+        ?string $name
     )
     {
         $this->userId = $userId;
@@ -59,7 +55,6 @@ class User
         $this->apiKey = $apiKey;
         $this->notes = $notes;
         $this->name = $name;
-        $this->token = $token;
     }
 
     /**
@@ -129,10 +124,5 @@ class User
     public function getName(): ?string
     {
         return $this->name;
-    }
-    
-    public function getToken(): ?string
-    {
-        return $this->token;
     }
 }

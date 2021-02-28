@@ -4,6 +4,7 @@
 namespace App\Repositories;
 
 use Exception;
+use Illuminate\Support\Facades\DB;
 use mysqli;
 use App\Models\User;
 use App\Repositories\Interfaces\IUserRepository;
@@ -48,8 +49,7 @@ WHERE apiKey='$cleanApiKey'");
             $row["isBlocked"],
             $row["apiKey"],
             $row["notes"],
-            $row["name"],
-            null
+            $row["name"]
         );
     }
     
@@ -62,7 +62,7 @@ WHERE apiKey='$cleanApiKey'");
         $mysqli = $this->connect();
         $res = $mysqli->query("
 SELECT
-    `id`, `roleId`, `dateCreated`, `phoneNumber`, `socialNetworkUrl`, `isBlocked`, `apiKey`, `notes`, `name`, `apiKey`
+    `id`, `roleId`, `dateCreated`, `phoneNumber`, `socialNetworkUrl`, `isBlocked`, `apiKey`, `notes`, `name`
 FROM ".$this->config->getUsersTableName());
     
         if(!$res || !$res->data_seek(0))
@@ -73,7 +73,6 @@ FROM ".$this->config->getUsersTableName());
         $users = [];
         while($row = $res->fetch_assoc())
         {
-            $token = $row["apiKey"];
             $users[] = new User(
                 $row["id"],
                 $row["roleId"],
@@ -83,13 +82,53 @@ FROM ".$this->config->getUsersTableName());
                 $row["isBlocked"],
                 $row["apiKey"],
                 $row["notes"],
-                $row["name"],
-                $token
+                $row["name"]
             );
         }
         
         $mysqli->close();
         
         return array_values($users);
+    }
+    
+    /**
+     * @inheritDoc
+     * @throws Exception
+     */
+    public function updateUser(int $userId, User $user): bool
+    {
+        $mysqli = $this->connect();
+        $res = $mysqli->query("
+            UPDATE ".$this->config->getUsersTableName()."
+            SET
+                `roleId` = ".$user->getRoleId().",
+                `dateCreated` = ".$user->getDateCreated().",
+                `phoneNumber` = ".$user->getPhoneNumber().",
+                `socialNetworkUrl` = ".$user->getSocialNetworkUrl().",
+                `isBlocked` = ".$user->isBlocked().",
+                `apiKey` = ".$user->getApiKey().",
+                `notes` = ".$user->getNotes().",
+                `name` = ".$user->getName()."
+            FROM ".$this->config->getUsersTableName()."
+            WHERE id=".$user->getUserId());
+
+        if(!$res || !$res->data_seek(0))
+        {
+            throw new Exception('User does not exists');
+        }
+        $row = $res->fetch_assoc();
+        $mysqli->close();
+
+        $users[] = new User(
+            $row["id"],
+            $row["roleId"],
+            $row["dateCreated"],
+            $row["phoneNumber"],
+            $row["socialNetworkUrl"],
+            $row["isBlocked"],
+            $row["apiKey"],
+            $row["notes"],
+            $row["name"]
+        );
     }
 }

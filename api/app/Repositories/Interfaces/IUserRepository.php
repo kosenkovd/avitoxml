@@ -23,4 +23,11 @@ interface IUserRepository
      * @throws Exception in case of DB connection failure.
      */
     public function getUsers() : ?array;
+    
+    /**
+     * @param int $userId
+     * @param User $user
+     * @return bool
+     */
+    public function updateUser(int $userId, User $user) : bool;
 }
