@@ -76,16 +76,14 @@ class UserController extends BaseController
         return response()->json($usersDTOs, 200);
     }
     
-    public function put(Request $request, $id): JsonResponse
+    public function update(Request $request, $id): JsonResponse
     {
         /** @var User $currentUser */
         $currentUser = $request->input("currentUser");
         
-        if (
-            ($currentUser->getUserId() !== $id)
-            ||
-            ($currentUser->getRoleId() !== $this->roles->Admin)
-        ) {
+        if (!(($currentUser->getUserId() === (int)$id) ||
+            ($currentUser->getRoleId() === $this->roles->Admin)))
+        {
             return response()->json(null, 403);
         }
     
@@ -107,9 +105,9 @@ class UserController extends BaseController
             $input['phoneNumber'],
             $input['socialNetworkUrl'],
             $input['isBlocked'],
-            $input['token'],
             $input['notes'],
             $input['name'],
+            $input['token'],
         );
         
         $user = UserDTOMapper::mapUserDTOToModel($userDTO);

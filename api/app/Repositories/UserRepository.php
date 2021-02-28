@@ -98,37 +98,38 @@ FROM ".$this->config->getUsersTableName());
     public function updateUser(int $userId, User $user): bool
     {
         $mysqli = $this->connect();
-        $res = $mysqli->query("
+       
+        $query = "
             UPDATE ".$this->config->getUsersTableName()."
-            SET
-                `roleId` = ".$user->getRoleId().",
-                `dateCreated` = ".$user->getDateCreated().",
-                `phoneNumber` = ".$user->getPhoneNumber().",
-                `socialNetworkUrl` = ".$user->getSocialNetworkUrl().",
-                `isBlocked` = ".$user->isBlocked().",
-                `apiKey` = ".$user->getApiKey().",
-                `notes` = ".$user->getNotes().",
-                `name` = ".$user->getName()."
-            FROM ".$this->config->getUsersTableName()."
-            WHERE id=".$user->getUserId());
+            SET `roleId` = ?,
+                `phoneNumber` = ?,
+                `socialNetworkUrl` = ?,
+                `isBlocked` = ?,
+                `notes` = ?,
+                `name` = ?
+            WHERE id=".$user->getUserId();
 
-        if(!$res || !$res->data_seek(0))
-        {
-            throw new Exception('User does not exists');
-        }
-        $row = $res->fetch_assoc();
+        $statement = $mysqli->prepare($query);
+        $roleId = $user->getRoleId();
+        $phoneNumber = $user->getPhoneNumber();
+        $socialNetworkUrl = $user->getSocialNetworkUrl();
+        $isBlocked = $user->isBlocked();
+        $notes = $user->getNotes();
+        $name = $user->getName();
+        
+        $statement->bind_param('issbss',
+            $roleId,
+            $phoneNumber,
+            $socialNetworkUrl,
+            $isBlocked,
+            $notes,
+            $name
+        );
+       
+        $result = $statement->execute();
+        
         $mysqli->close();
 
-        $users[] = new User(
-            $row["id"],
-            $row["roleId"],
-            $row["dateCreated"],
-            $row["phoneNumber"],
-            $row["socialNetworkUrl"],
-            $row["isBlocked"],
-            $row["apiKey"],
-            $row["notes"],
-            $row["name"]
-        );
+        return !!$result;
     }
 }
