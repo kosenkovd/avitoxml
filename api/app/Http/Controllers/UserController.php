@@ -114,9 +114,26 @@ class UserController extends BaseController
     
         $result = $this->userRepository->updateUser($id, $user);
         if ($result) {
+            return response()->json(true, 200);
+        } else {
+            return response()->json(false, 500);
+        }
+    }
+    
+    public function refreshToken(Request $request, $id): JsonResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
+        
+        if ($currentUser->getRoleId() !== $this->roles->Admin) {
+            return response()->json(null, 403);
+        }
+        
+        $result = $this->userRepository->refreshApiKey($id);
+        if (!!$result) {
             return response()->json($result, 200);
         } else {
-            return response()->json($result, 500);
+            return response()->json(null, 500);
         }
     }
 }

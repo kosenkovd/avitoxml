@@ -4,7 +4,8 @@
 namespace App\Repositories;
 
 use Exception;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use mysqli;
 use App\Models\User;
 use App\Repositories\Interfaces\IUserRepository;
@@ -107,7 +108,7 @@ FROM ".$this->config->getUsersTableName());
                 `isBlocked` = ?,
                 `notes` = ?,
                 `name` = ?
-            WHERE id=".$user->getUserId();
+            WHERE id=".$userId;
 
         $statement = $mysqli->prepare($query);
         $roleId = $user->getRoleId();
@@ -131,5 +132,28 @@ FROM ".$this->config->getUsersTableName());
         $mysqli->close();
 
         return !!$result;
+    }
+    
+    public function refreshApiKey(int $userId): ?string
+    {
+        $mysqli = $this->connect();
+    
+        $query = "
+            UPDATE ".$this->config->getUsersTableName()."
+            SET `apiKey` = ?
+            WHERE id=".$userId;
+    
+        $statement = $mysqli->prepare($query);
+        $apiKey = Hash::make(Str::random());
+    
+        $statement->bind_param('s',
+            $apiKey
+        );
+    
+        $result = $statement->execute();
+    
+        $mysqli->close();
+    
+        return !!$result ? $apiKey : null;
     }
 }

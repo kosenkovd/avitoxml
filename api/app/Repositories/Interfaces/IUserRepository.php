@@ -30,4 +30,10 @@ interface IUserRepository
      * @return bool
      */
     public function updateUser(int $userId, User $user) : bool;
+    
+    /**
+     * @param int $userId
+     * @return string
+     */
+    public function refreshApiKey(int $userId) : ?string;
 }
