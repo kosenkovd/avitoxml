@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Roles;
 use Closure;
 use App\Http\Models;
 use App\Repositories\Interfaces;
@@ -13,6 +14,11 @@ class Authenticate
      * @var Interfaces\IUserRepository Models\User repository.
      */
     private Interfaces\IUserRepository $userRepository;
+    
+    /**
+     * @var Roles
+     */
+    private Roles $roles;
 
     private static array $anonymousAllowed = [
         "App\Http\Controllers\GeneratorController@show",
@@ -22,6 +28,7 @@ class Authenticate
     public function __construct(Interfaces\IUserRepository $userRepository)
     {
         $this->userRepository = $userRepository;
+        $this->roles = new Roles();
     }
 
     /**
@@ -54,7 +61,7 @@ class Authenticate
             ], 403);
         }
     
-        if($user->isBlocked())
+        if(($user->getRoleId() !== $this->roles->Admin) && $user->isBlocked())
         {
             http_response_code(403);
             return response()->json([
