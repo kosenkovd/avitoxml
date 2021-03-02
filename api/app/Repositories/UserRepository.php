@@ -99,7 +99,7 @@ FROM ".$this->config->getUsersTableName());
     public function updateUser(int $userId, User $user): bool
     {
         $mysqli = $this->connect();
-       
+        
         $query = "
             UPDATE ".$this->config->getUsersTableName()."
             SET `roleId` = ?,
@@ -114,11 +114,11 @@ FROM ".$this->config->getUsersTableName());
         $roleId = $user->getRoleId();
         $phoneNumber = $user->getPhoneNumber();
         $socialNetworkUrl = $user->getSocialNetworkUrl();
-        $isBlocked = $user->isBlocked();
+        $isBlocked = (int)$user->isBlocked();
         $notes = $user->getNotes();
         $name = $user->getName();
         
-        $statement->bind_param('issbss',
+        $statement->bind_param('ississ',
             $roleId,
             $phoneNumber,
             $socialNetworkUrl,
