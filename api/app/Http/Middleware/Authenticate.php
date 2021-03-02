@@ -53,6 +53,14 @@ class Authenticate
                 "message" => "User with specified hash was not found."
             ], 403);
         }
+    
+        if($user->isBlocked())
+        {
+            http_response_code(403);
+            return response()->json([
+                "message" => "User is blocked."
+            ], 403);
+        }
 
         $request->request->add([
             'currentUser' => $user
