@@ -1,14 +1,14 @@
 <?php
-
-
+    
+    
     namespace App\Services;
-
+    
     use App\Configuration\Config;
     use App\Services\Interfaces\IYandexDiskService;
     use Exception;
     use \Arhitector\Yandex\Disk;
     use Illuminate\Support\Facades\Log;
-
+    
     /**
      * Handles communication with Yandex Drive services.
      * @package App\Services
@@ -16,12 +16,12 @@
     class YandexDiskService implements IYandexDiskService{
         private Config $config;
         private Disk $disk;
-
+        
         private function cleanupPath(string $path) : string
         {
             return preg_replace('/\/+/', '/', $path);
         }
-
+        
         /**
          * YandexDiskService constructor.
          */
@@ -29,7 +29,7 @@
         {
             $this->config = new Config();
         }
-
+        
         /**
          * @inheritDoc
          */
@@ -37,7 +37,7 @@
         {
             $this->disk = new Disk($token);
         }
-
+        
         /**
          * @inheritDoc
          * @throws Exception
@@ -58,9 +58,9 @@
             } else {
                 $folderPath = '/'.$parentId.'/'.$name;
             }
-
+            
             $result = $this->disk->getResource($folderPath)->create();
-
+            
             var_dump($result->toArray());
             if ($result) {
                 return $folderPath;
@@ -68,7 +68,7 @@
                 throw new Exception('Can\'t Create disk folder');
             }
         }
-
+        
         /**
          * @inheritDoc
          */
@@ -76,7 +76,7 @@
         {
             return '/'.$subFolderName.'/';
         }
-
+        
         /**
          * @inheritDoc
          * @throws Exception
@@ -84,11 +84,11 @@
         public function listFolderImages(string $folderID, bool $toRetry = true): array
         {
             $folderPath = $this->cleanupPath("/".$folderID);
-
+            
             try
             {
                 $directory = $this->disk->getResource($folderPath);
-
+                
                 $imageNames = [];
                 foreach ($directory->items as $item)
                 {
@@ -103,7 +103,7 @@
                 return [];
             }
         }
-
+        
         /**
          * @inheritDoc
          * @throws Exception
@@ -115,7 +115,7 @@
             bool $toRetry = true): void
         {
             $folderPath = '/'.$folderID.'/';
-
+            
             if(!is_null($newName))
             {
                 $newFilePath = $folderPath.$newName;
@@ -127,13 +127,13 @@
                 $newFilePath = $folderPath.$fileName;
             }
             $newFilePath = preg_replace('/\s/', '', $newFilePath);
-
+            
             $folder = $this->disk->getResource($this->cleanupPath("/".$folderID));
             if(!$folder->has())
             {
                 $folder->create();
             }
-
+            
             $file = $this->disk->getResource($this->cleanupPath($currentPath));
             echo "Save to ".$newFilePath." from ".$currentPath.PHP_EOL;
             $result = $file->move($this->cleanupPath($newFilePath));
@@ -143,17 +143,17 @@
                 echo "Move error!!!!!!".PHP_EOL;
             }
         }
-
+        
         /**
          * @inheritDoc
          */
         public function exists(string $folderID): bool
         {
             $folderPath = "/".$folderID;
-
+            
             return $this->disk->getResource($folderPath)->has();
         }
-
+        
         /**
          * @inheritDoc
          */
@@ -164,7 +164,7 @@
             {
                 return null;
             }
-
+            
             return $file->get('file');
         }
     }

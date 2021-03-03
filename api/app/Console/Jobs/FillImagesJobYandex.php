@@ -1,10 +1,11 @@
 <?php
-
-
+    
+    
     namespace App\Console\Jobs;
-
+    
     use App\Configuration\Spreadsheet\SheetNames;
     use App\Configuration\XmlGeneration;
+//    use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
     use App\Models\Table;
     use App\Models\TableHeader;
@@ -13,35 +14,35 @@
     use App\Services\Interfaces\IYandexDiskService;
     use Leonied7\Yandex\Disk\Item\File;
     use Ramsey\Uuid\Guid\Guid;
-
+    
     class FillImagesJobYandex extends JobBase
     {
         /**
          * @var int max time to execute job.
          */
         protected int $maxJobTime = 60*5;
-
+        
         /**
          * @var bool is logging enabled.
          */
         protected bool $loggingEnabled = true;
-
+        
         private array $images = [];
-
+        
         /**
          * @var IYandexDiskService Yandex Disk client.
          */
         protected IYandexDiskService $yandexDiskService;
-
+        
         /**
          * @var SheetNames
          */
         protected SheetNames $sheetNamesConfig;
-
+        
         private ITableRepository $tableRepository;
-
+        
         private XmlGeneration $xmlGeneration;
-
+        
         /**
          * Checks if it is possible to fill images in row.
          *
@@ -59,10 +60,10 @@
                 !is_null($propertyColumns->photoSourceFolder) &&
                 isset($row[$propertyColumns->photoSourceFolder]) &&
                 $row[$propertyColumns->photoSourceFolder] != '';
-
+            
             return $subFolderExists || $photoSourceFolderExists;
         }
-
+        
         /**
          * Get Images from GoogleDrive.
          *
@@ -75,16 +76,16 @@
             if ($subFolderName == '') {
                 return [];
             }
-
+            
             $childFolder = $this->yandexDiskService->getChildFolderByName($folderID, $subFolderName);
-
+            
             if ($childFolder == '') {
                 return [];
             }
-
+            
             return $this->yandexDiskService->listFolderImages($childFolder);
         }
-
+        
         /**
          * Creates sub folder and fills with images from source folders.
          *
@@ -99,10 +100,10 @@
             $newFolderName = null;
             $this->log("Source folders ".$row[$propertyColumns->photoSourceFolder]);
             $sourceFolders = explode(PHP_EOL, $row[$propertyColumns->photoSourceFolder]);
-
+            
             var_dump($sourceFolders);
             $maxNumberOfSymbolsInFileNumber = strlen(strval(count($sourceFolders)));
-
+            
             $imageCopyData = [];
             $imageNumber = 1;
             foreach ($sourceFolders as $sourceFolder)
@@ -112,10 +113,10 @@
                 {
                     continue;
                 }
-
+                
                 $this->log("Processing ".$sourceFolder);
                 $sourceFolderId = $this->yandexDiskService->getChildFolderByName($baseFolderId, $sourceFolder);
-
+                
                 var_dump($sourceFolderId);
                 /** @var $image File */
                 $image = null;
@@ -140,7 +141,7 @@
                     }
                     $image = array_shift($this->images[$sourceFolderId]);
                 }
-
+                
                 $filePathArray = explode('/', $image);
                 $imageName = $filePathArray[count($filePathArray) - 1];
                 $imageCopyData[] = [
@@ -153,11 +154,11 @@
                 ];
                 $imageNumber++;
             }
-
+            
             if(count($imageCopyData) > 0)
             {
                 $newFolderName = crc32(Guid::uuid4()->toString());
-
+                
                 foreach ($imageCopyData as $imageCopyDatum)
                 {
                     $this->yandexDiskService->moveFile(
@@ -166,10 +167,10 @@
                         $imageCopyDatum["newName"]);
                 }
             }
-
+            
             return $newFolderName;
         }
-
+        
         /**
          * Fills images for specified generator.
          *
@@ -184,28 +185,28 @@
         {
             $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
             [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, $quotaUserPrefix);
-
+            
             if (empty($values))
             {
                 return;
             }
-
+            
             foreach ($values as $numRow => $row)
             {
                 $this->stopIfTimeout();
-
+                
                 $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
-                    $row[$propertyColumns->imagesRaw] != '';
-
+                    trim($row[$propertyColumns->imagesRaw]) != '';
+                
                 // content starts at line 2
                 $spreadsheetRowNum = $numRow + 2;
                 if($alreadyFilled || !$this->canFillImages($row, $propertyColumns))
                 {
                     continue;
                 }
-
+                
                 $this->log("Filling row ".$spreadsheetRowNum);
-
+                
                 if(!isset($row[$propertyColumns->subFolderName]) ||
                     trim($row[$propertyColumns->subFolderName]) == '')
                 {
@@ -214,7 +215,7 @@
                     {
                         continue;
                     }
-
+                    
                     $this->spreadsheetClientService->updateCellContent(
                         $tableID,
                         $sheetName,
@@ -226,21 +227,24 @@
                 {
                     $subFolderName = trim($row[$propertyColumns->subFolderName]);
                 }
-
-
+                
+                
                 $this->log("Folder name ".$subFolderName);
-
+                
                 $images = $this->getImages($baseFolderID, $subFolderName);
                 $this->log("Found ".count($images)." images");
-
+                
                 if ($images !== []) {
-                    $links = [];
-                    foreach ($images as $image)
-                    {
-                        $links[] = $this->yandexDiskService->getFileUrl($image)." ";
-                    }
+                    $links = array_map(
+                        function (string $image): string {
+                            return $this->yandexDiskService->getFileUrl($image)." ";
+//                            $fileInfo = urlencode(base64_encode($image));
+//                            return LinkHelper::getYandexPictureDownloadLink($tableGuid, $fileInfo)." ";
+                        },
+                        $images
+                    );
                     $imagesString = join(PHP_EOL, $links);
-
+                    
                     $this->log("Images string ".$imagesString);
                     $this->spreadsheetClientService->updateCellContent(
                         $tableID,
@@ -249,11 +253,11 @@
                         $imagesString,
                         $quotaUserPrefix."NewImages".$spreadsheetRowNum);
                 }
-
-                sleep(1);
+                
+                sleep(2);
             }
         }
-
+        
         /**
          * Tries to init yandex disk service for table.
          *
@@ -263,15 +267,15 @@
         private function init(Table $table): bool
         {
             $yandexTokenCell = 'D7';
-
+            
             $range = $this->sheetNamesConfig->getInformation().'!'.$yandexTokenCell.':'.$yandexTokenCell;
-
+            
             $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                 $table->getGoogleSheetId(),
                 $range,
                 $table->getTableGuid()."fijy");
             $yandexToken = @$yandexConfig[0][0];
-
+            
             // If there is a token in spreadsheet, renew token in database and remove token from spreadsheet
             if (!is_null($yandexToken) && ($yandexToken !== ''))
             {
@@ -284,17 +288,17 @@
                     "",
                     $table->getTableGuid()."figt");
             }
-
+            
             if(is_null($table->getYandexToken()) || $table->getYandexToken() == "")
             {
                 return false;
             }
-
+            
             $this->yandexDiskService->init($table->getYandexToken());
-
+            
             return true;
         }
-
+        
         public function __construct(
             ISpreadsheetClientService $spreadsheetClientService,
             IYandexDiskService $yandexDiskService,
@@ -307,7 +311,7 @@
             $this->sheetNamesConfig = new SheetNames();
             $this->xmlGeneration = $xmlGeneration;
         }
-
+        
         /**
          * Start job.
          *
@@ -318,22 +322,22 @@
         public function start(Table $table): void
         {
             $this->log("Start fill images job");
-
+            
             $this->startTimestamp = time();
-
+            
             $tableID = $table->getGoogleSheetId();
             $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
             $baseFolderID = "";
-
+            
             if(!$this->init($table))
             {
                 $this->log("No token found for spreadsheet, stop execution.");
                 return;
             }
-
+            
             $existingSheets = $this->spreadsheetClientService->getSheets(
                 $table->getGoogleSheetId(), $table->getTableGuid()."fijy");
-
+            
             foreach ($table->getGenerators() as $generator)
             {
                 switch($generator->getTargetPlatform())
@@ -348,7 +352,7 @@
                         $targetSheets = $this->xmlGeneration->getYandexTabs();
                         break;
                 }
-
+                
                 $splitTargetSheets = explode(",", $targetSheets);
                 foreach ($splitTargetSheets as $targetSheet)
                 {
@@ -357,16 +361,16 @@
                     {
                         continue;
                     }
-
+                    
                     $quotaUserPrefix = substr($table->getTableGuid(), 0, 10).
                         (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
                         "RTJ";
-
+                    
                     $this->processSheet($table->getTableGuid(), $tableID, $baseFolderID, $targetSheet, $quotaUserPrefix);
                     $this->stopIfTimeout();
                 }
             }
-
+            
             $this->log("Finished fill images job.");
         }
     }

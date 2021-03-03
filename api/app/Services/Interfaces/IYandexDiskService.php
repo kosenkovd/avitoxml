@@ -43,7 +43,7 @@ interface IYandexDiskService
      * Gets images in specified folder.
      * @param string $folderID folder id.
      * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
-     * @return File[] images.
+     * @return string[] images.
      */
     public function listFolderImages(string $folderID, bool $toRetry = true): array;
 
