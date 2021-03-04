@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Log;
  *
  * @package App\Http\Controllers
  */
-class GeneratorController extends BaseController
+class GeneratorController_quota extends BaseController
 {
     /**
      * @var Interfaces\ITableRepository Models\Table repository.
@@ -112,7 +112,8 @@ class GeneratorController extends BaseController
 
         try
         {
-            $timeModified = $this->spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
+            $timeModified = $this->spreadsheetClientService->getFileModifiedTime(
+                $table->getGoogleSheetId(), $table->getTableGuid()."gfmt");
         }
         catch (Exception $e)
         {

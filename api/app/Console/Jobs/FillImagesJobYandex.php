@@ -12,6 +12,7 @@
     use App\Repositories\Interfaces\ITableRepository;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\Interfaces\IYandexDiskService;
+    use Illuminate\Support\Facades\Log;
     use Leonied7\Yandex\Disk\Item\File;
     use Ramsey\Uuid\Guid\Guid;
     
@@ -278,11 +279,17 @@
             
             $range = $this->sheetNamesConfig->getInformation().'!'.$yandexTokenCell.':'.$yandexTokenCell;
             
-            $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                $table->getGoogleSheetId(),
-                $range,
-                $table->getTableGuid()."fijy");
-            $yandexToken = @$yandexConfig[0][0];
+            try {
+                $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                    $table->getGoogleSheetId(),
+                    $range,
+                    $table->getTableGuid() . "fijy");
+            } catch(\Exception $exception) {
+                Log::error($table->getTableGuid().PHP_EOL.$exception->getMessage());
+                $yandexConfig = null;
+            }
+            
+            $yandexToken = @$yandexConfig[0][0] ?: null;
             
             // If there is a token in spreadsheet, renew token in database and remove token from spreadsheet
             if (!is_null($yandexToken) && ($yandexToken !== ''))

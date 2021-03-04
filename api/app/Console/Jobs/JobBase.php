@@ -7,6 +7,7 @@ namespace App\Console\Jobs;
 use App\Models\TableHeader;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use DateTime;
+use Illuminate\Support\Facades\Log;
 use Ramsey\Uuid\Guid\Guid;
 
 abstract class JobBase
@@ -77,13 +78,26 @@ abstract class JobBase
     protected function getHeaderAndDataFromTable(string $tableID, string $sheetName, string $quotaUserPrefix) : array
     {
         $headerRange = $sheetName.'!A1:FZ1';
-        $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-            $tableID, $headerRange, $quotaUserPrefix."GH");
-        $propertyColumns = new TableHeader($headerResponse[0]);
-
+        
+        try {
+            $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                $tableID, $headerRange, $quotaUserPrefix . "GH");
+            $propertyColumns = new TableHeader($headerResponse[0]);
+        } catch (\Exception $exception) {
+            $propertyColumns = null;
+            $this->log('Error getting spreadsheet values');
+            Log::error($tableID.PHP_EOL.$exception->getMessage());
+        }
+    
+        try {
         $range = $sheetName.'!A2:FZ5001';
         $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
             $tableID, $range, $quotaUserPrefix."GB");
+        } catch (\Exception $exception) {
+            $values = [];
+            $this->log('Error getting spreadsheet values');
+            Log::error($tableID.PHP_EOL.$exception->getMessage());
+        }
 
         return [ $propertyColumns, $values ];
     }

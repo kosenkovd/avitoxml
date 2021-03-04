@@ -9,6 +9,7 @@ use App\Helpers\SpreadsheetHelper;
 use App\Models\Table;
 use App\Services\Interfaces\ISpintaxService;
 use App\Services\Interfaces\ISpreadsheetClientService;
+use Illuminate\Support\Facades\Log;
 
 class RandomizeTextJob extends JobBase
 {
@@ -17,7 +18,7 @@ class RandomizeTextJob extends JobBase
     /**
      * @var bool is logging enabled.
      */
-    protected bool $loggingEnabled = false;
+    protected bool $loggingEnabled = true;
     
     protected bool $timeoutEnabled = false;
 
@@ -59,9 +60,15 @@ class RandomizeTextJob extends JobBase
 
         // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
         $numRow += +2;
-        $columnName = SpreadsheetHelper::getColumnLetterByNumber($resultCol);
-        $this->spreadsheetClientService->updateCellContent(
-            $tableId, $sheetName, $columnName.$numRow, $text, $quotaUser);
+        try {
+            $columnName = SpreadsheetHelper::getColumnLetterByNumber($resultCol);
+            $this->spreadsheetClientService->updateCellContent(
+                $tableId, $sheetName, $columnName . $numRow, $text, $quotaUser);
+        } catch (\Exception $exception) {
+            $this->log("Error on Randomizing row ".$numRow);
+        }
+    
+        sleep(1);
     }
 
 
@@ -75,7 +82,7 @@ class RandomizeTextJob extends JobBase
     private function processSheet(string $tableID, string $sheetName, string $quotaUserPrefix): void
     {
         [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, $quotaUserPrefix);
-
+        
         if (empty($values))
         {
             return;
@@ -112,8 +119,6 @@ class RandomizeTextJob extends JobBase
                     $row,
                     $sheetName,
                     $quotaUserPrefix."randText".$randomizer["result"]);
-
-                sleep(1);
             }
         }
     }
@@ -159,7 +164,7 @@ class RandomizeTextJob extends JobBase
                     break;
             }
 
-            $splitTargetSheets = explode(",", $targetSheets);
+            $splitTargetSheets = explode(",", $targetSheets); // TODO проверка $targetSheets на null
             foreach ($splitTargetSheets as $targetSheet)
             {
                 $targetSheet = trim($targetSheet);
