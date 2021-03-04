@@ -5,7 +5,9 @@
     use App\Configuration\XmlGeneration;
     use App\Console\Jobs\FillImagesJob;
     use App\Console\Jobs\FillImagesJobYandex;
+    use App\Console\Jobs\JobBase;
     use App\Console\Jobs\RandomizeTextJob;
+    use App\Models\Table;
     use App\Repositories\TableRepository;
     use App\Services\GoogleDriveClientService;
     use App\Services\SpintaxService;
@@ -14,6 +16,8 @@
     use Exception;
     use Illuminate\Console\Scheduling\Schedule;
     use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+    use Illuminate\Support\Facades\Log;
+    use phpDocumentor\Reflection\Types\Callable_;
     
     class Kernel extends ConsoleKernel {
         private static function execInBackground($cmd)
@@ -24,6 +28,8 @@
                 exec($cmd . " > /dev/null &");
             }
         }
+        
+        private int $secondToSleep = 45;
         
         /**
          * The Artisan commands provided by your application.
@@ -43,44 +49,69 @@
          */
         protected function schedule(Schedule $schedule)
         {
+//            Log::info("CronTab activate");
+            
             $tableRepository = new TableRepository();
             $tables = $tableRepository->getTables();
             
+            
             $schedule->call(function () use ($tables) {
+                Log::info("Starting Schedule");
                 foreach ($tables as $table) {
                     switch ($table->getTableId()) {
                         case 148:
                             // Google Drive
+                            Log::info("Starting FillImagesJob for " . $table->getTableGuid());
                             echo "Starting FillImagesJob for " . $table->getTableGuid();
                             try {
                                 (new FillImagesJob(new SpreadsheetClientService(), new GoogleDriveClientService()))
                                     ->start($table);
                             } catch (Exception $exception) {
-                                sleep(45);
+                                Log::error($table->getTableGuid() . PHP_EOL . $exception->getMessage());
+                                
+                                $this->restartIfQuota(
+                                    $table,
+                                    (int)$exception->getCode(),
+                                    (new FillImagesJob(new SpreadsheetClientService(), new GoogleDriveClientService()))
+                                );
                             }
                             break;
                         default:
+                            Log::info("Starting FillImagesJob for " . $table->getTableGuid());
                             echo "Starting FillImagesJob for " . $table->getTableGuid();
                             try {
                                 (new FillImagesJobYandex(
                                     new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
                                     ->start($table);
                             } catch (Exception $exception) {
-                                sleep(45);
+                                Log::error($table->getTableGuid() . PHP_EOL . $exception->getMessage());
+                                $this->restartIfQuota(
+                                    $table,
+                                    (int)$exception->getCode(),
+                                    (new FillImagesJobYandex(
+                                        new SpreadsheetClientService(),new YandexDiskService(), new TableRepository(), new XmlGeneration()))
+                                );
                             }
                     }
                     
+                    Log::info("Starting RandomizeTextJob for " . $table->getTableGuid());
                     echo "Starting RandomizeTextJob for " . $table->getTableGuid();
                     try {
                         (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService(), new XmlGeneration()))
                             ->start($table);
                     } catch (Exception $exception) {
-                        sleep(45);
+                        Log::error($table->getTableGuid() . PHP_EOL . $exception->getMessage());
+                        $this->restartIfQuota(
+                            $table,
+                            (int)$exception->getCode(),
+                            (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService(), new XmlGeneration()))
+                        );
                     }
                 }
+                
+                Log::info("Ending Schedule");
             })
-                ->name("Table Jobs Starts")
-                ->everyFiveMinutes()
+                ->name("Tables2") // имя процесса сбрасывается withoutOverlapping через 24 часа
                 ->withoutOverlapping();
 
 //            foreach ($tables as $table) {
@@ -144,6 +175,23 @@
 //                    ->everyThreeMinutes()
 //                    ->withoutOverlapping();
 //            }
+        }
+        
+        protected function restartIfQuota(Table $table, int $status, JobBase $job): void
+        {
+            if ($this->isQuota($status)) {
+                sleep($this->secondToSleep);
+                try {
+                    $job->start($table);
+                } catch (Exception $exception) {
+                    Log::error($table->getTableGuid() . PHP_EOL . $exception->getMessage());
+                }
+            }
+        }
+        
+        protected function isQuota(int $status): bool
+        {
+            return $status === 429;
         }
         
         /**
