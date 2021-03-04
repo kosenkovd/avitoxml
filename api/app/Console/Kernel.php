@@ -67,7 +67,7 @@
                                 (new FillImagesJob(new SpreadsheetClientService(), new GoogleDriveClientService()))
                                     ->start($table);
                             } catch (Exception $exception) {
-                                Log::error($table->getTableGuid() . PHP_EOL . $exception->getMessage());
+                                Log::error($table->getTableGuid() . ' ' . $exception->getCode() . PHP_EOL . $exception->getMessage());
                                 
                                 $this->restartIfQuota(
                                     $table,
@@ -84,12 +84,12 @@
                                     new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
                                     ->start($table);
                             } catch (Exception $exception) {
-                                Log::error($table->getTableGuid() . PHP_EOL . $exception->getMessage());
+                                Log::error($table->getTableGuid() . ' ' . $exception->getCode() . PHP_EOL . $exception->getMessage());
                                 $this->restartIfQuota(
                                     $table,
                                     (int)$exception->getCode(),
                                     (new FillImagesJobYandex(
-                                        new SpreadsheetClientService(),new YandexDiskService(), new TableRepository(), new XmlGeneration()))
+                                        new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
                                 );
                             }
                     }
@@ -100,7 +100,7 @@
                         (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService(), new XmlGeneration()))
                             ->start($table);
                     } catch (Exception $exception) {
-                        Log::error($table->getTableGuid() . PHP_EOL . $exception->getMessage());
+                        Log::error($table->getTableGuid() . ' ' . $exception->getCode() . PHP_EOL . $exception->getMessage());
                         $this->restartIfQuota(
                             $table,
                             (int)$exception->getCode(),
@@ -181,10 +181,13 @@
         {
             if ($this->isQuota($status)) {
                 sleep($this->secondToSleep);
+                echo "Restarting " . get_class($job) . " for " . $table->getTableGuid();
                 try {
                     $job->start($table);
                 } catch (Exception $exception) {
-                    Log::error($table->getTableGuid() . PHP_EOL . $exception->getMessage());
+                    Log::error($table->getTableGuid() . ' ' . $exception->getCode() . PHP_EOL . $exception->getMessage());
+
+                    $this->restartIfQuota($table, $status, $job);
                 }
             }
         }
