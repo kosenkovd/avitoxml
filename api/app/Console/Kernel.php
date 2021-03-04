@@ -47,22 +47,39 @@
             $tables = $tableRepository->getTables();
             
             $schedule->call(function () use ($tables) {
-                try {
-                    foreach ($tables as $table) {
-                        echo "Starting FillImagesJob for " . $table->getTableGuid();
-                        (new FillImagesJobYandex(
-                            new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
-                            ->start($table);
-                        
-                        echo "Starting RandomizeTextJob for " . $table->getTableGuid();
+                foreach ($tables as $table) {
+                    switch ($table->getTableId()) {
+                        case 148:
+                            // Google Drive
+                            echo "Starting FillImagesJob for " . $table->getTableGuid();
+                            try {
+                                (new FillImagesJob(new SpreadsheetClientService(), new GoogleDriveClientService()))
+                                    ->start($table);
+                            } catch (Exception $exception) {
+                                sleep(45);
+                            }
+                            break;
+                        default:
+                            echo "Starting FillImagesJob for " . $table->getTableGuid();
+                            try {
+                                (new FillImagesJobYandex(
+                                    new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
+                                    ->start($table);
+                            } catch (Exception $exception) {
+                                sleep(45);
+                            }
+                    }
+                    
+                    echo "Starting RandomizeTextJob for " . $table->getTableGuid();
+                    try {
                         (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService(), new XmlGeneration()))
                             ->start($table);
+                    } catch (Exception $exception) {
+                        sleep(45);
                     }
-                } catch (Exception $exception) {
-                    sleep(45);
                 }
             })
-                ->name("Tables Jobs")
+                ->name("Table Jobs Starts")
                 ->everyFiveMinutes()
                 ->withoutOverlapping();
 
@@ -82,13 +99,15 @@
 //                sleep(1);*/
 //
 //                switch ($table->getTableId()) {
-//                    case 99999:
+//                    case 148:
+//                        // Google Drive
 //                        $schedule->call(function () use ($table) {
 //                            echo "Starting FillImagesJob for " . $table->getTableGuid();
 //                            try {
 //                                (new FillImagesJob(new SpreadsheetClientService(), new GoogleDriveClientService()))
 //                                    ->start($table);
 //                            } catch (Exception $exception) {
+//                                sleep(45);
 //                            }
 //                        })
 //                            ->name("Randomize Google images " . $table->getTableId())
@@ -103,6 +122,7 @@
 //                                    new SpreadsheetClientService(), new YandexDiskService(), new TableRepository(), new XmlGeneration()))
 //                                    ->start($table);
 //                            } catch (Exception $exception) {
+//                                sleep(45);
 //                            }
 //                        })
 //                            ->name("Randomize yandex images " . $table->getTableId())
@@ -117,6 +137,7 @@
 //                        (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService(), new XmlGeneration()))
 //                            ->start($table);
 //                    } catch (Exception $exception) {
+//                        sleep(45);
 //                    }
 //                })
 //                    ->name("Randomize text " . $table->getTableId())
