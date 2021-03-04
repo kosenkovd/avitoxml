@@ -22,6 +22,11 @@ abstract class JobBase
      * @var bool is logging enabled.
      */
     protected bool $loggingEnabled = false;
+    
+    /**
+     * @var bool is logging enabled.
+     */
+    protected bool $timeoutEnabled = false;
 
     /**
      * @var int job execution time start epoch.
@@ -54,7 +59,7 @@ abstract class JobBase
      */
     protected function stopIfTimeout(): void
     {
-        if(time() >= $this->startTimestamp + $this->maxJobTime)
+        if($this->timeoutEnabled && (time() >= $this->startTimestamp + $this->maxJobTime))
         {
             $this->log("Finished ".get_class($this)." job by timeout.");
             exit;

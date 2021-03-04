@@ -26,6 +26,8 @@
          * @var bool is logging enabled.
          */
         protected bool $loggingEnabled = true;
+    
+        protected bool $timeoutEnabled = false;
         
         private array $images = [];
         

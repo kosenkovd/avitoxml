@@ -18,6 +18,8 @@ class RandomizeTextJob extends JobBase
      * @var bool is logging enabled.
      */
     protected bool $loggingEnabled = false;
+    
+    protected bool $timeoutEnabled = false;
 
     protected int $maxJobTime = 60*60;
 
