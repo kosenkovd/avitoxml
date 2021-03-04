@@ -22,7 +22,7 @@
         /**
          * @var bool is logging enabled.
          */
-        protected bool $loggingEnabled = false;
+        protected bool $loggingEnabled = true;
 
         private array $images = [];
 
@@ -99,8 +99,9 @@
                 $tableID,
                 $range,
                 $values,
-                $params,
-                substr($tableID, 0, 20)."FillImagesGoogle".$numRow);
+                $params
+//                substr($tableID, 0, 20)."FillImagesGoogle".$numRow
+            );
         }
 
         /**
