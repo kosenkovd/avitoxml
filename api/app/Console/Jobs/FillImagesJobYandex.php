@@ -5,7 +5,7 @@
     
     use App\Configuration\Spreadsheet\SheetNames;
     use App\Configuration\XmlGeneration;
-//    use App\Helpers\LinkHelper;
+    use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
     use App\Models\Table;
     use App\Models\TableHeader;
@@ -236,13 +236,19 @@
                 
                 if ($images !== []) {
                     $links = array_map(
-                        function (string $image): string {
+                        function (string $image): string  {
                             return $this->yandexDiskService->getFileUrl($image)." ";
-//                            $fileInfo = urlencode(base64_encode($image));
-//                            return LinkHelper::getYandexPictureDownloadLink($tableGuid, $fileInfo)." ";
                         },
                         $images
                     );
+//                    // wrap
+//                    $links = array_map(
+//                        function (string $image) use ($tableGuid): string  {
+//                            $fileInfo = urlencode(base64_encode($image));
+//                            return LinkHelper::getYandexPictureDownloadLink($tableGuid, $fileInfo)." ";
+//                        },
+//                        $images
+//                    );
                     $imagesString = join(PHP_EOL, $links);
                     
                     $this->log("Images string ".$imagesString);
