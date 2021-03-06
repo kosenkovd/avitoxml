@@ -13,7 +13,7 @@
      * Handles communication with Yandex Drive services.
      * @package App\Services
      */
-    class YandexDiskService implements IYandexDiskService {
+    class YandexDiskService_wrap implements IYandexDiskService {
         private Config $config;
         private Disk $disk;
         

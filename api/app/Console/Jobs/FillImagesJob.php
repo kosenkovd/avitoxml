@@ -85,7 +85,12 @@
          * @return void
          */
         private function updateCellContent(
-            string $content, int $numRow, string $tableID, string $columnName, string $targetSheet): void
+            string $content,
+            int $numRow,
+            string $tableID,
+            string $columnName,
+            string $targetSheet
+        ): void
         {
             $range = $targetSheet.'!' . $columnName . $numRow . ':' . $columnName . $numRow;
 
@@ -175,21 +180,22 @@
 
             return $newFolderName;
         }
-
+    
         /**
          * Fills images for specified generator.
          *
          * @param string $tableID Google spreadsheet id.
          * @param string $baseFolderID Google drive base folder id.
          * @param Generator $generator Generator.
+         * @throws \Exception
          */
         private function processSheet(string $tableID, string $baseFolderID, Generator $generator): void
         {
             $sheetName = $generator->getTargetPlatform();
             $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
             [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, substr($tableID, 0, 15));
-
-            if (empty($values))
+    
+            if ($propertyColumns && empty($values))
             {
                 return;
             }
@@ -200,7 +206,7 @@
 
                 var_dump($numRow);
                 $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
-                    $row[$propertyColumns->imagesRaw] != '';
+                    trim($row[$propertyColumns->imagesRaw]) != '';
 
                 // content starts at line 2
                 $spreadsheetRowNum = $numRow + 2;
@@ -239,11 +245,12 @@
                 $this->log("Found ".count($images)." images");
 
                 if ($images !== []) {
-                    $links = [];
-                    foreach ($images as $image)
-                    {
-                        $links[] = LinkHelper::getPictureDownloadLink($image->id);
-                    }
+                    $links = array_map(
+                        function (string $image): string  {
+                            return LinkHelper::getPictureDownloadLink($image->id)." ";
+                        },
+                        $images
+                    );
                     $imagesString = join(PHP_EOL, $links);
 
                     $this->log("Images string ".$imagesString);
@@ -265,30 +272,31 @@
             parent::__construct($spreadsheetClientService);
             $this->googleDriveClientService = $googleDriveClientService;
         }
-
+    
         /**
          * Start job.
          *
          * Fills images for all tables that were not filled before.
          *
          * @param Table $table table to process.
+         * @throws \Exception
          */
         public function start(Table $table): void
         {
-            $this->log("Start fill images job");
+            $this->log("Start fill images job ".$table->getGoogleSheetId());
 
             $this->startTimestamp = time();
-
-            $tableID = $table->getGoogleSheetId();
-            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
+            
+//            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
+            $this->log("Processing table ".$table->getGoogleSheetId().'...');
             $baseFolderID = $table->getGoogleDriveId();
 
             foreach ($table->getGenerators() as $generator)
             {
-                $this->processSheet($tableID, $baseFolderID, $generator);
+                $this->processSheet($table->getGoogleSheetId(), $baseFolderID, $generator);
                 $this->stopIfTimeout();
             }
 
-            $this->log("Finished fill images job.");
+            $this->log("Finished fill images job ".$table->getGoogleSheetId().'.');
         }
     }

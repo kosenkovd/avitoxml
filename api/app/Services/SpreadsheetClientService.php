@@ -15,7 +15,7 @@
     use Google_Service_Sheets;
     use Google_Service_Sheets_ValueRange;
     use Illuminate\Support\Facades\Log;
-    
+
     class SpreadsheetClientService implements ISpreadsheetClientService {
         private Config $config;
         private Google_Client $client;
@@ -124,7 +124,6 @@
         
         /**
          * @inheritDoc
-         * @throws Exception
          */
         public function getSpreadsheetCellsRange(string $spreadsheetId, string $range, bool $toRetry = true) : array
         {
@@ -135,14 +134,25 @@
             }
             catch (Exception $exception)
             {
-                Log::error($spreadsheetId.PHP_EOL.$exception->getMessage());
-                if(!$toRetry)
-                {
-                    throw $exception;
-                }
+                Log::error('Error on reading spreadsheet '.$spreadsheetId.' on '.$range.PHP_EOL.$exception->getMessage());
                 
-                sleep(60);
-                $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+                if ((int)$exception->getCode() === 429) {
+                    if(!$toRetry)
+                    {
+                        throw $exception;
+                    }
+                    Log::alert('sleep 60');
+                    sleep(60);
+                    
+                    try {
+                        $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+                    } catch (Exception $exception) {
+                        Log::error('Error on reading spreadsheet '.$spreadsheetId.' on '.$range.PHP_EOL.$exception->getMessage());
+                        throw $exception;
+                    }
+                } else {
+                    $values = null;
+                }
             }
             
             if(is_null($values))
@@ -161,7 +171,8 @@
             string $range,
             array $values,
             array $params,
-            bool $toRetry = true) : void
+            bool $toRetry = true
+        ) : void
         {
             $body = new Google_Service_Sheets_ValueRange(
                 [

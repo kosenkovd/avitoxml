@@ -62,11 +62,11 @@ abstract class JobBase
     {
         if($this->timeoutEnabled && (time() >= $this->startTimestamp + $this->maxJobTime))
         {
-            $this->log("Finished ".get_class($this)." job by timeout.");
+            $this->log("Finished ".get_class($this)." job by timeout");
             exit;
         }
     }
-
+    
     /**
      * Extracts TableHeader and rows from table sheet.
      *
@@ -74,6 +74,7 @@ abstract class JobBase
      * @param string $sheetName
      * @param string $quotaUserPrefix
      * @return array [ TableHeader, values ]
+     * @throws \Exception
      */
     protected function getHeaderAndDataFromTable(string $tableID, string $sheetName, string $quotaUserPrefix) : array
     {
@@ -81,25 +82,44 @@ abstract class JobBase
         
         try {
             $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                $tableID, $headerRange, $quotaUserPrefix . "GH");
+                $tableID,
+                $headerRange
+//            $quotaUserPrefix . "GH"
+            );
             $propertyColumns = new TableHeader($headerResponse[0]);
         } catch (\Exception $exception) {
             $propertyColumns = null;
-            $this->log('Error getting spreadsheet values');
-            Log::error($tableID.PHP_EOL.$exception->getMessage());
+            $this->log('Error getting spreadsheet headerResponse on '. $tableID.PHP_EOL.$exception->getMessage());
+            Log::error('Error getting spreadsheet headerResponse on '.$tableID.PHP_EOL.$exception->getMessage());
+            $this->throwExceptionIfQuota($exception);
         }
     
         try {
-        $range = $sheetName.'!A2:FZ5001';
-        $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-            $tableID, $range, $quotaUserPrefix."GB");
+            $range = $sheetName.'!A2:FZ5001';
+            $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                $tableID,
+                $range
+//                $quotaUserPrefix."GB"
+        );
         } catch (\Exception $exception) {
             $values = [];
-            $this->log('Error getting spreadsheet values');
-            Log::error($tableID.PHP_EOL.$exception->getMessage());
+            $this->log('Error getting spreadsheet values on '. $tableID.PHP_EOL.$exception->getMessage());
+            Log::error('Error getting spreadsheet values on '.$tableID.PHP_EOL.$exception->getMessage());
+            $this->throwExceptionIfQuota($exception);
         }
 
         return [ $propertyColumns, $values ];
+    }
+    
+    /**
+     * @param \Exception $exception
+     * @throws \Exception
+     */
+    protected function throwExceptionIfQuota(\Exception $exception): void
+    {
+        if ((int)$exception->getCode() === 429) {
+            throw $exception;
+        }
     }
 
     public function __construct(ISpreadsheetClientService $spreadsheetClientService)

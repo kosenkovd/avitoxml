@@ -25,7 +25,7 @@ class RandomizeTextJob extends JobBase
     protected int $maxJobTime = 60*60;
 
     private XmlGeneration $xmlGeneration;
-
+    
     /**
      * Randomises text in specified result column based on pattern column and updates spreadsheet.
      *
@@ -36,6 +36,7 @@ class RandomizeTextJob extends JobBase
      * @param string $sheetName sheet name, required for spreadsheet update.
      * @param array $row row data.
      * @param string $quotaUser quota user.
+     * @throws \Exception
      */
     private function randomizeText(
         string $tableId,
@@ -63,27 +64,35 @@ class RandomizeTextJob extends JobBase
         try {
             $columnName = SpreadsheetHelper::getColumnLetterByNumber($resultCol);
             $this->spreadsheetClientService->updateCellContent(
-                $tableId, $sheetName, $columnName . $numRow, $text, $quotaUser);
+                $tableId,
+                $sheetName,
+                $columnName . $numRow,
+                $text
+//                $quotaUser
+            );
         } catch (\Exception $exception) {
-            $this->log("Error on Randomizing row ".$numRow);
+            $this->log('Error on Randomizing row on '.$numRow.PHP_EOL.$exception->getMessage());
+            Log::error('Error on Randomizing row on '.$numRow.PHP_EOL.$exception->getMessage());
+            $this->throwExceptionIfQuota($exception);
         }
     
         sleep(1);
     }
-
-
+    
+    
     /**
      * Randomize text for specified generator.
      *
      * @param string $tableID Google spreadsheet id.
      * @param string $sheetName sheet name.
      * @param string $quotaUserPrefix quota user prefix.
+     * @throws \Exception
      */
     private function processSheet(string $tableID, string $sheetName, string $quotaUserPrefix): void
     {
         [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, $quotaUserPrefix);
         
-        if (empty($values))
+        if ($propertyColumns && empty($values))
         {
             return;
         }
@@ -110,7 +119,7 @@ class RandomizeTextJob extends JobBase
                 {
                     continue;
                 }
-
+                
                 $this->randomizeText(
                     $tableID,
                     $randomizer["pattern"],
@@ -132,13 +141,14 @@ class RandomizeTextJob extends JobBase
         $this->spintaxService = $spintaxService;
         $this->xmlGeneration = $xmlGeneration;
     }
-
+    
     /**
      * Start job.
      *
      * Randomizes texts in all tables that were not randomized before.
      *
      * @param Table $table table to process.
+     * @throws \Exception
      */
     public function start(Table $table) : void
     {
@@ -147,7 +157,9 @@ class RandomizeTextJob extends JobBase
         $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
 
         $existingSheets = $this->spreadsheetClientService->getSheets(
-            $table->getGoogleSheetId(), $table->getTableGuid()."rtj");
+            $table->getGoogleSheetId()
+//            $table->getTableGuid()."rtj"
+        );
 
         foreach ($table->getGenerators() as $generator)
         {

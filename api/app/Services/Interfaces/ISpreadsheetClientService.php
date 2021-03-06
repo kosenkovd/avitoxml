@@ -28,6 +28,7 @@
          * @param string $spreadsheetId spreadsheet id.
          * @param string $range range to get.
          * @param bool $toRetry whether to retry in case of Exception on first endpoint call.
+         * @throws \Exception throw Quota \Exception
          * @return array cells in chosen range.
          */
         public function getSpreadsheetCellsRange(string $spreadsheetId, string $range, bool $toRetry = true) : array;

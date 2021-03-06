@@ -245,26 +245,45 @@ class XmlGenerationService implements IXmlGenerationService
         $splitTargetSheets = explode(",", $targetSheets);
 
         $existingSheets = $this->spreadsheetClientService->getSheets(
-            $spreadsheetId, $quotaUserPrefix."XmlGetSheets");
+            $spreadsheetId
+//            $quotaUserPrefix."XmlGetSheets"
+        );
         foreach ($splitTargetSheets as $targetSheet)
         {
             $targetSheet = trim($targetSheet);
-            $targetSheetQuotaUserPrefix =
-                $quotaUserPrefix.(strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet);
+//            $targetSheetQuotaUserPrefix =
+//                $quotaUserPrefix.(strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet);
             if(!in_array($targetSheet, $existingSheets))
             {
                 continue;
             }
+    
+            try {
+                $headerRange = $targetSheet.'!A1:FZ1';
+                $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                    $spreadsheetId,
+                    $headerRange,
+//                $targetSheetQuotaUserPrefix."XmlGetHeader",
+                    false
+                );
+                $propertyColumns = new TableHeader($headerResponse[0]);
+            } catch(\Exception $exception) {
+                Log::error('Error getting headerResponse on '.$targetSheet.PHP_EOL.$exception->getMessage());
+                throw $exception;
+            }
 
-            $targetSheet = trim($targetSheet);
-            $headerRange = $targetSheet.'!A1:FZ1';
-            $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                $spreadsheetId, $headerRange, $targetSheetQuotaUserPrefix."XmlGetHeader", false);
-            $propertyColumns = new TableHeader($headerResponse[0]);
-
-            $range = $targetSheet.'!A2:FZ5001';
-            $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                $spreadsheetId, $range, $targetSheetQuotaUserPrefix."XmlGetContent", false);
+            try {
+                $range = $targetSheet . '!A2:FZ5001';
+                $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                    $spreadsheetId,
+                    $range,
+//                $targetSheetQuotaUserPrefix."XmlGetContent",
+                    false
+                );
+            } catch(\Exception $exception) {
+                Log::error('Error getting values on '.$targetSheet.PHP_EOL.$exception->getMessage());
+                throw $exception;
+            }
 
             $xml.= $this->createAdsForSheet($values, $propertyColumns, $targetSheet);
         }

@@ -173,7 +173,7 @@
             
             return $newFolderName;
         }
-        
+    
         /**
          * Fills images for specified generator.
          *
@@ -182,6 +182,7 @@
          * @param string $baseFolderID Google drive base folder id.
          * @param string $sheetName target sheet.
          * @param string $quotaUserPrefix quota user prefix.
+         * @throws \Exception
          */
         private function processSheet(
             string $tableGuid, string $tableID, string $baseFolderID, string $sheetName, string $quotaUserPrefix): void
@@ -189,7 +190,7 @@
             $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
             [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, $quotaUserPrefix);
             
-            if (empty($values))
+            if ($propertyColumns && empty($values))
             {
                 return;
             }
@@ -223,8 +224,9 @@
                         $tableID,
                         $sheetName,
                         SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName).$spreadsheetRowNum,
-                        $subFolderName,
-                        $quotaUserPrefix."NewFolder".$spreadsheetRowNum);
+                        $subFolderName
+//                        $quotaUserPrefix."NewFolder".$spreadsheetRowNum
+                    );
                 }
                 else
                 {
@@ -266,12 +268,13 @@
                 sleep(2);
             }
         }
-        
+    
         /**
          * Tries to init yandex disk service for table.
          *
          * @param Table $table
          * @return bool is init successful.
+         * @throws \Exception
          */
         private function init(Table $table): bool
         {
@@ -285,7 +288,9 @@
                     $range,
                     $table->getTableGuid() . "fijy");
             } catch(\Exception $exception) {
-                Log::error($table->getTableGuid().PHP_EOL.$exception->getMessage());
+                $this->log('Error getting yandex token on '.$table->getTableGuid().PHP_EOL.$exception->getMessage());
+                Log::error('Error getting yandex token on '.$table->getTableGuid().PHP_EOL.$exception->getMessage());
+                $this->throwExceptionIfQuota($exception);
                 $yandexConfig = null;
             }
             
@@ -326,22 +331,23 @@
             $this->sheetNamesConfig = new SheetNames();
             $this->xmlGeneration = $xmlGeneration;
         }
-        
+    
         /**
          * Start job.
          *
          * Fills images for all tables that were not filled before.
          *
          * @param Table $table table to process.
+         * @throws \Exception
          */
         public function start(Table $table): void
         {
-            $this->log("Start fill images job");
+            $this->log("Start fill images job ".$table->getGoogleSheetId());
             
             $this->startTimestamp = time();
             
-            $tableID = $table->getGoogleSheetId();
-            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
+//            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
+            $this->log("Processing table ".$table->getGoogleSheetId().'...');
             $baseFolderID = "";
             
             if(!$this->init($table))
@@ -351,7 +357,9 @@
             }
             
             $existingSheets = $this->spreadsheetClientService->getSheets(
-                $table->getGoogleSheetId(), $table->getTableGuid()."fijy");
+                $table->getGoogleSheetId()
+//                $table->getTableGuid()."fijy"
+            );
             
             foreach ($table->getGenerators() as $generator)
             {
@@ -381,11 +389,17 @@
                         (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
                         "RTJ";
                     
-                    $this->processSheet($table->getTableGuid(), $tableID, $baseFolderID, $targetSheet, $quotaUserPrefix);
+                    $this->processSheet(
+                        $table->getTableGuid(),
+                        $table->getGoogleSheetId(),
+                        $baseFolderID,
+                        $targetSheet,
+                        $quotaUserPrefix
+                    );
                     $this->stopIfTimeout();
                 }
             }
             
-            $this->log("Finished fill images job.");
+            $this->log("Finished fill images job ".$table->getGoogleSheetId().".");
         }
     }
