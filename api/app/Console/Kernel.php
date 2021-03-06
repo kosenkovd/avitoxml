@@ -29,6 +29,7 @@
         }
         
         private int $secondToSleep = 45;
+        private int $attemptsAfterGettingQuota = 3;
         
         /**
          * The Artisan commands provided by your application.
@@ -49,111 +50,109 @@
         protected function schedule(Schedule $schedule)
         {
 //            Log::info("CronTab activate");
-            $tableRepository = new TableRepository();
-            $tables = $tableRepository->getTables();
             
-            $schedule->call(function () use ($tables) {
+            $schedule->call(function () {
                 Log::info("Starting Schedule");
+                $tableRepository = new TableRepository();
+                $tables = $tableRepository->getTables();
+                
                 foreach ($tables as $table) {
-                    $this->startFillImagesJob($table);
                     $this->startRandomizeTextJob($table);
+                    $this->startFillImagesJob($table);
                 }
                 Log::info("Ending Schedule");
             })
                 ->name("Tables2") // имя процесса сбрасывается withoutOverlapping через 24 часа
                 ->withoutOverlapping();
         }
-        
-        protected function startFillImagesJob($table): void
+    
+        private function startRandomizeTextJob($table): void
         {
-            Log::info("Starting FillImagesJob for " . $table->getGoogleSheetId());
-            echo "Starting FillImagesJob for " . $table->getGoogleSheetId();
+            $this->handleJob(
+                $table,
+                (new RandomizeTextJob(
+                    new SpintaxService(),
+                    new SpreadsheetClientService(),
+                    new XmlGeneration()
+                ))
+            );
+        }
+    
+        private function startFillImagesJob($table): void
+        {
             switch ($table->getTableId()) {
                 case 148:
-                    // Google Drive
-                    try {
+                    // tables using Google Drive Disk
+                    $this->handleJob(
+                        $table,
                         (new FillImagesJob(
                             new SpreadsheetClientService(),
                             new GoogleDriveClientService()
                         ))
-                            ->start($table);
-                    } catch (Exception $exception) {
-                        $this->logTableError($table, $exception);
-                        $this->restartIfQuota(
-                            $table,
-                            (int)$exception->getCode(),
-                            (new FillImagesJob(
-                                new SpreadsheetClientService(),
-                                new GoogleDriveClientService()
-                            ))
-                        );
-                    }
+                    );
                     break;
                 default:
-                    try {
+                    $this->handleJob(
+                        $table,
                         (new FillImagesJobYandex(
                             new SpreadsheetClientService(),
                             new YandexDiskService(),
                             new TableRepository(),
                             new XmlGeneration()
                         ))
-                            ->start($table);
-                    } catch (Exception $exception) {
-                        $this->logTableError($table, $exception);
-                        $this->restartIfQuota(
-                            $table,
-                            (int)$exception->getCode(),
-                            (new FillImagesJobYandex(
-                                new SpreadsheetClientService(),
-                                new YandexDiskService(),
-                                new TableRepository(),
-                                new XmlGeneration()
-                            ))
-                        );
-                    }
+                    );
             }
         }
-        
-        protected function startRandomizeTextJob($table): void
+    
+        /**
+         * @param Table $table
+         * @param JobBase $job
+         * @param int|null $status
+         * @param int $attempts
+         */
+        private function handleJob(Table $table, JobBase $job, int $status = null, int $attempts = 0): void
         {
-            Log::info("Starting RandomizeTextJob for " . $table->getGoogleSheetId());
-            echo "Starting RandomizeTextJob for " . $table->getGoogleSheetId();
+            if ($attempts >= $this->attemptsAfterGettingQuota) {
+                return;
+            } else {
+                $attempts++;
+            }
+            
+            if (!is_null($status) && $this->isQuota($status)) {
+                $actionType = 'Restarting';
+                Log::alert('sleep ' . $this->secondToSleep);
+                sleep($this->secondToSleep);
+            } else {
+                $actionType = 'Starting';
+            }
+            
+            $this->logTableHandling($table, $job, $actionType);
+            
             try {
-                (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService(), new XmlGeneration()))
-                    ->start($table);
+                $job->start($table);
             } catch (Exception $exception) {
                 $this->logTableError($table, $exception);
-                $this->restartIfQuota(
-                    $table,
-                    (int)$exception->getCode(),
-                    (new RandomizeTextJob(new SpintaxService(), new SpreadsheetClientService(), new XmlGeneration()))
-                );
+                $this->handleJob($table, $job, $status, $attempts);
             }
         }
-        
-        protected function restartIfQuota(Table $table, int $status, JobBase $job): void
-        {
-            if ($this->isQuota($status)) {
-                sleep($this->secondToSleep);
-                Log::info("Restarting ".get_class($job)." for " . $table->getGoogleSheetId());
-                echo "Restarting ".get_class($job)." for " . $table->getGoogleSheetId();
-                try {
-                    $job->start($table);
-                } catch (Exception $exception) {
-                    $this->logTableError($table, $exception);
-//                    $this->restartIfQuota($table, $status, $job);
-                }
-            }
-        }
-        
-        protected function isQuota(int $status): bool
+    
+        private function isQuota(int $status): bool
         {
             return $status === 429;
         }
-        
-        protected function logTableError(Table $table, Exception $exception): void
+    
+        private function logTableHandling($table, $job, string $actionType): void
         {
-            Log::error("Error on ".$table->getGoogleSheetId() . PHP_EOL . $exception->getMessage());
+            $message = $actionType . " " . get_class($job) . " for " . $table->getGoogleSheetId();
+            Log::info($message);
+            echo $message;
+        }
+    
+        private function logTableError(Table $table, Exception $exception): void
+        {
+            $message = "Error on " . $table->getGoogleSheetId() . PHP_EOL . $exception->getMessage();
+            Log::error($message);
+            echo $message;
         }
         
         /**
