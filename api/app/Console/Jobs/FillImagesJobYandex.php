@@ -288,8 +288,9 @@
                     $range,
                     $table->getTableGuid() . "fijy");
             } catch(\Exception $exception) {
-                $this->log('Error getting yandex token on '.$table->getTableGuid().PHP_EOL.$exception->getMessage());
-                Log::error('Error getting yandex token on '.$table->getTableGuid().PHP_EOL.$exception->getMessage());
+                $message = 'Error getting yandex token on '.$table->getGoogleDriveId().PHP_EOL.$exception->getMessage();
+                $this->log($message);
+                Log::error($message);
                 $this->throwExceptionIfQuota($exception);
                 $yandexConfig = null;
             }
@@ -342,17 +343,14 @@
          */
         public function start(Table $table): void
         {
-            $this->log("Start fill images job ".$table->getGoogleSheetId());
-            
+            $this->log("Processing table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().'...');
             $this->startTimestamp = time();
-            
-//            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
-            $this->log("Processing table ".$table->getGoogleSheetId().'...');
             $baseFolderID = "";
             
             if(!$this->init($table))
             {
-                $this->log("No token found for spreadsheet, stop execution.");
+                $this->log("No token found for ".$table->getGoogleSheetId()." / ".$table->getTableGuid().
+                    ", stop execution.");
                 return;
             }
             
@@ -388,7 +386,9 @@
                     $quotaUserPrefix = substr($table->getTableGuid(), 0, 10).
                         (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
                         "RTJ";
-                    
+    
+                    $this->log("Processing table ".$table->getGoogleSheetId(). " / ".$table->getTableGuid().
+                        ", sheet ".$targetSheet."...");
                     $this->processSheet(
                         $table->getTableGuid(),
                         $table->getGoogleSheetId(),
@@ -400,6 +400,6 @@
                 }
             }
             
-            $this->log("Finished fill images job ".$table->getGoogleSheetId().".");
+            $this->log("Finished table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().".");
         }
     }

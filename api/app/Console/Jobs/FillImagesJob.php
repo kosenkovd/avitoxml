@@ -283,12 +283,8 @@
          */
         public function start(Table $table): void
         {
-            $this->log("Start fill images job ".$table->getGoogleSheetId());
-
+            $this->log("Processing table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().'...');
             $this->startTimestamp = time();
-            
-//            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
-            $this->log("Processing table ".$table->getGoogleSheetId().'...');
             $baseFolderID = $table->getGoogleDriveId();
 
             foreach ($table->getGenerators() as $generator)
@@ -296,7 +292,7 @@
                 $this->processSheet($table->getGoogleSheetId(), $baseFolderID, $generator);
                 $this->stopIfTimeout();
             }
-
-            $this->log("Finished fill images job ".$table->getGoogleSheetId().'.');
+    
+            $this->log("Finished table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().".");
         }
     }

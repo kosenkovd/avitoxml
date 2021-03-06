@@ -152,9 +152,9 @@ class RandomizeTextJob extends JobBase
      */
     public function start(Table $table) : void
     {
+        $this->log("Processing table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().'...');
         $this->startTimestamp = time();
         $tableID = $table->getGoogleSheetId();
-        $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
 
         $existingSheets = $this->spreadsheetClientService->getSheets(
             $table->getGoogleSheetId()
@@ -189,12 +189,13 @@ class RandomizeTextJob extends JobBase
                     (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
                     "RTJ";
 
-                $this->log("Processing table ".$table->getTableId().", sheet ".$targetSheet.", spreadsheet id ".$table->getGoogleSheetId());
+                $this->log("Processing table ".$table->getGoogleSheetId(). " / ".$table->getTableGuid().
+                    ", sheet ".$targetSheet."...");
                 $this->processSheet($tableID, $targetSheet, $quotaUserPrefix);
                 $this->stopIfTimeout();
             }
         }
 
-        $this->log("Finished processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
+        $this->log("Finished table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().'...');
     }
 }
