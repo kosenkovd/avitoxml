@@ -240,20 +240,21 @@
                 $this->log("Found ".count($images)." images");
                 
                 if ($images !== []) {
-                    $links = array_map(
+                    /*$links = array_map(
                         function (string $image): string  {
-                            return $this->yandexDiskService->getFileUrl($image)." ";
+                            $path = $this->yandexDiskService->getFileUrl($image);
+                            return $path ? $path." " : '';
                         },
                         $images
                     );
-//                    // wrap
-//                    $links = array_map(
-//                        function (string $image) use ($tableGuid): string  {
-//                            $fileInfo = urlencode(base64_encode($image));
-//                            return LinkHelper::getYandexPictureDownloadLink($tableGuid, $fileInfo)." ";
-//                        },
-//                        $images
-//                    );
+                    array_filter($links);*/
+                    $links = array_map(
+                        function (string $image) use ($tableGuid): string  {
+                        $fileInfo = urlencode(base64_encode($image));
+                        return LinkHelper::getTestPictureDownloadLink($tableGuid, $fileInfo)." ";
+                        },
+                        $images
+                    );
                     $imagesString = join(PHP_EOL, $links);
                     
                     $this->log("Images string ".$imagesString);
