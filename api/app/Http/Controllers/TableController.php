@@ -238,6 +238,7 @@ class TableController extends BaseController
             null,
             null,
             Guid::uuid4()->toString(),
+            time(),
             []
         );
 

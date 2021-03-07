@@ -107,7 +107,13 @@ class GeneratorController extends BaseController
         {
             return response("File not found", 404);
         }
-
+    
+        $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
+    
+        return response($content, 200)
+            ->header("Content-Type", "application/xml");
+        
+        /*
         $content = "";
 
         try
@@ -154,6 +160,7 @@ class GeneratorController extends BaseController
 
         return response($content, 200)
             ->header("Content-Type", "application/xml");
+        */
     }
 
     /**

@@ -38,6 +38,7 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`dateDeleted`,
        `t`.`notes`,
        `t`.`tableGuid`,
+       `t`.`dateLastModified`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
        `g`.`targetPlatform`,
@@ -77,6 +78,7 @@ WHERE 1";
                     $row["dateDeleted"],
                     $row["notes"],
                     $row["tableGuid"],
+                    $row["dateLastModified"],
                     [$generator]);
             }
             else
@@ -107,6 +109,7 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`dateDeleted`,
        `t`.`notes`,
        `t`.`tableGuid`,
+       `t`.`dateLastModified`,
        `g`.`generatorGuid`
 FROM `".$this->config->getTablesTableName()."` `t`
 LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
@@ -129,6 +132,7 @@ WHERE generatorGuid IS NULL";
                 $row["dateDeleted"],
                 $row["notes"],
                 $row["tableGuid"],
+                $row["dateLastModified"],
                 []);
         }
 
@@ -190,6 +194,7 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`dateDeleted`,
        `t`.`notes`,
        `t`.`tableGuid`,
+       `t`.`dateLastModified`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
        `g`.`targetPlatform`,
@@ -230,6 +235,7 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
                     $row["dateDeleted"],
                     $row["notes"],
                     $row["tableGuid"],
+                    $row["dateLastModified"],
                     [$generator]);
             }
             else
@@ -239,6 +245,27 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
         }
 
         return $table;
+    }
+    
+    /**
+     * Update yandex token for table.
+     *
+     * @param int $tableId
+     * @throws Exception
+     */
+    public function updateLastModified(int $tableId) : void
+    {
+        $query = "
+UPDATE `".$this->config->getTablesTableName()."`
+SET `dateLastModified`=?
+WHERE `id`=?";
+    
+        $mysqli = $this->connect();
+        $statement = $mysqli->prepare($query);
+        $time = time();
+        $statement->bind_param('ii', $time, $tableId);
+    
+        $statement->execute();
     }
 
     /**

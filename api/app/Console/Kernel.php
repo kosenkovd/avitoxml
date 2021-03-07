@@ -2,16 +2,22 @@
     
     namespace App\Console;
     
+    use App\Configuration\Spreadsheet\SheetNames;
     use App\Configuration\XmlGeneration;
     use App\Console\Jobs\FillImagesJob;
     use App\Console\Jobs\FillImagesJobYandex;
+    use App\Console\Jobs\GenerateXMLJob;
     use App\Console\Jobs\JobBase;
     use App\Console\Jobs\RandomizeTextJob;
     use App\Models\Table;
+    use App\Repositories\GeneratorRepository;
+    use App\Repositories\Interfaces\ITableRepository;
     use App\Repositories\TableRepository;
     use App\Services\GoogleDriveClientService;
+    use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\SpintaxService;
     use App\Services\SpreadsheetClientService;
+    use App\Services\XmlGenerationService;
     use App\Services\YandexDiskService;
     use Exception;
     use Illuminate\Console\Scheduling\Schedule;
@@ -29,7 +35,7 @@
         }
         
         private int $secondToSleep = 45;
-        private int $attemptsAfterGettingQuota = 3;
+        private int $attemptsAfterGettingQuota = 2;
         
         /**
          * The Artisan commands provided by your application.
@@ -52,21 +58,65 @@
 //            Log::info("CronTab activate");
             
             $schedule->call(function () {
-                Log::info("Starting Schedule");
+                Log::alert("Starting Schedule");
                 $tableRepository = new TableRepository();
                 $tables = $tableRepository->getTables();
                 
                 foreach ($tables as $table) {
-                    $this->startRandomizeTextJob($table);
-                    $this->startFillImagesJob($table);
+                    Log::info("Processing table '" . $table->getTableId() . "'...");
+                    if (
+                        $this->isModified(
+                            $table,
+                            new SpreadsheetClientService(),
+                        )
+                    ) {
+                        $this->startRandomizeTextJob($table);
+                        $this->startFillImagesJob($table);
+                        $this->startXMLGenerationJob($table);
+                        $this->updateLastModified($table, $tableRepository);
+                    } else {
+                        Log::info("Table '" . $table->getTableId() . "' is up to date.");
+                    }
+                    Log::info("Finished processing table '" . $table->getTableId() . "'.");
                 }
-                Log::info("Ending Schedule");
+                Log::alert("Ending Schedule");
             })
                 ->name("Tables2") // имя процесса сбрасывается withoutOverlapping через 24 часа
                 ->withoutOverlapping();
         }
+        
+        private function isModified(
+            Table $table,
+            ISpreadsheetClientService $spreadsheetClientService,
+            int $attempts = 0
+        ): bool
+        {
+            if ($attempts >= $this->attemptsAfterGettingQuota) {
+                return false;
+            } else {
+                $attempts++;
+            }
+            
+            try {
+                $timeModified = $spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
+                Log::info("Table '" . $table->getTableId() . "' last modified = " .
+                    $timeModified->getTimestamp());
+            } catch (Exception $exception) {
+                $this->logTableError($table, $exception);
+                $this->isModified(
+                    $table,
+                    new SpreadsheetClientService(),
+                    $attempts
+                );
+            }
     
-        private function startRandomizeTextJob($table): void
+            $isTableExpiredOrDeleted = $table->isDeleted() ||
+                (!is_null($table->getDateExpired()) && $table->getDateExpired() < time());
+    
+            return !$isTableExpiredOrDeleted || ($table->getDateLastModified() < $timeModified->getTimestamp());
+        }
+    
+        private function startRandomizeTextJob(Table $table): void
         {
             $this->handleJob(
                 $table,
@@ -78,7 +128,7 @@
             );
         }
     
-        private function startFillImagesJob($table): void
+        private function startFillImagesJob(Table $table): void
         {
             switch ($table->getTableId()) {
                 case 148:
@@ -102,6 +152,25 @@
                         ))
                     );
             }
+        }
+        
+        private function startXMLGenerationJob(Table $table): void
+        {
+            $this->handleJob(
+                $table,
+                (new GenerateXMLJob(
+                    new SpreadsheetClientService(),
+                    new XmlGeneration(),
+                    new TableRepository(),
+                    new GeneratorRepository(),
+                    new XmlGenerationService(
+                        new SpreadsheetClientService(),
+                        new SheetNames(),
+                        new XmlGeneration()
+                    ),
+                    new SheetNames()
+                ))
+            );
         }
     
         /**
@@ -132,7 +201,7 @@
                 $job->start($table);
             } catch (Exception $exception) {
                 $this->logTableError($table, $exception);
-                $this->handleJob($table, $job, $status, $attempts);
+                $this->handleJob($table, $job, (int)$exception->getCode(), $attempts);
             }
         }
     
@@ -153,6 +222,12 @@
             $message = "Error on '" . $table->getGoogleSheetId() . "'" . PHP_EOL . $exception->getMessage();
             Log::error($message);
             echo $message;
+        }
+        
+        private function updateLastModified(Table $table, ITableRepository $tableRepository): void
+        {
+            $tableRepository->updateLastModified($table->getTableId());
+            Log::info("Table '" . $table->getTableId() . "' updated at " . time());
         }
         
         /**

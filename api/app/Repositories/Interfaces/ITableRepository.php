@@ -3,6 +3,7 @@
 namespace App\Repositories\Interfaces;
 
 use App\Models\Table;
+use Exception;
 
 interface ITableRepository
 {
@@ -36,7 +37,14 @@ interface ITableRepository
      * @return Table|null table, if found, otherwise null.
      */
     public function get(string $tableGuid) : ?Table;
-
+    
+    /**
+     * Update date last modified for table.
+     *
+     * @param int $tableId
+     */
+    public function updateLastModified(int $tableId) : void;
+    
     /**
      * Update yandex token for table.
      *
