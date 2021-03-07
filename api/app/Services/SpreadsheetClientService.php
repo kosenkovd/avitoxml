@@ -22,6 +22,8 @@
         private Google_Service_Drive_Permission $drivePermissions;
         private Google_Service_Sheets $sheetsService;
         
+        private int $secondToSleep = 45;
+        
         /**
          * Creates new GoogleSheet from template.
          *
@@ -134,20 +136,22 @@
             }
             catch (Exception $exception)
             {
-                Log::error('Error on reading spreadsheet '.$spreadsheetId.' on '.$range.PHP_EOL.$exception->getMessage());
+                Log::error("Error on reading '".$spreadsheetId."' on '".$range."'".PHP_EOL.
+                    $exception->getMessage());
                 
                 if ((int)$exception->getCode() === 429) {
                     if(!$toRetry)
                     {
                         throw $exception;
                     }
-                    Log::alert('sleep 60');
-                    sleep(60);
+                    Log::alert('sleep '.$this->secondToSleep);
+                    sleep($this->secondToSleep);
                     
                     try {
                         $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
                     } catch (Exception $exception) {
-                        Log::error('Error on reading spreadsheet '.$spreadsheetId.' on '.$range.PHP_EOL.$exception->getMessage());
+                        Log::error("Error on reading '".$spreadsheetId."' on '".$range."'".PHP_EOL.
+                            $exception->getMessage());
                         throw $exception;
                     }
                 } else {
@@ -189,21 +193,31 @@
                     $body,
                     $params
                 );
-            }
-            catch (Exception $exception)
-            {
-                if(!$toRetry)
-                {
-                    throw $exception;
-                }
+            } catch (Exception $exception) {
+                Log::error("Error on updating '".$spreadsheetId."' on '".$range."'".PHP_EOL.
+                    $exception->getMessage());
                 
-                sleep(60);
-                $service->spreadsheets_values->update(
-                    $spreadsheetId,
-                    $range,
-                    $body,
-                    $params
-                );
+                if ((int)$exception->getCode() === 429) {
+                    if(!$toRetry)
+                    {
+                        throw $exception;
+                    }
+                    Log::alert('sleep '.$this->secondToSleep);
+                    sleep($this->secondToSleep);
+                    
+                    try {
+                        $service->spreadsheets_values->update(
+                            $spreadsheetId,
+                            $range,
+                            $body,
+                            $params
+                        );
+                    } catch (Exception $exception) {
+                        Log::error("Error on updating '".$spreadsheetId."' on '".$range."'".PHP_EOL.
+                            $exception->getMessage());
+                        throw $exception;
+                    }
+                }
             }
         }
         

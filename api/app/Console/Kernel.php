@@ -143,14 +143,14 @@
     
         private function logTableHandling($table, $job, string $actionType): void
         {
-            $message = $actionType . " " . get_class($job) . " for " . $table->getGoogleSheetId();
+            $message = $actionType . " '" . get_class($job) . "'"  . " for '" . $table->getGoogleSheetId() . "'" ;
             Log::info($message);
             echo $message;
         }
     
         private function logTableError(Table $table, Exception $exception): void
         {
-            $message = "Error on " . $table->getGoogleSheetId() . PHP_EOL . $exception->getMessage();
+            $message = "Error on '" . $table->getGoogleSheetId() . "'" . PHP_EOL . $exception->getMessage();
             Log::error($message);
             echo $message;
         }

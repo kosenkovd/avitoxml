@@ -90,7 +90,7 @@ abstract class JobBase
         } catch (\Exception $exception) {
             $message = 'Error getting spreadsheet headerResponse on '. $tableID.PHP_EOL.$exception->getMessage();
             $this->log($message);
-            Log::error($message);
+//            Log::error($message);
             $this->throwExceptionIfQuota($exception);
             
             $propertyColumns = null;
@@ -106,7 +106,7 @@ abstract class JobBase
         } catch (\Exception $exception) {
             $message = 'Error getting spreadsheet values on '. $tableID.PHP_EOL.$exception->getMessage();
             $this->log($message);
-            Log::error($message);
+//            Log::error($message);
             $this->throwExceptionIfQuota($exception);
             
             $values = [];

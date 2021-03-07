@@ -283,7 +283,7 @@
          */
         public function start(Table $table): void
         {
-            $this->log("Processing table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().'...');
+            $this->log("Processing table '".$table->getGoogleSheetId()."'...");
             $this->startTimestamp = time();
             $baseFolderID = $table->getGoogleDriveId();
 
@@ -293,6 +293,6 @@
                 $this->stopIfTimeout();
             }
     
-            $this->log("Finished table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().".");
+            $this->log("Finished table '".$table->getGoogleSheetId()."'.");
         }
     }

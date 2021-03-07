@@ -343,14 +343,13 @@
          */
         public function start(Table $table): void
         {
-            $this->log("Processing table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().'...');
+            $this->log("Processing table '".$table->getGoogleSheetId()."'...");
             $this->startTimestamp = time();
             $baseFolderID = "";
             
             if(!$this->init($table))
             {
-                $this->log("No token found for ".$table->getGoogleSheetId()." / ".$table->getTableGuid().
-                    ", stop execution.");
+                $this->log("No token found for '".$table->getGoogleSheetId()."', stop execution.");
                 return;
             }
             
@@ -387,8 +386,7 @@
                         (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
                         "RTJ";
     
-                    $this->log("Processing table ".$table->getGoogleSheetId(). " / ".$table->getTableGuid().
-                        ", sheet ".$targetSheet."...");
+                    $this->log("Processing table '".$table->getGoogleSheetId()."', sheet '".$targetSheet."'...");
                     $this->processSheet(
                         $table->getTableGuid(),
                         $table->getGoogleSheetId(),
@@ -400,6 +398,6 @@
                 }
             }
             
-            $this->log("Finished table ".$table->getGoogleSheetId()." / ".$table->getTableGuid().".");
+            $this->log("Finished table '".$table->getGoogleSheetId()."'.");
         }
     }
