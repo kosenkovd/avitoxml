@@ -60,24 +60,26 @@
             $schedule->call(function () {
                 Log::alert("Starting Schedule");
                 $tableRepository = new TableRepository();
+                $spreadsheetClientService = new SpreadsheetClientService();
                 $tables = $tableRepository->getTables();
                 
                 foreach ($tables as $table) {
-                    Log::info("Processing table '" . $table->getTableId() . "'...");
+                    Log::info("Table '" . $table->getGoogleSheetId() . "' started");
                     if (
                         $this->isModified(
                             $table,
-                            new SpreadsheetClientService(),
+                            $spreadsheetClientService
                         )
                     ) {
+                        Log::info("Table '" . $table->getGoogleSheetId() . "' updating...");
                         $this->startRandomizeTextJob($table);
                         $this->startFillImagesJob($table);
                         $this->startXMLGenerationJob($table);
                         $this->updateLastModified($table, $tableRepository);
                     } else {
-                        Log::info("Table '" . $table->getTableId() . "' is up to date.");
+                        Log::info("Table '" . $table->getGoogleSheetId() . "' is up to date.");
                     }
-                    Log::info("Finished processing table '" . $table->getTableId() . "'.");
+                    Log::info("Table '" . $table->getGoogleSheetId() . "' finished.");
                 }
                 Log::alert("Ending Schedule");
             })
@@ -99,13 +101,11 @@
             
             try {
                 $timeModified = $spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
-                Log::info("Table '" . $table->getTableId() . "' last modified = " .
-                    $timeModified->getTimestamp());
             } catch (Exception $exception) {
                 $this->logTableError($table, $exception);
                 $this->isModified(
                     $table,
-                    new SpreadsheetClientService(),
+                    $spreadsheetClientService,
                     $attempts
                 );
             }
@@ -113,7 +113,11 @@
             $isTableExpiredOrDeleted = $table->isDeleted() ||
                 (!is_null($table->getDateExpired()) && $table->getDateExpired() < time());
     
-            return !$isTableExpiredOrDeleted || ($table->getDateLastModified() < $timeModified->getTimestamp());
+            if ($isTableExpiredOrDeleted) {
+                return false;
+            }
+            
+            return $table->getDateLastModified() < $timeModified->getTimestamp();
         }
     
         private function startRandomizeTextJob(Table $table): void
@@ -188,11 +192,11 @@
             }
             
             if (!is_null($status) && $this->isQuota($status)) {
-                $actionType = 'Restarting';
+                $actionType = 'restarting';
                 Log::alert('sleep ' . $this->secondToSleep);
                 sleep($this->secondToSleep);
             } else {
-                $actionType = 'Starting';
+                $actionType = 'starting';
             }
             
             $this->logTableHandling($table, $job, $actionType);
@@ -212,7 +216,7 @@
     
         private function logTableHandling($table, $job, string $actionType): void
         {
-            $message = $actionType . " '" . get_class($job) . "'"  . " for '" . $table->getGoogleSheetId() . "'" ;
+            $message = "Table '" . $table->getGoogleSheetId() . "' " . $actionType . " '" . get_class($job) . "'...";
             Log::info($message);
             echo $message;
         }
@@ -227,7 +231,7 @@
         private function updateLastModified(Table $table, ITableRepository $tableRepository): void
         {
             $tableRepository->updateLastModified($table->getTableId());
-            Log::info("Table '" . $table->getTableId() . "' updated at " . time());
+            Log::info("Table '" . $table->getGoogleSheetId() . "' updated.");
         }
         
         /**

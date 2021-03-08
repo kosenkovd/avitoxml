@@ -18,22 +18,22 @@
     
     class GenerateXMLJob extends JobBase {
         private IXmlGenerationService $xmlGenerationService;
-    
+        
         private XmlGeneration $xmlGeneration;
-    
+        
         private ITableRepository $tablesRepository;
-    
+        
         private IGeneratorRepository $generatorRepository;
-    
+        
         private SheetNames $sheetNamesConfig;
-    
+        
         /**
          * @var bool is logging enabled.
          */
         protected bool $loggingEnabled = true;
-    
+        
         protected bool $timeoutEnabled = false;
-    
+        
         protected int $maxJobTime = 60 * 60;
         
         /**
@@ -44,40 +44,23 @@
          */
         private function processSheet(Table $table, Generator $generator): void
         {
-//            try {
-//                $timeModified = $this->spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
-//            } catch (Exception $exception) {
-//                $message = "Error getting last modified on '" . $table->getGoogleDriveId(). "'" . PHP_EOL .
-//                    $exception->getMessage();
-//                $this->log($message);
-//                Log::error($message);
-//                $this->throwExceptionIfQuota($exception);
-//                return;
-//            }
-            
-//            if ($this->isTableExpiredOrDeleted($table) || $this->isXmlActual($generator, $timeModified)) {
-//                $message = "Generator for table '" . $table->getGoogleDriveId(). "'" . " is up to date.";
-//                $this->log($message);
-//                Log::info($message);
-//            } else {
-                try {
-                    $content = $this->xmlGenerationService->generateAvitoXML(
-                        $table->getGoogleSheetId(),
-                        $generator->getTargetPlatform()
-                    );
-                    $generator->setLastGenerated(time());
-                    $this->generatorRepository->update($generator);
-                    $this->generatorRepository->setLastGeneration($generator->getGeneratorId(), $content);
-                } catch (Exception $exception) {
-                    $message = "Error on '" . $table->getGoogleDriveId(). "'" . PHP_EOL .
-                        $exception->getMessage();
-                    $this->log($message);
-                    Log::error($message);
-                    $this->throwExceptionIfQuota($exception);
-                }
-//            }
+            try {
+                $content = $this->xmlGenerationService->generateAvitoXML(
+                    $table->getGoogleSheetId(),
+                    $generator->getTargetPlatform()
+                );
+                $generator->setLastGenerated(time());
+                $this->generatorRepository->update($generator);
+                $this->generatorRepository->setLastGeneration($generator->getGeneratorId(), $content);
+            } catch (Exception $exception) {
+                $message = "Error on '".$table->getGoogleDriveId()."'".PHP_EOL.
+                    $exception->getMessage();
+                $this->log($message);
+                Log::error($message);
+                $this->throwExceptionIfQuota($exception);
+            }
         }
-    
+        
         /**
          * Expired or deleted tables always return last generated XML
          *
@@ -89,7 +72,7 @@
             return $table->isDeleted() ||
                 (!is_null($table->getDateExpired()) && $table->getDateExpired() < time());
         }
-    
+        
         /**
          * Xml must be regenerated twice an hour to update yandex ads that rely on date created that can be set long
          * before real actual date
@@ -132,7 +115,10 @@
          */
         public function start(Table $table): void
         {
-            $this->log("Processing table '" . $table->getGoogleSheetId() . "'...");
+            $message = "Table '".$table->getGoogleSheetId()."' processing...";
+            $this->log($message);
+            Log::info($message);
+            
             $this->startTimestamp = time();
             
             $existingSheets = $this->spreadsheetClientService->getSheets(
@@ -160,13 +146,22 @@
                         continue;
                     }
                     
-                    $this->log("Processing table '" . $table->getGoogleSheetId() . "'" .
-                        ", sheet " . $targetSheet . "...");
+                    $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."'...";
+                    $this->log($message);
+                    Log::info($message);
+                    
                     $this->processSheet($table, $generator);
+    
+                    $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."' finished.";
+                    $this->log($message);
+                    Log::info($message);
+                    
                     $this->stopIfTimeout();
                 }
             }
             
-            $this->log("Finished table '" . $table->getGoogleSheetId() . "'...");
+            $message = "Table '".$table->getGoogleSheetId()."' finished.";
+            $this->log($message);
+            Log::info($message);
         }
     }

@@ -88,13 +88,16 @@ abstract class JobBase
             );
             $propertyColumns = new TableHeader($headerResponse[0]);
         } catch (\Exception $exception) {
-            $message = 'Error getting spreadsheet headerResponse on '. $tableID.PHP_EOL.$exception->getMessage();
+            $message = "Error on '". $tableID."' while getting spreadsheet headerResponse ".PHP_EOL.
+                $exception->getMessage();
             $this->log($message);
 //            Log::error($message);
             $this->throwExceptionIfQuota($exception);
             
             $propertyColumns = null;
         }
+        
+        sleep(1);
     
         try {
             $range = $sheetName.'!A2:FZ5001';
@@ -104,14 +107,14 @@ abstract class JobBase
 //                $quotaUserPrefix."GB"
         );
         } catch (\Exception $exception) {
-            $message = 'Error getting spreadsheet values on '. $tableID.PHP_EOL.$exception->getMessage();
+            $message = "Error on '". $tableID."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
             $this->log($message);
 //            Log::error($message);
             $this->throwExceptionIfQuota($exception);
             
             $values = [];
         }
-
+    
         return [ $propertyColumns, $values ];
     }
     

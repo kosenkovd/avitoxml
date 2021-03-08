@@ -136,7 +136,7 @@
             }
             catch (Exception $exception)
             {
-                Log::error("Error on reading '".$spreadsheetId."' on '".$range."'".PHP_EOL.
+                Log::error("Error on '".$spreadsheetId."' while reading".PHP_EOL.
                     $exception->getMessage());
                 
                 if ((int)$exception->getCode() === 429) {
@@ -150,7 +150,7 @@
                     try {
                         $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
                     } catch (Exception $exception) {
-                        Log::error("Error on reading '".$spreadsheetId."' on '".$range."'".PHP_EOL.
+                        Log::error("Error on '".$spreadsheetId."' while reading".PHP_EOL.
                             $exception->getMessage());
                         throw $exception;
                     }
@@ -194,7 +194,7 @@
                     $params
                 );
             } catch (Exception $exception) {
-                Log::error("Error on updating '".$spreadsheetId."' on '".$range."'".PHP_EOL.
+                Log::error("Error on '".$spreadsheetId."' while updating".PHP_EOL.
                     $exception->getMessage());
                 
                 if ((int)$exception->getCode() === 429) {
@@ -213,7 +213,7 @@
                             $params
                         );
                     } catch (Exception $exception) {
-                        Log::error("Error on updating '".$spreadsheetId."' on '".$range."'".PHP_EOL.
+                        Log::error("Error on '".$spreadsheetId."' while updating".PHP_EOL.
                             $exception->getMessage());
                         throw $exception;
                     }

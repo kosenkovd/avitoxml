@@ -10,6 +10,7 @@
     use App\Models\TableHeader;
     use App\Services\Interfaces\IGoogleDriveClientService;
     use App\Services\Interfaces\ISpreadsheetClientService;
+    use Illuminate\Support\Facades\Log;
     use Ramsey\Uuid\Guid\Guid;
 
     class FillImagesJob extends JobBase
@@ -192,7 +193,11 @@
         private function processSheet(string $tableID, string $baseFolderID, Generator $generator): void
         {
             $sheetName = $generator->getTargetPlatform();
-            $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
+    
+            $message = "Table '".$tableID."' processing sheet '".$sheetName."'...";
+            $this->log($message);
+            Log::info($message);
+            
             [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, substr($tableID, 0, 15));
     
             if ($propertyColumns && empty($values))
@@ -215,7 +220,9 @@
                     continue;
                 }
 
-                $this->log("Filling row ".$spreadsheetRowNum);
+                $message = "Table '".$tableID."' start filling row ".$spreadsheetRowNum;
+                $this->log($message);
+                Log::info($message);
 
                 if(!isset($row[$propertyColumns->subFolderName]) ||
                     $row[$propertyColumns->subFolderName] == '')
@@ -239,10 +246,15 @@
                 }
 
 
-                $this->log("Folder name ".$subFolderName);
+                $message = "Table '".$tableID."' folder name ".$subFolderName;
+                $this->log($message);
+                Log::info($message);
 
                 $images = $this->getImages($baseFolderID, $subFolderName);
-                $this->log("Found ".count($images)." images");
+                
+                $message = "Table '".$tableID."' found ".count($images)." images";
+                $this->log($message);
+                Log::info($message);
 
                 if ($images !== []) {
                     $links = array_map(
@@ -253,7 +265,10 @@
                     );
                     $imagesString = join(PHP_EOL, $links);
 
-                    $this->log("Images string ".$imagesString);
+                    $message = "Table '".$tableID."' filling ".$spreadsheetRowNum."...";
+                    $this->log($message.PHP_EOL.$imagesString);
+                    Log::info($message);
+                    
                     $this->updateCellContent(
                         $imagesString,
                         $spreadsheetRowNum,
@@ -283,7 +298,10 @@
          */
         public function start(Table $table): void
         {
-            $this->log("Processing table '".$table->getGoogleSheetId()."'...");
+            $message = "Table '".$table->getGoogleSheetId()."' processing...";
+            $this->log($message);
+            Log::info($message);
+            
             $this->startTimestamp = time();
             $baseFolderID = $table->getGoogleDriveId();
 
@@ -293,6 +311,8 @@
                 $this->stopIfTimeout();
             }
     
-            $this->log("Finished table '".$table->getGoogleSheetId()."'.");
+            $message = "Table '".$table->getGoogleSheetId()."' finished.";
+            $this->log($message);
+            Log::info($message);
         }
     }

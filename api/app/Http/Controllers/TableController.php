@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Console\Jobs\FillImagesJobYandex;
+use App\Console\Jobs\RandomizeTextJob;
 use App\Helpers\LinkHelper;
 use App\Repositories\TableRepository;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\IMailService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IYandexDiskService;
+use App\Services\SpintaxService;
 use App\Services\SpreadsheetClientService;
 use App\Services\YandexDiskService;
 use Illuminate\Http\Request;
@@ -182,7 +184,7 @@ class TableController extends BaseController
 //            new SpreadsheetClientService(),
 //            new GoogleDriveClientService()
 //        );
-
+//
         /*$spintaxService = new RandomizeTextJob(
             new SpintaxService(),
             new SpreadsheetClientService(),
@@ -238,7 +240,7 @@ class TableController extends BaseController
             null,
             null,
             Guid::uuid4()->toString(),
-            time(),
+            0,
             []
         );
 
