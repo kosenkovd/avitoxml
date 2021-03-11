@@ -35,9 +35,6 @@
             }
         }
         
-        private int $secondToSleep = 45;
-        private int $attemptsAfterGettingQuota = 2;
-        
         /**
          * The Artisan commands provided by your application.
          *
@@ -124,24 +121,12 @@
         private function isModified(
             Table $table,
             ISpreadsheetClientService $spreadsheetClientService,
-            int $attempts = 0
         ): bool
         {
-            if ($attempts >= $this->attemptsAfterGettingQuota) {
-                return false;
-            } else {
-                $attempts++;
-            }
-            
             try {
                 $timeModified = $spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
             } catch (Exception $exception) {
                 $this->logTableError($table, $exception);
-                $this->isModified(
-                    $table,
-                    $spreadsheetClientService,
-                    $attempts
-                );
             }
     
             $isTableExpiredOrDeleted = $table->isDeleted() ||
@@ -214,38 +199,23 @@
         /**
          * @param Table $table
          * @param JobBase $job
-         * @param int|null $status
-         * @param int $attempts
+//         * @param int|null $status
+//         * @param int $attempts
          */
-        private function handleJob(Table $table, JobBase $job, int $status = null, int $attempts = 0): void
+        private function handleJob(
+            Table $table,
+            JobBase $job
+        ): void
         {
-            if ($attempts >= $this->attemptsAfterGettingQuota) {
-                return;
-            } else {
-                $attempts++;
-            }
-            
-            if (!is_null($status) && $this->isQuota($status)) {
-                $actionType = 'restarting';
-                Log::alert('sleep ' . $this->secondToSleep);
-                sleep($this->secondToSleep);
-            } else {
-                $actionType = 'starting';
-            }
-            
+        
+            $actionType = 'starting';
             $this->logTableHandling($table, $job, $actionType);
             
             try {
                 $job->start($table);
             } catch (Exception $exception) {
                 $this->logTableError($table, $exception);
-                $this->handleJob($table, $job, (int)$exception->getCode(), $attempts);
             }
-        }
-    
-        private function isQuota(int $status): bool
-        {
-            return $status === 429;
         }
     
         private function logTableHandling($table, $job, string $actionType): void

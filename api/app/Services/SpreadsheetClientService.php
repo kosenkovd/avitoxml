@@ -23,6 +23,7 @@
         private Google_Service_Sheets $sheetsService;
         
         private int $secondToSleep = 45;
+        private int $attemptsAfterGettingQuota = 2;
         
         /**
          * Creates new GoogleSheet from template.
@@ -75,6 +76,61 @@
                     "transferOwnership" => true
                 ]);
         }
+    
+        /**
+         * @param string $tableId
+         * @param callable $callback
+         * @param int|null $status
+         * @param int $attempts
+         * @param Exception|null $quotaException
+         * @return mixed
+         * @throws Exception
+         */
+        private function quotaHandler(
+            string $tableId,
+            callable $callback,
+            int $status = null,
+            int $attempts = 0,
+            Exception $quotaException = null
+        )
+        {
+            if ($attempts >= $this->attemptsAfterGettingQuota) {
+                throw $quotaException;
+            } else {
+                $attempts++;
+            }
+    
+            if (!is_null($status) && $this->isQuota($status)) {
+                Log::alert('sleep '.$this->secondToSleep);
+                sleep($this->secondToSleep);
+            }
+            
+            try {
+                return $callback();
+            } catch (Exception $exception) {
+                $this->logTableError($tableId, $exception);
+                if (!is_null($status) && $this->isQuota($status)) {
+                    $this->quotaHandler(
+                        $tableId,
+                        $callback,
+                        (int)$exception->getCode(),
+                        $attempts,
+                        $exception
+                    );
+                }
+            }
+        }
+    
+        private function isQuota(int $status): bool
+        {
+            return $status === 429;
+        }
+    
+        private function logTableError(string $tableId, Exception $exception): void
+        {
+            $message = "Error on '" . $tableId . "'" . PHP_EOL . $exception->getMessage();
+            Log::error($message);
+        }
         
         /**
          * GoogleServicesClient constructor.
@@ -107,9 +163,18 @@
             
             try
             {
-                $file = $driveService->files->get($fileId, [
-                    'fields' => 'modifiedTime, createdTime'
-                ]);
+                $file = $this->quotaHandler(
+                    $fileId,
+                    function () use ($driveService, $fileId) {
+                        return $driveService->files->get($fileId, [
+                            'fields' => 'modifiedTime, createdTime'
+                        ]);
+                    }
+                );
+//
+//                $file = $driveService->files->get($fileId, [
+//                    'fields' => 'modifiedTime, createdTime'
+//                ]);
             }
             catch (Exception $exception)
             {
@@ -132,7 +197,12 @@
             $service = new Google_Service_Sheets($this->client);
             try
             {
-                $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+                $values = $this->quotaHandler(
+                    $spreadsheetId,
+                    function () use ($service, $spreadsheetId, $range) {
+                        return $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
+                    }
+                );
             }
             catch (Exception $exception)
             {
@@ -140,20 +210,7 @@
                     $exception->getMessage());
                 
                 if ((int)$exception->getCode() === 429) {
-                    if(!$toRetry)
-                    {
-                        throw $exception;
-                    }
-                    Log::alert('sleep '.$this->secondToSleep);
-                    sleep($this->secondToSleep);
-                    
-                    try {
-                        $values = $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
-                    } catch (Exception $exception) {
-                        Log::error("Error on '".$spreadsheetId."' while reading".PHP_EOL.
-                            $exception->getMessage());
-                        throw $exception;
-                    }
+                    throw $exception;
                 } else {
                     $values = null;
                 }
@@ -187,37 +244,19 @@
             
             try
             {
-                $service->spreadsheets_values->update(
+                $this->quotaHandler(
                     $spreadsheetId,
-                    $range,
-                    $body,
-                    $params
-                );
-            } catch (Exception $exception) {
-                Log::error("Error on '".$spreadsheetId."' while updating".PHP_EOL.
-                    $exception->getMessage());
-                
-                if ((int)$exception->getCode() === 429) {
-                    if(!$toRetry)
-                    {
-                        throw $exception;
-                    }
-                    Log::alert('sleep '.$this->secondToSleep);
-                    sleep($this->secondToSleep);
-                    
-                    try {
+                    function () use ($service, $spreadsheetId, $range, $body, $params) {
                         $service->spreadsheets_values->update(
                             $spreadsheetId,
                             $range,
                             $body,
                             $params
                         );
-                    } catch (Exception $exception) {
-                        Log::error("Error on '".$spreadsheetId."' while updating".PHP_EOL.
-                            $exception->getMessage());
-                        throw $exception;
                     }
-                }
+                );
+            } catch (Exception $exception) {
+                throw $exception;
             }
         }
         
@@ -244,16 +283,26 @@
                 $toRetry
             );
         }
-        
+    
         /**
          * @inheritDoc
+         * @throws Exception
          */
         public function getSheets(string $tableId): array
         {
             $sheets = [];
             $service = new Google_Service_Sheets($this->client);
             
-            $response = $service->spreadsheets->get($tableId);
+            try {
+                $response = $this->quotaHandler(
+                    $tableId,
+                    function () use ($service, $tableId) {
+                        return $service->spreadsheets->get($tableId);
+                    }
+                );
+            } catch (Exception $exception) {
+                throw $exception;
+            }
             foreach($response->getSheets() as $s) {
                 $sheets[] = $s['properties']['title'];
             }
