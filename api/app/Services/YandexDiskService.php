@@ -87,7 +87,7 @@
             
             try
             {
-                $directory = $this->disk->getResource($folderPath);
+                $directory = $this->disk->getResource($folderPath, 1000);
                 
                 $imageNames = [];
                 foreach ($directory->items as $item)
