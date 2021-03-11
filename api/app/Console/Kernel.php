@@ -135,7 +135,7 @@
         private function startFillImagesJob(Table $table): void
         {
             switch ($table->getTableId()) {
-                case 148:
+                case 99999:
                     // tables using Google Drive Disk
                     $this->handleJob(
                         $table,

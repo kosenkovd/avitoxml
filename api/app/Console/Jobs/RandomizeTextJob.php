@@ -52,6 +52,9 @@
             if ($alreadyFilled || $noSource) {
                 return;
             }
+    
+            // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
+            $numRow += +2;
             
             $message = "Table '".$tableId."' randomizing row ".$numRow."...";
             $this->log($message);
@@ -59,8 +62,6 @@
             
             $text = $this->spintaxService->randomize($row[$patternCol]);
             
-            // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
-            $numRow += +2;
             try {
                 $columnName = SpreadsheetHelper::getColumnLetterByNumber($resultCol);
                 $this->spreadsheetClientService->updateCellContent(
