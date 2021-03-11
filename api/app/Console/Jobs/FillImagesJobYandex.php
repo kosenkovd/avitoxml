@@ -126,11 +126,6 @@
                 if(isset($this->images[$sourceFolderId]))
                 {
                     $this->log("Num of images from ".$sourceFolderId." is ".count($this->images[$sourceFolderId]));
-                    if(count($this->images[$sourceFolderId]) == 0)
-                    {
-                        continue;
-                    }
-                    $image = array_shift($this->images[$sourceFolderId]);
                 }
                 else
                 {
@@ -138,12 +133,15 @@
                     $this->log("Does folder ".$sourceFolderId." exist: ".$this->yandexDiskService->exists($sourceFolderId));
                     $this->images[$sourceFolderId] = $this->yandexDiskService->listFolderImages($sourceFolderId);
                     $this->log($sourceFolderId." contains ".count($this->images["$sourceFolderId"])." images. Loaded them into cache.");
-                    if(count($this->images[$sourceFolderId]) == 0)
-                    {
-                        continue;
-                    }
-                    $image = array_shift($this->images[$sourceFolderId]);
                 }
+    
+                if(count($this->images[$sourceFolderId]) == 0)
+                {
+                    continue;
+                }
+//                $image = array_shift($this->images[$sourceFolderId]);
+                
+                $image = $this->images[$sourceFolderId][0];
 
                 $filePathArray = explode('/', $image);
                 $imageName = $filePathArray[count($filePathArray) - 1];
@@ -158,8 +156,13 @@
                 $imageNumber++;
             }
 
-            if(count($imageCopyData) > 0)
+            if((count($imageCopyData) > 0) && (count($imageCopyData) === count($sourceFolders)))
             {
+                foreach ($sourceFolders as $sourceFolder) {
+                    $sourceFolderId = $this->yandexDiskService->getChildFolderByName($baseFolderId, $sourceFolder);
+                    array_shift($this->images[$sourceFolderId]);
+                }
+                
                 $newFolderName = crc32(Guid::uuid4()->toString());
 
                 foreach ($imageCopyData as $imageCopyDatum)
@@ -275,7 +278,7 @@
                         $quotaUserPrefix."NewImages".$spreadsheetRowNum);
                 }
 
-                sleep(2);
+                sleep(1);
             }
         }
 
