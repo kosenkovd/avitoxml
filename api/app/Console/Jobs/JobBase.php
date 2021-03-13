@@ -119,6 +119,34 @@ abstract class JobBase
     }
     
     /**
+     * Extracts data from table sheet.
+     *
+     * @param string $tableID
+     * @param string $sheetName
+     * @return array [ TableHeader, values ]
+     * @throws \Exception
+     */
+    protected function getFullDataFromTable(string $tableID, string $sheetName) : array
+    {
+        try {
+            $range = $sheetName.'!A1:FZ5001';
+            $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                $tableID,
+                $range
+        );
+        } catch (\Exception $exception) {
+            $message = "Error on '". $tableID."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
+            $this->log($message);
+//            Log::error($message);
+            $this->throwExceptionIfQuota($exception);
+            
+            $values = [];
+        }
+    
+        return $values;
+    }
+    
+    /**
      * @param \Exception $exception
      * @throws \Exception
      */
