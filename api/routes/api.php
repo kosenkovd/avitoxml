@@ -25,5 +25,6 @@ Route::get('/users/', [C\UserController::class, 'index']);
 Route::put('/users/{id}', [C\UserController::class, 'update']);
 Route::put('/users/refresh/{id}', [C\UserController::class, 'refreshToken']);
 
+Route::get('/tables/filltable', [C\TableController::class, 'fillTable']);
 Route::get('/tables/fixGenerators', [C\TableController::class, 'fixGenerators']);
 Route::get('/tables/{tableId}/yandexFile', [C\FileWrapperController::class, 'yandexFile'])->withoutMiddleware([\Illuminate\Routing\Middleware\ThrottleRequests::class]);

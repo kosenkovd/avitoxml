@@ -13,6 +13,7 @@
     use Google_Service_Drive_DriveFile;
     use Google_Service_Drive_Permission;
     use Google_Service_Sheets;
+    use Google_Service_Sheets_BatchUpdateValuesRequest;
     use Google_Service_Sheets_ValueRange;
     use Illuminate\Support\Facades\Log;
 
@@ -211,6 +212,63 @@
                             $range,
                             $body,
                             $params
+                        );
+                    } catch (Exception $exception) {
+                        Log::error("Error on '".$spreadsheetId."' while updating".PHP_EOL.
+                            $exception->getMessage());
+                        throw $exception;
+                    }
+                }
+            }
+        }
+    
+        /**
+         * @inheritDoc
+         * @throws Exception
+         */
+        public function updateMultipleSpreadsheetCellsRange(
+            string $spreadsheetId,
+            array $values,
+            array $params,
+            bool $toRetry = true
+        ) : void
+        {
+            $data = [];
+            foreach ($values as $range => $value) {
+                $data[] = new Google_Service_Sheets_ValueRange([
+                    'range' => $range,
+                    'values' => $value
+                ]);
+            }
+        
+            $body = new Google_Service_Sheets_BatchUpdateValuesRequest([
+                'data' => $data,
+                'valueInputOption' => 'RAW',
+            ]);
+            $service = new Google_Service_Sheets($this->client);
+//            dd($data, $body);
+            try
+            {
+                $service->spreadsheets_values->batchUpdate(
+                    $spreadsheetId,
+                    $body
+                );
+            } catch (Exception $exception) {
+                Log::error("Error on '".$spreadsheetId."' while updating".PHP_EOL.
+                    $exception->getMessage());
+    
+                if ((int)$exception->getCode() === 429) {
+                    if(!$toRetry)
+                    {
+                        throw $exception;
+                    }
+                    Log::alert('sleep '.$this->secondToSleep);
+                    sleep($this->secondToSleep);
+        
+                    try {
+                        $service->spreadsheets_values->batchUpdate(
+                            $spreadsheetId,
+                            $body
                         );
                     } catch (Exception $exception) {
                         Log::error("Error on '".$spreadsheetId."' while updating".PHP_EOL.

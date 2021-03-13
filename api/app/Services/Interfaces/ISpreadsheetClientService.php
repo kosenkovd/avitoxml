@@ -50,6 +50,13 @@
             array $params,
             bool $toRetry = true
         ) : void;
+    
+        public function updateMultipleSpreadsheetCellsRange(
+            string $spreadsheetId,
+            array $values,
+            array $params,
+            bool $toRetry = true
+        ) : void;
         
         /**
          * Updates GoogleSheet cell content.
