@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
+use App\Console\Jobs\FillAmountJob;
 use App\Console\Jobs\FillImagesJobYandex;
 use App\Console\Jobs\RandomizeTextJob;
 use App\Helpers\LinkHelper;
@@ -303,29 +304,29 @@ class TableController extends BaseController
         return response()->json($request, 200);
     }
     
-    public function fillTable(Request $request)
-    {
-        $table = new Models\Table(
-            null,
-            1,
-            '1VJdo7mkIHk2I8D_fCol21sOSrVi6wuVmRz3NEvvLQe0',
-            null,
-            null,
-            null,
-            0,
-            null,
-            null,
-            'null',
-            time()
-        );
-    
-        $fillAmountJob = new FillAmountJob(
-            new SpreadsheetClientService(),
-            new TableRepository(),
-            new XmlGeneration()
-        );
-        $fillAmountJob->start($table);
-        
-        return response('', 200);
-    }
+//    public function fillTable(Request $request)
+//    {
+//        $table = new Models\Table(
+//            null,
+//            1,
+//            '1VJdo7mkIHk2I8D_fCol21sOSrVi6wuVmRz3NEvvLQe0',
+//            null,
+//            null,
+//            null,
+//            0,
+//            null,
+//            null,
+//            'null',
+//            time()
+//        );
+//
+//        $fillAmountJob = new FillAmountJob(
+//            new SpreadsheetClientService(),
+//            new TableRepository(),
+//            new XmlGeneration()
+//        );
+//        $fillAmountJob->start($table);
+//
+//        return response('', 200);
+//    }
 }

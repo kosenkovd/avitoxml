@@ -17,7 +17,8 @@
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^8.12",
         "laravel/tinker": "^2.5",
-        "leonied7/yandex-disk-api": "dev-master"
+        "leonied7/yandex-disk-api": "dev-master",
+      "ext-curl": "*"
     },
     "require-dev": {
         "facade/ignition": "^2.5",

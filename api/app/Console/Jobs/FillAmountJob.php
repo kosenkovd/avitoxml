@@ -28,14 +28,17 @@
          */
         protected bool $loggingEnabled = true;
         
-        protected bool $timeoutEnabled = false;
+        protected bool $timeoutEnabled = true;
         
-        private int $secondsToSleepAvito = 1;
+        private int $secondsToSleepAvito = 6;
         private int $secondsToSleepGoogle = 2;
-        private int $mSecondsToSleepAvito = 100;
+//        private int $mSecondsToSleepAvito = 6000;
         
         private ?int $cityId = null;
         private array $newValues = [];
+        private bool $needsToUpdate = false;
+        private bool $stoppedDueAvitoQuota = false;
+        private ?int $lastRow = null;
         
         /**
          * @var SheetNames
@@ -56,24 +59,45 @@
          */
         private function processSheet(string $tableID, string $sheetName): void
         {
+            
+            dd('testing');
+            $message = $tableID." processing...";
+            dump($message);
+            
             $values = $this->getFullDataFromTable($tableID, $sheetName);
             
             if (empty($values)) {
                 return;
             }
             
+            // Заголовки
             $propertyColumns = array_shift($values);
     
             foreach ($values as $numRow => $row) {
-                $this->stopIfTimeout();
+                // content starts at line 2
+                $spreadsheetRowNum = $numRow + 2;
+                
+                if($this->timeoutEnabled && (time() >= $this->startTimestamp + $this->maxJobTime)) {
+                    // fill what we can
+                    // row before that
+                    $this->lastRow = $spreadsheetRowNum - 1;
+    
+                    dump("timeout");
+    
+                    break;
+                }
+    
+                if ($this->stoppedDueAvitoQuota) {
+                    break;
+                }
                 
                 // city name
                 $city = $row[0];
     
-                $cells = [];
-                $amounts = [];
-                
                 foreach ($propertyColumns as $column => $propertyColumn) {
+                    if ($this->stoppedDueAvitoQuota) {
+                        break;
+                    }
                     
                     // city
                     if ($column === 0) {
@@ -86,50 +110,78 @@
                     // check alreadyFilled
                     if ($alreadyFilled) {
                         if ($column === 1) {
-                            $cityIdRow = $row[1];
-                            $this->cityId = $cityIdRow;
-    
-                            $this->newValues[$numRow][$column] = $cityIdRow;
-                        } else {
-                            $this->newValues[$numRow][$column] = $row[$column];
+                            $this->cityId = $row[$column];
                         }
+                        
+                        $this->newValues[$numRow][$column] = $row[$column];
                         
                         continue;
                     }
                     
-                    // content starts at line 2
-                    $spreadsheetRowNum = $numRow + 2;
                     $cell = SpreadsheetHelper::getColumnLetterByNumber($column).$spreadsheetRowNum;
                     
                     // cityId
                     if ($column === 1) {
+                        $message = $tableID." filling city id on ".$cell;
+                        dump($message);
                         try {
                             $this->cityId = $this->getAvitoCityId($city);
                             $this->newValues[$numRow][$column] = $this->cityId;
                         } catch (\Exception $exception) {
-                            dd($exception);
+                            // fill what we can
+                            $this->newValues[$numRow][$column] = '';
+                            $this->stoppedDueAvitoQuota = true;
+                            $this->lastRow = $spreadsheetRowNum;
+                            
+                            dump($exception);
+                            
+                            break;
                         }
+    
+                        $this->needsToUpdate = true;
                         
                         continue;
                     }
-                    
-                    if (is_null($this->cityId)) {
-                        dd($cell. " -  нет id");
-                    }
-                    
+    
+                    $message = $tableID." filling ".$cell;
+                    dump($message);
                     try {
                         $amount = $this->getAvitoAmount($this->cityId, $propertyColumn);
                     } catch (\Exception $exception) {
-                        dd($exception);
+                        // fill what we can
+                        $this->newValues[$numRow][$column] = '';
+                        $this->stoppedDueAvitoQuota = true;
+                        $this->lastRow = $spreadsheetRowNum;
+    
+                        dump($exception);
+    
+                        break;
                     }
                     
-                    $cells[] = $cell;
-                    $amounts[] = $amount;
                     $this->newValues[$numRow][$column] = $amount;
+                    $this->needsToUpdate = true;
                 }
             }
+    
+            if (
+                $this->stoppedDueAvitoQuota ||
+                ($this->timeoutEnabled && (time() >= $this->startTimestamp + $this->maxJobTime))
+            ) {
+                $range = $sheetName.'!A2:FZ'.$this->lastRow;
+            } else {
+                $range = $sheetName.'!A2:FZ5001';
+            }
+    
+            if (!$this->needsToUpdate) {
+                $message = $tableID." is already full.";
+                dump($message);
+                return;
+            }
             
-            $range = $sheetName.'!A2:FZ5001';
+            $message = $tableID." writing values to table...";
+            dump($message);
+            
+           
             $this->spreadsheetClientService->updateSpreadsheetCellsRange(
                 $tableID,
                 $range,
@@ -139,23 +191,39 @@
                 ],
                 false
             );
+    
+            $message = $tableID." successfully wrote values.";
+            dump($message);
+            
+            if ($this->stoppedDueAvitoQuota) {
+                $message = $tableID." needs to restart";
+                dump($message);
+            }
         }
         
         private function getAvitoCityId(string $city): int
         {
             $url = "https://www.avito.ru/web/1/slocations?limit=2&q=".urlencode($city);
-            $opts = array(
-                'http'=>array(
-                    'method'=>"GET",
-                    'header'=>"Host: www.avito.ru"
-                )
-            );
+//            $opts = array(
+//                'http'=>array(
+//                    'method'=>"GET",
+//                    'header'=>"Host: www.avito.ru"
+//                )
+//            );
+//
+//            $context = stream_context_create($opts);
+//            $result = file_get_contents($url, false, $context);
     
-            $context = stream_context_create($opts);
-            $result = file_get_contents($url, false, $context);
             
-//            sleep($this->secondsToSleepAvito);
-            usleep($this->mSecondsToSleepAvito);
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            $result = curl_exec($ch);
+    
+            curl_close($ch);
+            
+            sleep($this->secondsToSleepAvito);
+//            usleep($this->mSecondsToSleepAvito);
     
             $locations = json_decode($result)->result->locations;
             
@@ -173,19 +241,29 @@
         private function getAvitoAmount(string $cityId, string $filling): int
         {
             $url = "https://www.avito.ru/js/catalog?locationId=".$cityId."&name=".urlencode($filling)."&countOnly=1&bt=1";
-            // Создаём поток
-            $opts = array(
-                'http'=>array(
-                    'method'=>"GET",
-                    'header'=>"Host: www.avito.ru"
-                )
-            );
+//            // Создаём поток
+//            $opts = array(
+//                'http'=>array(
+//                    'method'=>"GET",
+//                    'header'=>"Host: www.avito.ru"
+//                )
+//            );
+//
+//            $context = stream_context_create($opts);
+//            $result = file_get_contents($url, false, $context);
     
-            $context = stream_context_create($opts);
-            $result = file_get_contents($url, false, $context);
     
-            //            sleep($this->secondsToSleepAvito);
-            usleep($this->mSecondsToSleepAvito);
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+            $result = curl_exec($ch);
+    
+            curl_close($ch);
+            
+            
+    
+            sleep($this->secondsToSleepAvito);
+//            usleep($this->mSecondsToSleepAvito);
             
             return json_decode($result)->mainCount;
         }

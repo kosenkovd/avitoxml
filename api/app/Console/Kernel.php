@@ -4,6 +4,7 @@
     
     use App\Configuration\Spreadsheet\SheetNames;
     use App\Configuration\XmlGeneration;
+    use App\Console\Jobs\FillAmountJob;
     use App\Console\Jobs\FillImagesJob;
     use App\Console\Jobs\FillImagesJobYandex;
     use App\Console\Jobs\GenerateXMLJob;
@@ -84,6 +85,39 @@
                 Log::alert("Ending Schedule");
             })
                 ->name("Tables2") // имя процесса сбрасывается withoutOverlapping через 24 часа
+                ->withoutOverlapping();
+            
+            
+            $schedule->call(function () {
+                Log::alert("Starting AmountParser");
+                try {
+                    $tableGoogleId = '1VJdo7mkIHk2I8D_fCol21sOSrVi6wuVmRz3NEvvLQe0';
+                    $table = new Table(
+                        null,
+                        1,
+                        $tableGoogleId,
+                        null,
+                        null,
+                        null,
+                        0,
+                        null,
+                        null,
+                        'null',
+                        time()
+                    );
+                
+                    $fillAmountJob = new FillAmountJob(
+                        new SpreadsheetClientService(),
+                        new TableRepository(),
+                        new XmlGeneration()
+                    );
+                    $fillAmountJob->start($table);
+                } catch (Exception $exception) {
+                
+                }
+                Log::alert("Finished AmountParser");
+            })
+                ->name("AmountParser") // имя процесса сбрасывается withoutOverlapping через 24 часа
                 ->withoutOverlapping();
         }
         
