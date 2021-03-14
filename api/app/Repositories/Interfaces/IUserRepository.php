@@ -33,7 +33,8 @@ interface IUserRepository
     
     /**
      * @param int $userId
-     * @return string
+     * @param string $newApiKey
+     * @return bool
      */
-    public function refreshApiKey(int $userId) : ?string;
+    public function updateApiKey(int $userId, string $newApiKey) : bool;
 }

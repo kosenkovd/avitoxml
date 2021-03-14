@@ -134,7 +134,7 @@ FROM ".$this->config->getUsersTableName());
         return !!$result;
     }
     
-    public function refreshApiKey(int $userId): ?string
+    public function updateApiKey(int $userId, string $newApiKey): bool
     {
         $mysqli = $this->connect();
     
@@ -144,16 +144,15 @@ FROM ".$this->config->getUsersTableName());
             WHERE id=".$userId;
     
         $statement = $mysqli->prepare($query);
-        $apiKey = Hash::make(Str::random());
     
         $statement->bind_param('s',
-            $apiKey
+            $newApiKey
         );
     
         $result = $statement->execute();
     
         $mysqli->close();
     
-        return !!$result ? $apiKey : null;
+        return $result;
     }
 }
