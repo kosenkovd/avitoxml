@@ -20,6 +20,7 @@ use App\Services\Interfaces\IMailService;
 use App\Services\XmlGenerationService;
 use App\Services\SpintaxService;
 use App\Services\MailService;
+use JsonMapper;
 
 class ServicesProvider extends ServiceProvider
 {
@@ -50,6 +51,9 @@ class ServicesProvider extends ServiceProvider
         });
         $this->app->bind(IYandexFileDownloader::class, function () {
             return new YandexFileDownloader();
+        });
+        $this->app->bind(JsonMapper::class, function () {
+            return new JsonMapper();
         });
     }
 }

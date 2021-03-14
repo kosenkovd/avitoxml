@@ -12,6 +12,8 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller as BaseController;
+use JsonMapper;
+use Ramsey\Uuid\Guid\Guid;
 
 /**
  * Class UserController
@@ -26,11 +28,15 @@ class UserController extends BaseController
     
     private IUserRepository $userRepository;
     
+    private JsonMapper $jsonMapper;
+    
     public function __construct(
-        IUserRepository $userRepository
+        IUserRepository $userRepository,
+        JsonMapper $jsonMapper
     )
     {
         $this->userRepository = $userRepository;
+        $this->jsonMapper = $jsonMapper;
         $this->roles = new Roles();
     }
     
@@ -87,29 +93,12 @@ class UserController extends BaseController
             return response()->json(null, 403);
         }
     
-        $input = $request->only([
-            'roleId',
-            'dateCreated',
-            'phoneNumber',
-            'socialNetworkUrl',
-            'isBlocked',
-            'token',
-            'notes',
-            'name',
-        ]);
+        try {
+            $userDTO = $this->jsonMapper->map($request->json(), new UserDTO());
+        } catch (Exception $e) {
+            return response()->json(null, 400);
+        }
     
-        $userDTO = new UserDTO(
-            $id,
-            $input['roleId'],
-            $input['dateCreated'],
-            $input['phoneNumber'],
-            $input['socialNetworkUrl'],
-            $input['isBlocked'],
-            $input['notes'],
-            $input['name'],
-            $input['token'],
-        );
-        
         $user = UserDTOMapper::mapUserDTOToModel($userDTO);
     
         $result = $this->userRepository->updateUser($id, $user);
@@ -129,9 +118,11 @@ class UserController extends BaseController
             return response()->json(null, 403);
         }
         
-        $result = $this->userRepository->refreshApiKey($id);
+        $newApiKey = md5(Guid::uuid4()->toString());
+        
+        $result = $this->userRepository->updateApiKey($id, $newApiKey);
         if (!!$result) {
-            return response()->json(null, 200);
+            return response()->json($newApiKey, 200);
         } else {
             return response()->json(null, 500);
         }

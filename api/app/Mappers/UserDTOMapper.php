@@ -15,18 +15,20 @@ class UserDTOMapper
         $dateCreated = new DateTime();
         $dateCreated->setTimestamp($user->getDateCreated());
         $dateCreatedString = $dateCreated->format(DateTime::ISO8601);
-
-        return new UserDTO(
-            $user->getUserId(),
-            $user->getRoleId(),
-            $dateCreatedString,
-            $user->getPhoneNumber(),
-            $user->getSocialNetworkUrl(),
-            $user->isBlocked(),
-            $user->getNotes(),
-            $user->getName(),
-            $user->getApiKey()
-        );
+        
+        $userDTO = new UserDTO();
+        $userDTO
+            ->setUserId($user->getUserId())
+            ->setRoleId($user->getRoleId())
+            ->setDateCreated($dateCreatedString)
+            ->setPhoneNumber($user->getPhoneNumber())
+            ->setSocialNetworkUrl($user->getSocialNetworkUrl())
+            ->setIsBlocked($user->isBlocked())
+            ->setNotes($user->getNotes())
+            ->setName($user->getName())
+            ->setToken($user->getApiKey());
+        
+        return $userDTO;
     }
     
     public static function mapUserDTOToModel(UserDTO $userDTO) : User
