@@ -250,20 +250,40 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
     /**
      * Update yandex token for table.
      *
-     * @param int $tableId
+     * @param Table $table
      * @throws Exception
      */
-    public function updateLastModified(int $tableId) : void
+    public function update(Table $table) : void
     {
         $query = "
-UPDATE `".$this->config->getTablesTableName()."`
-SET `dateLastModified`=?
-WHERE `id`=?";
+            UPDATE `".$this->config->getTablesTableName()."`
+            SET
+               `googleDriveId` = ?,
+               `dateExpired` = ?,
+               `isDeleted` = ?,
+               `dateDeleted` = ?,
+               `notes` = ?,
+               `dateLastModified` = ?
+            WHERE `id`=?";
     
         $mysqli = $this->connect();
         $statement = $mysqli->prepare($query);
-        $time = time();
-        $statement->bind_param('ii', $time, $tableId);
+        $googleDriveId = $table->getGoogleDriveId();
+        $dateExpired = $table->getDateExpired();
+        $isDeleted = $table->isDeleted();
+        $dateDeleted = $table->getDateDeleted();
+        $notes = $table->getNotes();
+        $dateLastModified = $table->getDateLastModified();
+        $statement->bind_param(
+            'siiisii',
+            $googleDriveId,
+            $dateExpired,
+            $isDeleted,
+            $dateDeleted,
+            $notes,
+            $dateLastModified,
+            $tableId
+        );
     
         $statement->execute();
     }

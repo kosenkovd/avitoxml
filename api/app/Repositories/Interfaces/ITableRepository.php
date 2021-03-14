@@ -39,11 +39,11 @@ interface ITableRepository
     public function get(string $tableGuid) : ?Table;
     
     /**
-     * Update date last modified for table.
+     * Update table.
      *
-     * @param int $tableId
+     * @param Table $table
      */
-    public function updateLastModified(int $tableId) : void;
+    public function update(Table $table) : void;
     
     /**
      * Update yandex token for table.

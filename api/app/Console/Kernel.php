@@ -239,7 +239,8 @@
         
         private function updateLastModified(Table $table, ITableRepository $tableRepository): void
         {
-            $tableRepository->updateLastModified($table->getTableId());
+            $table->setDateLastModified(time());
+            $tableRepository->update($table);
             Log::info("Table '" . $table->getGoogleSheetId() . "' updated.");
         }
         

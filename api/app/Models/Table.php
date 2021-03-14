@@ -170,6 +170,15 @@ class Table {
     {
         return $this->dateLastModified;
     }
+    
+    /**
+     * @param int $dateLastModified
+     */
+    public function setDateLastModified(int $dateLastModified): Table
+    {
+        $this->dateLastModified = $dateLastModified;
+        return $this;
+    }
 
     /**
      * @return array
