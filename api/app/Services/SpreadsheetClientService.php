@@ -82,39 +82,35 @@
          *
          * @param string $tableId
          * @param callable $action
-         * @param int|null $status
-         * @param int $attempts
+         * @param int $failedAttempts
          * @return mixed
          * @throws Exception
          */
-        public function handleQuota(
+        private function handleQuota(
             string $tableId,
             callable $action,
-            int $status = null,
-            int $attempts = 0
+            int $failedAttempts = 0
         )
         {
-            if (!is_null($status) && $this->isQuota($status)) {
-                Log::alert('sleep '.$this->secondToSleep);
-                sleep($this->secondToSleep);
-            }
-            
             try {
                 return ($action)();
             } catch (Exception $exception) {
                 $this->logTableError($tableId, $exception);
     
-                $attempts++;
-                if ($attempts >= $this->attemptsAfterGettingQuota) {
+                $failedAttempts++;
+                if ($failedAttempts >= $this->attemptsAfterGettingQuota) {
                     throw $exception;
                 }
-                
+    
+                $status = (int)$exception->getCode();
                 if (!is_null($status) && $this->isQuota($status)) {
+                    Log::alert('sleep '.$this->secondToSleep);
+                    sleep($this->secondToSleep);
+                    
                     return $this->handleQuota(
                         $tableId,
                         $action,
-                        (int)$exception->getCode(),
-                        $attempts
+                        $failedAttempts
                     );
                 } else {
                     throw $exception;
