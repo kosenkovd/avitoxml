@@ -78,45 +78,46 @@
         }
     
         /**
+         * Функция обертка для обработки ошибки google квоты
+         *
          * @param string $tableId
-         * @param callable $callback
+         * @param callable $action
          * @param int|null $status
          * @param int $attempts
-         * @param Exception|null $quotaException
          * @return mixed
          * @throws Exception
          */
-        private function quotaHandler(
+        public function handleQuota(
             string $tableId,
-            callable $callback,
+            callable $action,
             int $status = null,
-            int $attempts = 0,
-            Exception $quotaException = null
+            int $attempts = 0
         )
         {
-            if ($attempts >= $this->attemptsAfterGettingQuota) {
-                throw $quotaException;
-            } else {
-                $attempts++;
-            }
-    
             if (!is_null($status) && $this->isQuota($status)) {
                 Log::alert('sleep '.$this->secondToSleep);
                 sleep($this->secondToSleep);
             }
             
             try {
-                return $callback();
+                return ($action)();
             } catch (Exception $exception) {
                 $this->logTableError($tableId, $exception);
+    
+                $attempts++;
+                if ($attempts >= $this->attemptsAfterGettingQuota) {
+                    throw $exception;
+                }
+                
                 if (!is_null($status) && $this->isQuota($status)) {
-                    $this->quotaHandler(
+                    return $this->handleQuota(
                         $tableId,
-                        $callback,
+                        $action,
                         (int)$exception->getCode(),
-                        $attempts,
-                        $exception
+                        $attempts
                     );
+                } else {
+                    throw $exception;
                 }
             }
         }
@@ -163,7 +164,7 @@
             
             try
             {
-                $file = $this->quotaHandler(
+                $file = $this->handleQuota(
                     $fileId,
                     function () use ($driveService, $fileId) {
                         return $driveService->files->get($fileId, [
@@ -171,10 +172,6 @@
                         ]);
                     }
                 );
-//
-//                $file = $driveService->files->get($fileId, [
-//                    'fields' => 'modifiedTime, createdTime'
-//                ]);
             }
             catch (Exception $exception)
             {
@@ -197,7 +194,7 @@
             $service = new Google_Service_Sheets($this->client);
             try
             {
-                $values = $this->quotaHandler(
+                $values = $this->handleQuota(
                     $spreadsheetId,
                     function () use ($service, $spreadsheetId, $range) {
                         return $service->spreadsheets_values->get($spreadsheetId, $range)->getValues();
@@ -209,11 +206,7 @@
                 Log::error("Error on '".$spreadsheetId."' while reading".PHP_EOL.
                     $exception->getMessage());
                 
-                if ((int)$exception->getCode() === 429) {
-                    throw $exception;
-                } else {
-                    $values = null;
-                }
+                throw $exception;
             }
             
             if(is_null($values))
@@ -244,7 +237,7 @@
             
             try
             {
-                $this->quotaHandler(
+                $this->handleQuota(
                     $spreadsheetId,
                     function () use ($service, $spreadsheetId, $range, $body, $params) {
                         $service->spreadsheets_values->update(
@@ -294,7 +287,7 @@
             $service = new Google_Service_Sheets($this->client);
             
             try {
-                $response = $this->quotaHandler(
+                $response = $this->handleQuota(
                     $tableId,
                     function () use ($service, $tableId) {
                         return $service->spreadsheets->get($tableId);
