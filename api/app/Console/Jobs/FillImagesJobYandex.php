@@ -259,8 +259,10 @@
                     array_filter($links);*/
                     $links = array_map(
                         function (string $image) use ($tableGuid): string  {
-                        $fileInfo = urlencode(base64_encode($image));
-                        return LinkHelper::getTestPictureDownloadLink($tableGuid, $fileInfo)." ";
+                            $base64 = base64_encode($image);
+                            $urlSafeBase64 = preg_replace(['/\+/', '/\//', '/=/'], ['-', '_', ''], $base64);
+                            $fileInfo = $urlSafeBase64;
+                            return LinkHelper::getPictureDownloadLink($tableGuid, $fileInfo)." ";
                         },
                         $images
                     );

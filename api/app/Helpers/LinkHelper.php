@@ -28,17 +28,7 @@ class LinkHelper
         return "http://avitoxml.beget.tech/api/tables/".$tableGuid."/generators/".$generatorGuid;
     }
 
-    public static function getPictureDownloadLink(string $fileID) : string
-    {
-        return "http://avitoxml.beget.tech/pictures/pictureWrapper.php?fileID=".$fileID;
-    }
-
-    public static function getYandexPictureDownloadLink(string $tableId, string $fileInfo) : string
-    {
-        return "http://avitoxml.beget.tech/api/tables/".$tableId."/yandexFile?fileInfo=".$fileInfo;
-    }
-
-    public static function getTestPictureDownloadLink(string $tableId, string $fileInfo) : string
+    public static function getPictureDownloadLink(string $tableId, string $fileInfo) : string
     {
         return "http://agishev-autoz.ru/tables/".$tableId."/images/".$fileInfo;
     }
