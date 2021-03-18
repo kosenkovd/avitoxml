@@ -151,6 +151,11 @@ class UserController extends BaseController
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
     
+        $existingUser = $this->userRepository->getUserById((int)$id);
+        if (is_null($existingUser)) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+        }
+        
         try {
             $userDTO = $this->jsonMapper->map($request->json(), new UserDTO());
         } catch (Exception $e) {
@@ -178,10 +183,16 @@ class UserController extends BaseController
         if ($this->currentUser->getRoleId() !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
+    
+        $user = $this->userRepository->getUserById((int)$id);
+        if (is_null($user)) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+        }
         
         $newApiKey = md5(Guid::uuid4()->toString());
+        $user->setApiKey($newApiKey);
+        $this->userRepository->update($user);
         
-        $this->userRepository->updateApiKey($id, $newApiKey);
         return response()->json($newApiKey, 200);
     }
 }

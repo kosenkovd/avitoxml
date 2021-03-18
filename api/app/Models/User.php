@@ -121,8 +121,21 @@ class User
         return $this->notes;
     }
     
+    /**
+     * @return string|null
+     */
     public function getName(): ?string
     {
         return $this->name;
+    }
+    
+    /**
+     * @param string $apiKey
+     * @return User
+     */
+    public function setApiKey(string $apiKey): User
+    {
+        $this->apiKey = $apiKey;
+        return $this;
     }
 }

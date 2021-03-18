@@ -172,8 +172,9 @@
                         break;
                 }
                 
-                $splitTargetSheets = explode(",", $targetSheets); // TODO проверка $targetSheets на null
+                $splitTargetSheets = explode(",", $targetSheets);
                 foreach ($splitTargetSheets as $targetSheet) {
+                    
                     $targetSheet = trim($targetSheet);
                     if (!in_array($targetSheet, $existingSheets)) {
                         continue;

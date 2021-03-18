@@ -17,6 +17,15 @@ interface IUserRepository
     public function getUserByApiKey(string $apiKey) : ?User;
     
     /**
+     * Find user by userId.
+     *
+     * @param int $userId user id
+     * @return User|null user if found, otherwise null.
+     * @throws Exception in case of DB connection failure.
+     */
+    public function getUserById(int $userId) : ?User;
+    
+    /**
      * Get all users.
      *
      * @return User[]

@@ -381,11 +381,10 @@
                 }
 
                 $splitTargetSheets = explode(",", $targetSheets);
-                foreach ($splitTargetSheets as $targetSheet)
-                {
+                foreach ($splitTargetSheets as $targetSheet) {
+                    
                     $targetSheet = trim($targetSheet);
-                    if(!in_array($targetSheet, $existingSheets))
-                    {
+                    if(!in_array($targetSheet, $existingSheets)) {
                         continue;
                     }
     
