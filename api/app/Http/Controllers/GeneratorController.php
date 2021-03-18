@@ -112,55 +112,6 @@ class GeneratorController extends BaseController
     
         return response($content, 200)
             ->header("Content-Type", "application/xml");
-        
-        /*
-        $content = "";
-
-        try
-        {
-            $timeModified = $this->spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
-        }
-        catch (Exception $e)
-        {
-            $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
-
-            return response($content, 200)
-                ->header("Content-Type", "application/xml");
-        }
-
-        // Expired or deleted tables always return last generated XML
-        $isTableExpiredOrDeleted = $table->isDeleted() ||
-            (!is_null($table->getDateExpired()) && $table->getDateExpired() < time());
-
-        // Xml must be regenerated twice an hour to update yandex ads that rely on date created that can be set long
-        // before real actual date
-        $isXmlActual = ($generator->getTargetPlatform() != $this->sheetNamesConfig->getYandex() ||
-                time() - $generator->getLastGenerated() < 1800) &&
-            (is_null($timeModified) || ($generator->getLastGenerated() > $timeModified->getTimestamp()));
-        if($isTableExpiredOrDeleted || $isXmlActual)
-        {
-            $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
-        }
-        else
-        {
-            try
-            {
-                $content = $this->xmlGenerator->generateAvitoXML(
-                    $table->getGoogleSheetId(), $generator->getTargetPlatform());
-                $generator->setLastGenerated(time());
-                $this->generatorsRepository->update($generator);
-                $this->generatorsRepository->setLastGeneration($generator->getGeneratorId(), $content);
-            }
-            catch(Exception $e)
-            {
-                Log::error($e);
-                $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
-            }
-        }
-
-        return response($content, 200)
-            ->header("Content-Type", "application/xml");
-        */
     }
 
     /**

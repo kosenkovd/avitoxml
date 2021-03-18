@@ -19,22 +19,36 @@ interface IUserRepository
     /**
      * Get all users.
      *
-     * @return User[]|null
+     * @return User[]
      * @throws Exception in case of DB connection failure.
      */
-    public function getUsers() : ?array;
+    public function get() : array;
+
+	/**
+     * Persist new user in database
+     *
+	 * @param User $user
+	 * @return bool
+	 * @throws Exception in case of DB connection failure.
+	 */
+    public function insert(User $user) : bool;
     
     /**
-     * @param int $userId
+     * Update user
+     *
      * @param User $user
      * @return bool
+	 * @throws Exception in case of DB connection failure.
      */
-    public function updateUser(int $userId, User $user) : bool;
+    public function update(User $user) : bool;
     
     /**
+     * Update user ApiKey
+     *
      * @param int $userId
      * @param string $newApiKey
      * @return bool
+	 * @throws Exception in case of DB connection failure.
      */
     public function updateApiKey(int $userId, string $newApiKey) : bool;
 }

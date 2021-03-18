@@ -139,8 +139,6 @@
                 {
                     continue;
                 }
-//                $image = array_shift($this->images[$sourceFolderId]);
-                
                 $image = $this->images[$sourceFolderId][0];
 
                 $filePathArray = explode('/', $image);
@@ -184,13 +182,12 @@
          * @param string $tableID Google spreadsheet id.
          * @param string $baseFolderID Google drive base folder id.
          * @param string $sheetName target sheet.
-         * @param string $quotaUserPrefix quota user prefix.
          * @throws \Exception
          */
         private function processSheet(
-            string $tableGuid, string $tableID, string $baseFolderID, string $sheetName, string $quotaUserPrefix): void
+            string $tableGuid, string $tableID, string $baseFolderID, string $sheetName): void
         {
-            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, $quotaUserPrefix);
+            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
 
             if ($propertyColumns && empty($values))
             {
@@ -229,15 +226,13 @@
                         $sheetName,
                         SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName).$spreadsheetRowNum,
                         $subFolderName
-//                        $quotaUserPrefix."NewFolder".$spreadsheetRowNum
                     );
                 }
                 else
                 {
                     $subFolderName = trim($row[$propertyColumns->subFolderName]);
                 }
-    
-    
+   
                 $message = "Table '".$tableID."' folder name ".$subFolderName;
                 $this->log($message);
                 Log::info($message);
@@ -249,14 +244,6 @@
                 Log::info($message);
 
                 if ($images !== []) {
-                    /*$links = array_map(
-                        function (string $image): string  {
-                            $path = $this->yandexDiskService->getFileUrl($image);
-                            return $path ? $path." " : '';
-                        },
-                        $images
-                    );
-                    array_filter($links);*/
                     $links = array_map(
                         function (string $image) use ($tableGuid): string  {
                             $base64 = base64_encode($image);
@@ -277,7 +264,7 @@
                         $sheetName,
                         SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw).$spreadsheetRowNum,
                         $imagesString,
-                        $quotaUserPrefix."NewImages".$spreadsheetRowNum);
+                    );
                 }
 
                 sleep(1);
@@ -307,9 +294,8 @@
                     $exception->getMessage();
                 $this->log($message);
                 Log::error($message);
-                $this->throwExceptionIfQuota($exception);
                 
-                $yandexConfig = null;
+                throw $exception;
             }
 
             $yandexToken = $yandexConfig ? @$yandexConfig[0][0] : null;
@@ -377,7 +363,6 @@
 
             $existingSheets = $this->spreadsheetClientService->getSheets(
                 $table->getGoogleSheetId()
-//                $table->getTableGuid()."fijy"
             );
 
             foreach ($table->getGenerators() as $generator)
@@ -403,10 +388,6 @@
                     {
                         continue;
                     }
-
-                    $quotaUserPrefix = substr($table->getTableGuid(), 0, 10).
-                        (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
-                        "RTJ";
     
                     $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."'...";
                     $this->log($message);
@@ -416,8 +397,7 @@
                         $table->getTableGuid(),
                         $table->getGoogleSheetId(),
                         $baseFolderID,
-                        $targetSheet,
-                        $quotaUserPrefix
+                        $targetSheet
                     );
                     $this->stopIfTimeout();
                 }

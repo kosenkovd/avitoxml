@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\DTOs\ErrorResponse;
 use App\DTOs\UserDTO;
 use App\Enums\Roles;
 use App\Mappers\UserDTOMapper;
@@ -11,7 +12,9 @@ use App\Repositories\Interfaces\IUserRepository;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Support\Facades\Log;
 use JsonMapper;
 use Ramsey\Uuid\Guid\Guid;
 
@@ -29,8 +32,13 @@ class UserController extends BaseController
     private IUserRepository $userRepository;
     
     private JsonMapper $jsonMapper;
-    
-    public function __construct(
+
+	/**
+	 * @var User authenticated user through query hash
+	 */
+	private User $currentUser;
+
+	public function __construct(
         IUserRepository $userRepository,
         JsonMapper $jsonMapper
     )
@@ -38,6 +46,8 @@ class UserController extends BaseController
         $this->userRepository = $userRepository;
         $this->jsonMapper = $jsonMapper;
         $this->roles = new Roles();
+
+        $this->currentUser = request()->input("currentUser");
     }
     
     /**
@@ -50,14 +60,13 @@ class UserController extends BaseController
      */
     public function myAccount(Request $request) : JsonResponse
     {
-        $currentUser = $request->input("currentUser");
-        return response()->json(UserDTOMapper::mapModelToUserDTO($currentUser), 200);
+        return response()->json(UserDTOMapper::mapModelToDTO($this->currentUser), 200);
     }
     
     /**
      * GET /users
      *
-     * Get current user info.
+     * Get all users.
      *
      * @param $request Request request.
      * @return JsonResponse current users.
@@ -65,66 +74,114 @@ class UserController extends BaseController
      */
     public function index(Request $request): JsonResponse
     {
-        /** @var User $currentUser */
-        $currentUser = $request->input("currentUser");
-        
-        if ($currentUser->getRoleId() !== $this->roles->Admin) {
-            return response()->json(null, 403);
+        if ($this->currentUser->getRoleId() !== $this->roles->Admin) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
         
-        $users = $this->userRepository->getUsers();
+        $users = $this->userRepository->get();
         
         $usersDTOs = array_map(function (User $user) {
-            return UserDTOMapper::mapModelToUserDTO($user);
+            return UserDTOMapper::mapModelToDTO($user);
         },
         $users);
         
         return response()->json($usersDTOs, 200);
     }
-    
+
+	/**
+	 * Post /users
+	 *
+	 * Create new User
+	 *
+	 * @param Request $request
+	 * @var int $count
+	 * @return JsonResponse <User[]>
+	 */
+    public function store(Request $request): JsonResponse
+	{
+	    // work in progress
+        die();
+        
+		if ($this->currentUser->getRoleId() === $this->roles->Admin) {
+			return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+		}
+
+		$count = $request->query('count') ? (int)$request->query('count') : 1;
+		$users = [];
+		for ($i = 1; $i < $count; $i++) {
+			$apiKey = md5(Guid::uuid4()->toString());
+
+			$user = new User(
+				null,
+				$this->roles->Customer,
+				time(),
+				null,
+				null,
+				false,
+				$apiKey,
+				null,
+				null
+			);
+
+			try {
+				$this->userRepository->insert($user);
+				$createdUser = $this->userRepository->getUserByApiKey($apiKey);
+				$users[] = UserDTOMapper::mapModelToDTO($createdUser);
+			} catch (Exception $exception) {
+				Log::channel('api')->error("Error on inserting ".User::class.PHP_EOL.$exception->getMessage());
+			}
+		}
+
+		return response()->json($users, 201);
+	}
+
+	/**
+	 * Put /users/{$id}
+	 *
+	 * @param Request $request
+	 * @param         $id
+	 * @return JsonResponse
+	 * @throws Exception
+	 */
     public function update(Request $request, $id): JsonResponse
     {
-        /** @var User $currentUser */
-        $currentUser = $request->input("currentUser");
-        
-        if (!(($currentUser->getUserId() === (int)$id) ||
-            ($currentUser->getRoleId() === $this->roles->Admin)))
+        if (!(($this->currentUser->getUserId() === (int)$id) ||
+            ($this->currentUser->getRoleId() === $this->roles->Admin)))
         {
-            return response()->json(null, 403);
+            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
     
         try {
             $userDTO = $this->jsonMapper->map($request->json(), new UserDTO());
         } catch (Exception $e) {
-            return response()->json(null, 400);
+            return response()->json(new ErrorResponse(Response::$statusTexts[400]), 400);
         }
     
-        $user = UserDTOMapper::mapUserDTOToModel($userDTO);
-    
-        $result = $this->userRepository->updateUser($id, $user);
-        if ($result) {
-            return response()->json(null, 200);
-        } else {
-            return response()->json(null, 500);
-        }
+        $user = UserDTOMapper::mapDTOToModel($userDTO);
+
+		// TODO disable all tables and generators for user if isBlocked
+        
+        $this->userRepository->update($user);
+        return response()->json(null, 200);
     }
-    
+
+	/**
+	 * Put /users/{$id}/token
+	 *
+	 * @param Request $request
+	 * @param         $id
+	 * @return JsonResponse
+	 * @throws Exception
+	 */
     public function refreshToken(Request $request, $id): JsonResponse
     {
-        /** @var User $currentUser */
-        $currentUser = $request->input("currentUser");
-        
-        if ($currentUser->getRoleId() !== $this->roles->Admin) {
-            return response()->json(null, 403);
+        if ($this->currentUser->getRoleId() !== $this->roles->Admin) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
         
         $newApiKey = md5(Guid::uuid4()->toString());
         
-        $result = $this->userRepository->updateApiKey($id, $newApiKey);
-        if (!!$result) {
-            return response()->json($newApiKey, 200);
-        } else {
-            return response()->json(null, 500);
-        }
+        $this->userRepository->updateApiKey($id, $newApiKey);
+        return response()->json($newApiKey, 200);
     }
 }

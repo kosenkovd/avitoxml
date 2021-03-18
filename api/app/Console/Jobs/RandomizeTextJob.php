@@ -34,7 +34,6 @@
          * @param int $numRow row number, required for spreadsheet update.
          * @param string $sheetName sheet name, required for spreadsheet update.
          * @param array $row row data.
-         * @param string $quotaUser quota user.
          * @throws \Exception
          */
         private function randomizeText(
@@ -43,8 +42,8 @@
             int $resultCol,
             int $numRow,
             array $row,
-            string $sheetName,
-            string $quotaUser): void
+            string $sheetName
+        ): void
         {
             $alreadyFilled = isset($row[$resultCol]) && $row[$resultCol] != '';
             $noSource = !isset($row[$patternCol]) || $row[$patternCol] == '';
@@ -69,14 +68,13 @@
                     $sheetName,
                     $columnName.$numRow,
                     $text
-//                $quotaUser
                 );
             } catch (\Exception $exception) {
                 $message = "Error on '".$tableId."' while randomizing row ".$numRow.PHP_EOL.
                     $exception->getMessage();
                 $this->log($message);
                 Log::error($message);
-                $this->throwExceptionIfQuota($exception);
+                throw $exception;
             }
             
             sleep(1);
@@ -88,12 +86,11 @@
          *
          * @param string $tableID Google spreadsheet id.
          * @param string $sheetName sheet name.
-         * @param string $quotaUserPrefix quota user prefix.
          * @throws \Exception
          */
-        private function processSheet(string $tableID, string $sheetName, string $quotaUserPrefix): void
+        private function processSheet(string $tableID, string $sheetName): void
         {
-            [$propertyColumns, $values] = $this->getHeaderAndDataFromTable($tableID, $sheetName, $quotaUserPrefix);
+            [$propertyColumns, $values] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
             
             if ($propertyColumns && empty($values)) {
                 return;
@@ -126,7 +123,7 @@
                         $numRow,
                         $row,
                         $sheetName,
-                        $quotaUserPrefix."randText".$randomizer["result"]);
+                    );
                 }
             }
         }
@@ -160,7 +157,6 @@
             
             $existingSheets = $this->spreadsheetClientService->getSheets(
                 $table->getGoogleSheetId()
-//            $table->getTableGuid()."rtj"
             );
             
             foreach ($table->getGenerators() as $generator) {
@@ -183,15 +179,11 @@
                         continue;
                     }
                     
-                    $quotaUserPrefix = substr($table->getTableGuid(), 0, 10).
-                        (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
-                        "RTJ";
-                    
                     $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."'...";
                     $this->log($message);
                     Log::info($message);
                     
-                    $this->processSheet($tableID, $targetSheet, $quotaUserPrefix);
+                    $this->processSheet($tableID, $targetSheet);
                     $this->stopIfTimeout();
                 }
             }

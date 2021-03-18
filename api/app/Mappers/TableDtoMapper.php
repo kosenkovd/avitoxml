@@ -29,7 +29,7 @@ class TableDtoMapper
         return $generatorDtos;
     }
 
-    public static function MapTableDTO(Models\Table $table, Models\User $user) : DTOs\TableDTO
+    public static function mapModelToDTO(Models\Table $table, Models\User $user) : DTOs\TableDTO
     {
         if(is_null($table->getDateExpired()))
         {
@@ -51,8 +51,8 @@ class TableDtoMapper
         return new DTOs\TableDTO(
             $table->getTableId(),
             $user->getUserId(),
-            $user->getPhoneNumber(),
-            $user->getSocialNetworkUrl(),
+            null,
+			null,
             LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
             $googleDriveUrl,
             self::GetGenerators($table->getTableGuid(), $table->getGenerators()),
@@ -62,14 +62,14 @@ class TableDtoMapper
             $table->getYandexToken() != null);
     }
 
-    public static function MapDeletedTableDTO(Models\Table $table, Models\User $user)
+    public static function MapDeletedModelToDTO(Models\Table $table, Models\User $user)
         : DTOs\DeletedTableDTO
     {
         return new DTOs\DeletedTableDTO(
             $table->getTableId(),
             $user->getUserId(),
-            $user->getPhoneNumber(),
-            $user->getSocialNetworkUrl(),
+			null,
+			null,
             LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
             LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId()),
             self::GetGenerators($table->getTableGuid(), $table->getGenerators()),

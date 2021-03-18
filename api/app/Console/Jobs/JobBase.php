@@ -60,11 +60,16 @@ abstract class JobBase
      */
     protected function stopIfTimeout(): void
     {
-        if($this->timeoutEnabled && (time() >= $this->startTimestamp + $this->maxJobTime))
+        if($this->checkIsTimeout())
         {
             $this->log("Finished ".get_class($this)." job by timeout");
             exit;
         }
+    }
+    
+    protected function checkIsTimeout(): bool
+    {
+        return $this->timeoutEnabled && (time() >= ($this->startTimestamp + $this->maxJobTime));
     }
     
     /**
@@ -72,49 +77,15 @@ abstract class JobBase
      *
      * @param string $tableID
      * @param string $sheetName
-     * @param string $quotaUserPrefix
      * @return array [ TableHeader, values ]
      * @throws \Exception
      */
-    protected function getHeaderAndDataFromTable(string $tableID, string $sheetName, string $quotaUserPrefix) : array
+    protected function getHeaderAndDataFromTable(string $tableID, string $sheetName) : array
     {
-        $headerRange = $sheetName.'!A1:FZ1';
+        $values = $this->getFullDataFromTable($tableID, $sheetName);
         
-        try {
-            $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                $tableID,
-                $headerRange
-//            $quotaUserPrefix . "GH"
-            );
-            $propertyColumns = new TableHeader($headerResponse[0]);
-        } catch (\Exception $exception) {
-            $message = "Error on '". $tableID."' while getting spreadsheet headerResponse ".PHP_EOL.
-                $exception->getMessage();
-            $this->log($message);
-//            Log::error($message);
-            $this->throwExceptionIfQuota($exception);
-            
-            $propertyColumns = null;
-        }
+        $propertyColumns = new TableHeader(array_shift($values));
         
-        sleep(1);
-    
-        try {
-            $range = $sheetName.'!A2:FZ5001';
-            $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                $tableID,
-                $range
-//                $quotaUserPrefix."GB"
-        );
-        } catch (\Exception $exception) {
-            $message = "Error on '". $tableID."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
-            $this->log($message);
-//            Log::error($message);
-            $this->throwExceptionIfQuota($exception);
-            
-            $values = [];
-        }
-    
         return [ $propertyColumns, $values ];
     }
     
@@ -137,24 +108,10 @@ abstract class JobBase
         } catch (\Exception $exception) {
             $message = "Error on '". $tableID."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
             $this->log($message);
-//            Log::error($message);
-            $this->throwExceptionIfQuota($exception);
-            
-            $values = [];
+            throw $exception;
         }
     
         return $values;
-    }
-    
-    /**
-     * @param \Exception $exception
-     * @throws \Exception
-     */
-    protected function throwExceptionIfQuota(\Exception $exception): void
-    {
-        if ((int)$exception->getCode() === 429) {
-            throw $exception;
-        }
     }
 
     public function __construct(ISpreadsheetClientService $spreadsheetClientService)

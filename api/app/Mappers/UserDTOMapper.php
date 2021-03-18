@@ -10,7 +10,7 @@ use \DateTime;
 
 class UserDTOMapper
 {
-    public static function mapModelToUserDTO(User $user) : UserDTO
+    public static function mapModelToDTO(User $user) : UserDTO
     {
         $dateCreated = new DateTime();
         $dateCreated->setTimestamp($user->getDateCreated());
@@ -31,7 +31,7 @@ class UserDTOMapper
         return $userDTO;
     }
     
-    public static function mapUserDTOToModel(UserDTO $userDTO) : User
+    public static function mapDTOToModel(UserDTO $userDTO) : User
     {
         $dateCreated = Carbon::createFromTimeString($userDTO->dateCreated)->timestamp;
         

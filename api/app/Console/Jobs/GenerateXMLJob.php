@@ -49,43 +49,15 @@
                     $table->getGoogleSheetId(),
                     $generator->getTargetPlatform()
                 );
-                $generator->setLastGenerated(time());
-                $this->generatorRepository->update($generator);
                 $this->generatorRepository->setLastGeneration($generator->getGeneratorId(), $content);
             } catch (Exception $exception) {
-                $message = "Error on '".$table->getGoogleDriveId()."'".PHP_EOL.
+                $message = "Error on '".$table->getGoogleSheetId()."' while processSheet".PHP_EOL.
                     $exception->getMessage();
                 $this->log($message);
                 Log::error($message);
-                $this->throwExceptionIfQuota($exception);
+                
+                throw $exception;
             }
-        }
-        
-        /**
-         * Expired or deleted tables always return last generated XML
-         *
-         * @param Table $table
-         * @return bool
-         */
-        private function isTableExpiredOrDeleted(Table $table): bool
-        {
-            return $table->isDeleted() ||
-                (!is_null($table->getDateExpired()) && $table->getDateExpired() < time());
-        }
-        
-        /**
-         * Xml must be regenerated twice an hour to update yandex ads that rely on date created that can be set long
-         * before real actual date
-         *
-         * @param Generator $generator
-         * @param DateTime $timeModified
-         * @return bool
-         */
-        private function isXmlActual(Generator $generator, DateTime $timeModified): bool
-        {
-            return ($generator->getTargetPlatform() != $this->sheetNamesConfig->getYandex() ||
-                    time() - $generator->getLastGenerated() < 1800) &&
-                (is_null($timeModified) || ($generator->getLastGenerated() > $timeModified->getTimestamp()));
         }
         
         public function __construct(
@@ -108,7 +80,7 @@
         /**
          * Start job.
          *
-         * Randomizes texts in all tables that were not randomized before.
+         * Generate xml for table.
          *
          * @param Table $table table to process.
          * @throws Exception
@@ -123,7 +95,6 @@
             
             $existingSheets = $this->spreadsheetClientService->getSheets(
                 $table->getGoogleSheetId()
-//            $table->getTableGuid()."rtj"
             );
             
             foreach ($table->getGenerators() as $generator) {

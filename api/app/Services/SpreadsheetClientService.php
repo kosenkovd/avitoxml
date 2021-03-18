@@ -22,7 +22,7 @@
         private Google_Service_Drive_Permission $drivePermissions;
         private Google_Service_Sheets $sheetsService;
         
-        private int $secondToSleep = 45;
+        private int $secondToSleep = 60;
         private int $attemptsAfterGettingQuota = 2;
         
         /**
@@ -96,16 +96,16 @@
                 return ($action)();
             } catch (Exception $exception) {
                 $this->logTableError($tableId, $exception);
-    
-                $failedAttempts++;
-                if ($failedAttempts >= $this->attemptsAfterGettingQuota) {
-                    throw $exception;
-                }
-    
+                
                 $status = (int)$exception->getCode();
                 if (!is_null($status) && $this->isQuota($status)) {
                     Log::alert('sleep '.$this->secondToSleep);
                     sleep($this->secondToSleep);
+    
+                    $failedAttempts++;
+                    if ($failedAttempts >= $this->attemptsAfterGettingQuota) {
+                        throw $exception;
+                    }
                     
                     return $this->handleQuota(
                         $tableId,
@@ -125,7 +125,7 @@
     
         private function logTableError(string $tableId, Exception $exception): void
         {
-            $message = "Error on '" . $tableId . "'" . PHP_EOL . $exception->getMessage();
+            $message = "Error on '" . $tableId . "' ". $exception->getCode() . PHP_EOL . $exception->getMessage();
             Log::error($message);
         }
         

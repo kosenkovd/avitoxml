@@ -4,9 +4,6 @@
 namespace App\Repositories;
 
 use Exception;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
-use mysqli;
 use App\Models\User;
 use App\Repositories\Interfaces\IUserRepository;
 
@@ -55,10 +52,9 @@ WHERE apiKey='$cleanApiKey'");
     }
     
     /**
-     * @return array|null
-     * @throws Exception
+     * @inheritDoc
      */
-    public function getUsers(): ?array
+    public function get(): array
     {
         $mysqli = $this->connect();
         $res = $mysqli->query("
@@ -68,7 +64,7 @@ FROM ".$this->config->getUsersTableName());
     
         if(!$res || !$res->data_seek(0))
         {
-            return null;
+            return [];
         }
         
         $users = [];
@@ -91,12 +87,53 @@ FROM ".$this->config->getUsersTableName());
         
         return array_values($users);
     }
+
+	/**
+	 * @inheritDoc
+	 */
+	public function insert(User $user): bool
+	{
+		$mysqli = $this->connect();
+
+		$query = "
+            INSERT INTO `".$this->config->getUsersTableName()."`
+            (
+            	`roleId`,
+            	`dateCreated`,
+            	`apiKey`
+            )
+            VALUES (
+                `roleId` = ?,
+                `dateCreated` = ?,
+            	`apiKey` = ?
+            )
+            WHERE id = ?";
+
+		$statement = $mysqli->prepare($query);
+
+		$roleId = $user->getRoleId();
+		$dateCreated = $user;
+		$apiKey = $user->getApiKey();
+		$userId = $user->getUserId();
+
+		$statement->bind_param('iisi',
+			$roleId,
+			$dateCreated,
+			$apiKey,
+			$userId
+		);
+
+		$result = $statement->execute();
+
+		$mysqli->close();
+
+		return !!$result;
+	}
     
     /**
      * @inheritDoc
-     * @throws Exception
      */
-    public function updateUser(int $userId, User $user): bool
+    public function update(User $user): bool
     {
         $mysqli = $this->connect();
         
@@ -108,7 +145,7 @@ FROM ".$this->config->getUsersTableName());
                 `isBlocked` = ?,
                 `notes` = ?,
                 `name` = ?
-            WHERE id=".$userId;
+            WHERE id=".$user->getUserId();
 
         $statement = $mysqli->prepare($query);
         $roleId = $user->getRoleId();
@@ -134,6 +171,9 @@ FROM ".$this->config->getUsersTableName());
         return !!$result;
     }
     
+    /**
+     * @inheritDoc
+     */
     public function updateApiKey(int $userId, string $newApiKey): bool
     {
         $mysqli = $this->connect();

@@ -106,7 +106,6 @@
                 $range,
                 $values,
                 $params
-//                substr($tableID, 0, 20)."FillImagesGoogle".$numRow
             );
         }
 
@@ -198,7 +197,7 @@
             $this->log($message);
             Log::info($message);
             
-            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, substr($tableID, 0, 15));
+            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
     
             if ($propertyColumns && empty($values))
             {

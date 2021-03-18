@@ -5,17 +5,10 @@
     
     use App\Configuration\Spreadsheet\SheetNames;
     use App\Configuration\XmlGeneration;
-    use App\Helpers\LinkHelper;
     use App\Helpers\SpreadsheetHelper;
     use App\Models\Table;
-    use App\Models\TableHeader;
     use App\Repositories\Interfaces\ITableRepository;
     use App\Services\Interfaces\ISpreadsheetClientService;
-    use App\Services\Interfaces\IYandexDiskService;
-    use Illuminate\Support\Facades\Log;
-    use Leonied7\Yandex\Disk\Item\File;
-    use Ramsey\Uuid\Guid\Guid;
-    use function PHPUnit\Framework\isNull;
 
     class FillAmountJob extends JobBase {
         /**
@@ -30,16 +23,23 @@
         
         protected bool $timeoutEnabled = true;
         
+        /** @var int seconds to sleep between requests to avito.ru */
         private int $secondsToSleepAvito = 6;
-        private int $secondsToSleepGoogle = 2;
-//        private int $mSecondsToSleepAvito = 6000;
         
-        private ?int $cityId = null;
+        /** @var int id of city for row */
+        private int $cityId;
+        
+        /** @var string[][] values to write */
         private array $newValues = [];
-        private bool $needsToUpdate = false;
-        private bool $stoppedDueAvitoQuota = false;
-        private ?int $lastRow = null;
         
+        private bool $needsToUpdate = false;
+        
+        private ?int $lastRowUntilJobStops = null;
+        
+        private int $cityNameColumnNum = 0;
+        private int $cityIdColumnNum = 1;
+    
+    
         /**
          * @var SheetNames
          */
@@ -50,17 +50,14 @@
         private XmlGeneration $xmlGeneration;
     
         /**
-         * Fills amount for specified generator.
+         * Fills cityIds and amount for query from table column name for specified sheet.
          *
          * @param string $tableID Google spreadsheet id.
          * @param string $sheetName target sheet.
-         * @param string $quotaUserPrefix
          * @throws \Exception
          */
         private function processSheet(string $tableID, string $sheetName): void
         {
-            
-            dd('testing');
             $message = $tableID." processing...";
             dump($message);
             
@@ -73,157 +70,21 @@
             // Заголовки
             $propertyColumns = array_shift($values);
     
-            foreach ($values as $numRow => $row) {
-                // content starts at line 2
-                $spreadsheetRowNum = $numRow + 2;
-                
-                if($this->timeoutEnabled && (time() >= $this->startTimestamp + $this->maxJobTime)) {
-                    // fill what we can
-                    // row before that
-                    $this->lastRow = $spreadsheetRowNum - 1;
-    
-                    dump("timeout");
-    
-                    break;
-                }
-    
-                if ($this->stoppedDueAvitoQuota) {
-                    break;
-                }
-                
-                // city name
-                $city = $row[0];
-    
-                foreach ($propertyColumns as $column => $propertyColumn) {
-                    if ($this->stoppedDueAvitoQuota) {
-                        break;
-                    }
-                    
-                    // city
-                    if ($column === 0) {
-                        $this->newValues[$numRow][$column] = $city;
-                    }
-    
-                    $alreadyFilled = isset($row[$column]) &&
-                        trim($row[$column]) != '';
-    
-                    // check alreadyFilled
-                    if ($alreadyFilled) {
-                        if ($column === 1) {
-                            $this->cityId = $row[$column];
-                        }
-                        
-                        $this->newValues[$numRow][$column] = $row[$column];
-                        
-                        continue;
-                    }
-                    
-                    $cell = SpreadsheetHelper::getColumnLetterByNumber($column).$spreadsheetRowNum;
-                    
-                    // cityId
-                    if ($column === 1) {
-                        $message = $tableID." filling city id on ".$cell;
-                        dump($message);
-                        try {
-                            $this->cityId = $this->getAvitoCityId($city);
-                            $this->newValues[$numRow][$column] = $this->cityId;
-                        } catch (\Exception $exception) {
-                            // fill what we can
-                            $this->newValues[$numRow][$column] = '';
-                            $this->stoppedDueAvitoQuota = true;
-                            $this->lastRow = $spreadsheetRowNum;
-                            
-                            dump($exception);
-                            
-                            break;
-                        }
-    
-                        $this->needsToUpdate = true;
-                        
-                        continue;
-                    }
-    
-                    $message = $tableID." filling ".$cell;
-                    dump($message);
-                    try {
-                        $amount = $this->getAvitoAmount($this->cityId, $propertyColumn);
-                    } catch (\Exception $exception) {
-                        // fill what we can
-                        $this->newValues[$numRow][$column] = '';
-                        $this->stoppedDueAvitoQuota = true;
-                        $this->lastRow = $spreadsheetRowNum;
-    
-                        dump($exception);
-    
-                        break;
-                    }
-                    
-                    $this->newValues[$numRow][$column] = $amount;
-                    $this->needsToUpdate = true;
-                }
-            }
-    
-            if (
-                $this->stoppedDueAvitoQuota ||
-                ($this->timeoutEnabled && (time() >= $this->startTimestamp + $this->maxJobTime))
-            ) {
-                $range = $sheetName.'!A2:FZ'.$this->lastRow;
-            } else {
-                $range = $sheetName.'!A2:FZ5001';
-            }
-    
-            if (!$this->needsToUpdate) {
-                $message = $tableID." is already full.";
-                dump($message);
-                return;
-            }
-            
-            $message = $tableID." writing values to table...";
-            dump($message);
-            
-           
-            $this->spreadsheetClientService->updateSpreadsheetCellsRange(
-                $tableID,
-                $range,
-                $this->newValues,
-                [
-                    'valueInputOption' => 'RAW'
-                ],
-                false
-            );
-    
-            $message = $tableID." successfully wrote values.";
-            dump($message);
-            
-            if ($this->stoppedDueAvitoQuota) {
-                $message = $tableID." needs to restart";
-                dump($message);
-            }
+            $this->getNewValues($tableID, $values, $propertyColumns);
+            $this->fillSheet($tableID, $sheetName);
         }
         
         private function getAvitoCityId(string $city): int
         {
             $url = "https://www.avito.ru/web/1/slocations?limit=2&q=".urlencode($city);
-//            $opts = array(
-//                'http'=>array(
-//                    'method'=>"GET",
-//                    'header'=>"Host: www.avito.ru"
-//                )
-//            );
-//
-//            $context = stream_context_create($opts);
-//            $result = file_get_contents($url, false, $context);
-    
             
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             $result = curl_exec($ch);
-    
             curl_close($ch);
             
             sleep($this->secondsToSleepAvito);
-//            usleep($this->mSecondsToSleepAvito);
     
             $locations = json_decode($result)->result->locations;
             
@@ -241,31 +102,129 @@
         private function getAvitoAmount(string $cityId, string $filling): int
         {
             $url = "https://www.avito.ru/js/catalog?locationId=".$cityId."&name=".urlencode($filling)."&countOnly=1&bt=1";
-//            // Создаём поток
-//            $opts = array(
-//                'http'=>array(
-//                    'method'=>"GET",
-//                    'header'=>"Host: www.avito.ru"
-//                )
-//            );
-//
-//            $context = stream_context_create($opts);
-//            $result = file_get_contents($url, false, $context);
-    
     
             $ch = curl_init();
             curl_setopt($ch, CURLOPT_URL, $url);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
             $result = curl_exec($ch);
-    
             curl_close($ch);
-            
-            
     
             sleep($this->secondsToSleepAvito);
-//            usleep($this->mSecondsToSleepAvito);
             
             return json_decode($result)->mainCount;
+        }
+        
+        private function getNewValues(string $tableID, array $values, array $propertyColumns): void
+        {
+            foreach ($values as $numRow => $row) {
+                // content starts at line 2
+                $spreadsheetRowNum = $numRow + 2;
+        
+                if ($this->checkIsTimeout()) {
+                    dump("timeout");
+                    
+                    // row before that row
+                    $this->lastRowUntilJobStops = $spreadsheetRowNum - 1;
+                    
+                    return;
+                }
+        
+                $cityName = $row[$this->cityNameColumnNum];
+        
+                foreach ($propertyColumns as $column => $propertyColumn) {
+                    
+                    if ($column === $this->cityNameColumnNum) {
+                        $this->newValues[$numRow][$column] = $cityName;
+                    }
+            
+                    $alreadyFilled = isset($row[$column]) &&
+                        trim($row[$column]) != '';
+            
+                    // check alreadyFilled
+                    if ($alreadyFilled) {
+                        if ($column === $this->cityIdColumnNum) {
+                            $this->cityId = $row[$column];
+                        }
+                
+                        $this->newValues[$numRow][$column] = $row[$column];
+                
+                        continue;
+                    }
+            
+                    $cell = SpreadsheetHelper::getColumnLetterByNumber($column).$spreadsheetRowNum;
+            
+                    if ($column === $this->cityIdColumnNum) {
+                        $message = $tableID." filling city id on ".$cell;
+                        dump($message);
+                        
+                        try {
+                            $this->cityId = $this->getAvitoCityId($cityName);
+                        } catch (\Exception $exception) {
+                            dump($exception);
+                            
+                            $this->newValues[$numRow][$column] = '';
+                            $this->lastRowUntilJobStops = $spreadsheetRowNum;
+                            
+                            return;
+                        }
+    
+                        $this->newValues[$numRow][$column] = $this->cityId;
+                        $this->needsToUpdate = true;
+    
+                        continue;
+                    }
+            
+                    $message = $tableID." filling ".$cell;
+                    dump($message);
+                    try {
+                        $amount = $this->getAvitoAmount($this->cityId, $propertyColumn);
+                    } catch (\Exception $exception) {
+                        dump($exception);
+                        
+                        $this->newValues[$numRow][$column] = '';
+                        $this->lastRowUntilJobStops = $spreadsheetRowNum;
+                        
+                        return;
+                    }
+    
+                    $this->newValues[$numRow][$column] = $amount;
+                    $this->needsToUpdate = true;
+                }
+            }
+        }
+        
+        private function fillSheet(string $tableID, string $sheetName)
+        {
+            if (!$this->needsToUpdate) {
+                $message = $tableID." is already filled.";
+                dump($message);
+                return;
+            }
+            
+            if ($this->checkIsTimeout() || !is_null($this->lastRowUntilJobStops)) {
+                $range = $sheetName.'!A2:FZ'.$this->lastRowUntilJobStops;
+            } else {
+                $range = $sheetName.'!A2:FZ5001';
+            }
+            
+            $message = $tableID." writing values to table...";
+            dump($message);
+    
+            try {
+                $this->spreadsheetClientService->updateSpreadsheetCellsRange(
+                    $tableID,
+                    $range,
+                    $this->newValues,
+                    [
+                        'valueInputOption' => 'RAW'
+                    ]
+                );
+            } catch (\Exception $exception) {
+                dump($exception);
+            }
+    
+            $message = $tableID." successfully wrote values.";
+            dump($message);
         }
         
         public function __construct(
@@ -289,63 +248,11 @@
          */
         public function start(Table $table): void
         {
-//            $message = "Table '".$table->getGoogleSheetId()."' processing...";
-//            $this->log($message);
-//            Log::info($message);
-            
             $this->startTimestamp = time();
-//            $baseFolderID = "";
-
-//            $existingSheets = $this->spreadsheetClientService->getSheets(
-//                $table->getGoogleSheetId()
-////                $table->getTableGuid()."fijy"
-//            );
-
-//            foreach ($table->getGenerators() as $generator)
-//            {
-//                switch($generator->getTargetPlatform())
-//                {
-//                    case "Avito":
-//                        $targetSheets = $this->xmlGeneration->getAvitoTabs();
-//                        break;
-//                    case "Юла":
-//                        $targetSheets = $this->xmlGeneration->getYoulaTabs();
-//                        break;
-//                    case "Яндекс":
-//                        $targetSheets = $this->xmlGeneration->getYandexTabs();
-//                        break;
-//                }
-//
-//                $splitTargetSheets = explode(",", $targetSheets);
-//                foreach ($splitTargetSheets as $targetSheet)
-//                {
-//                    $targetSheet = trim($targetSheet);
-////                    if(!in_array($targetSheet, $existingSheets))
-////                    {
-////                        continue;
-////                    }
-//
-
-//            $quotaUserPrefix = substr($table->getTableGuid(), 0, 10).
-//                (strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet).
-//                "RTJ";
-//
-//                    $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."'...";
-////                    $this->log($message);
-////                    Log::info($message);
-//
-            
             $targetSheet = 'Лист1';
             $this->processSheet(
                 $table->getGoogleSheetId(),
                 $targetSheet
             );
-//                    $this->stopIfTimeout();
-//                }
-//            }
-
-//            $message = "Table '".$table->getGoogleSheetId()."' finished.";
-//            $this->log($message);
-//            Log::info($message);
         }
     }

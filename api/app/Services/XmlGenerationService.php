@@ -222,8 +222,6 @@ class XmlGenerationService implements IXmlGenerationService
      */
     public function generateAvitoXML(string $spreadsheetId, string $targetSheet) : string
     {
-        $quotaUserPrefix = substr($spreadsheetId, 0, 10);
-
         $xml = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>'
             .PHP_EOL."<Ads formatVersion=\"3\" target=\"Avito.ru\">".PHP_EOL;
 
@@ -246,45 +244,31 @@ class XmlGenerationService implements IXmlGenerationService
 
         $existingSheets = $this->spreadsheetClientService->getSheets(
             $spreadsheetId
-//            $quotaUserPrefix."XmlGetSheets"
         );
         foreach ($splitTargetSheets as $targetSheet)
         {
             $targetSheet = trim($targetSheet);
-//            $targetSheetQuotaUserPrefix =
-//                $quotaUserPrefix.(strlen($targetSheet) > 10 ? substr($targetSheet, 0, 10) : $targetSheet);
             if(!in_array($targetSheet, $existingSheets))
             {
                 continue;
             }
     
             try {
-                $headerRange = $targetSheet.'!A1:FZ1';
-                $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                    $spreadsheetId,
-                    $headerRange,
-//                $targetSheetQuotaUserPrefix."XmlGetHeader",
-                    false
-                );
-                $propertyColumns = new TableHeader($headerResponse[0]);
-            } catch(\Exception $exception) {
-                Log::error('Error getting headerResponse on '.$targetSheet.PHP_EOL.$exception->getMessage());
-                throw $exception;
-            }
-
-            try {
-                $range = $targetSheet . '!A2:FZ5001';
+                $range = $targetSheet.'!A1:FZ5001';
                 $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                     $spreadsheetId,
-                    $range,
-//                $targetSheetQuotaUserPrefix."XmlGetContent",
-                    false
+                    $range
                 );
-            } catch(\Exception $exception) {
-                Log::error('Error getting values on '.$targetSheet.PHP_EOL.$exception->getMessage());
+                $propertyColumns = new TableHeader(array_shift($values));
+            } catch (\Exception $exception) {
+                $message = "Error on '". $spreadsheetId."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
+                Log::error($message);
+                
                 throw $exception;
             }
-
+            
+            sleep(1);
+            
             $xml.= $this->createAdsForSheet($values, $propertyColumns, $targetSheet);
         }
 

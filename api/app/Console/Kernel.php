@@ -26,15 +26,6 @@
     use Illuminate\Support\Facades\Log;
     
     class Kernel extends ConsoleKernel {
-        private static function execInBackground($cmd)
-        {
-            if (substr(php_uname(), 0, 7) == "Windows") {
-                pclose(popen("start /B " . $cmd, "r"));
-            } else {
-                exec($cmd . " > /dev/null &");
-            }
-        }
-        
         /**
          * The Artisan commands provided by your application.
          *
@@ -53,37 +44,16 @@
          */
         protected function schedule(Schedule $schedule)
         {
-//            Log::info("CronTab activate");
-            
             $schedule->call(function () {
-                try {
-                    Log::alert("Starting Schedule");
-                    $tableRepository = new TableRepository();
-                    $spreadsheetClientService = new SpreadsheetClientService();
-                    $tables = $tableRepository->getTables();
-    
-                    foreach ($tables as $table) {
-                        Log::info("Table '".$table->getGoogleSheetId()."' started");
-                        if (
-                        $this->isModified(
-                            $table,
-                            $spreadsheetClientService
-                        )
-                        ) {
-                            Log::info("Table '".$table->getGoogleSheetId()."' updating...");
-                            $this->startRandomizeTextJob($table);
-                            $this->startFillImagesJob($table);
-                            $this->startXMLGenerationJob($table);
-                            $this->updateLastModified($table, $tableRepository);
-                        } else {
-                            Log::info("Table '".$table->getGoogleSheetId()."' is up to date.");
-                        }
-                        Log::info("Table '".$table->getGoogleSheetId()."' finished.");
-                    }
-                    Log::alert("Ending Schedule");
-                } catch (Exception $exception) {
-                    Log::error($exception->getMessage());
+                Log::alert("Starting Schedule");
+                $tableRepository = new TableRepository();
+                $spreadsheetClientService = new SpreadsheetClientService();
+                $tables = $tableRepository->getTables();
+                
+                foreach ($tables as $table) {
+                    $this->processTable($table, $tableRepository, $spreadsheetClientService);
                 }
+                Log::alert("Ending Schedule");
             })
                 ->name("Tables2") // имя процесса сбрасывается withoutOverlapping через 24 часа
                 ->withoutOverlapping();
@@ -121,6 +91,32 @@
             })
                 ->name("AmountParser") // имя процесса сбрасывается withoutOverlapping через 24 часа
                 ->withoutOverlapping();
+        }
+        
+        private function processTable(
+            Table $table,
+            ITableRepository $tableRepository,
+            ISpreadsheetClientService $spreadsheetClientService
+        ): void
+        {
+            Log::info("Table '".$table->getGoogleSheetId()."' started");
+            try {
+                if ($this->isModified($table, $spreadsheetClientService)) {
+                    Log::info("Table '".$table->getGoogleSheetId()."' updating...");
+                    $this->startRandomizeTextJob($table);
+                    $this->startFillImagesJob($table);
+                    $this->startXMLGenerationJob($table);
+                    $this->updateLastModified($table, $tableRepository);
+                } else {
+                    Log::info("Table '".$table->getGoogleSheetId()."' is up to date.");
+                }
+            } catch (Exception $exception) {
+                Log::error($exception->getMessage());
+            }
+            Log::info("Table '".$table->getGoogleSheetId()."' finished.");
+            
+            Log::info("sleep 1");
+            sleep(1);
         }
         
         private function isModified(
@@ -204,15 +200,12 @@
         /**
          * @param Table $table
          * @param JobBase $job
-        //         * @param int|null $status
-        //         * @param int $attempts
          */
         private function handleJob(
             Table $table,
             JobBase $job
         ): void
         {
-            
             $actionType = 'starting';
             $this->logTableHandling($table, $job, $actionType);
             
@@ -225,14 +218,14 @@
         
         private function logTableHandling($table, $job, string $actionType): void
         {
-            $message = "Table '" . $table->getGoogleSheetId() . "' " . $actionType . " '" . get_class($job) . "'...";
+            $message = "Table '".$table->getGoogleSheetId()."' ".$actionType." '".get_class($job)."'...";
             Log::info($message);
             echo $message;
         }
         
         private function logTableError(Table $table, Exception $exception): void
         {
-            $message = "Error on '" . $table->getGoogleSheetId() . "'" . PHP_EOL . $exception->getMessage();
+            $message = "Error on '".$table->getGoogleSheetId()."' Kernel".PHP_EOL.$exception->getMessage();
             Log::error($message);
             echo $message;
         }
@@ -241,7 +234,7 @@
         {
             $table->setDateLastModified(time());
             $tableRepository->update($table);
-            Log::info("Table '" . $table->getGoogleSheetId() . "' updated.");
+            Log::info("Table '".$table->getGoogleSheetId()."' updated.");
         }
         
         /**
@@ -251,7 +244,7 @@
          */
         protected function commands()
         {
-            $this->load(__DIR__ . '/Commands');
+            $this->load(__DIR__.'/Commands');
             
             require base_path('routes/console.php');
         }

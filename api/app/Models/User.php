@@ -4,7 +4,7 @@ namespace App\Models;
 
 class User
 {
-    private int $userId;
+    private ?int $userId;
 
     private int $roleId;
 
@@ -21,21 +21,21 @@ class User
     private ?string $notes;
     
     private ?string $name;
-    
-    /**
-     * User constructor.
-     * @param int $userId
-     * @param int $roleId
-     * @param int $dateCreated
-     * @param string|null $phoneNumber
-     * @param string|null $socialNetworkUrl
-     * @param bool $isBlocked
-     * @param string $apiKey
-     * @param string|null $notes
-     * @param string|null $name
-     */
+
+	/**
+	 * User constructor.
+	 * @param int|null    $userId
+	 * @param int         $roleId
+	 * @param int         $dateCreated
+	 * @param string|null $phoneNumber
+	 * @param string|null $socialNetworkUrl
+	 * @param bool        $isBlocked
+	 * @param string      $apiKey
+	 * @param string|null $notes
+	 * @param string|null $name
+	 */
     public function __construct(
-        int $userId,
+        ?int $userId,
         int $roleId,
         int $dateCreated,
         ?string $phoneNumber,
