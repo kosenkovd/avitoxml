@@ -89,8 +89,9 @@
             }
             catch (Exception $exc)
             {
-                Log::error("Error during image list: (folderId: ".$folderPath.", exception: ".$exc->getCode().PHP_EOL.$exc->getMessage().")");
-                echo "Error during image list: (folderId: ".$folderPath.", exception: ".$exc->getCode().PHP_EOL.$exc->getMessage().")".PHP_EOL;
+                $message = "Error on folder ".$folderPath.PHP_EOL.$exc->getCode()." ".$exc->getMessage();
+                Log::error($message);
+                echo $message.PHP_EOL;
                 return [];
             }
         }

@@ -32,6 +32,7 @@
         
         private array $images = [];
         private array $errors = [];
+        private string $errorCell;
         
         public function __construct(
             ISpreadsheetClientService $spreadsheetClientService,
@@ -72,6 +73,8 @@
             $existingSheets = $this->spreadsheetClientService->getSheets(
                 $table->getGoogleSheetId()
             );
+            
+            $this->ensureCreatedRootFolders();
             
             foreach ($table->getGenerators() as $generator) {
                 switch ($generator->getTargetPlatform()) {
@@ -183,8 +186,6 @@
                 return;
             }
             
-            $this->checkAndCreateRootFolders();
-            
             foreach ($values as $numRow => $row) {
                 $this->errors = [];
                 
@@ -204,10 +205,12 @@
                 $this->log($message);
                 Log::info($message);
                 
+                $this->errorCell = SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw).$spreadsheetRowNum;
+                
                 if (!$this->isExistsInRow($row, $propertyColumns->subFolderName)) {
                     $subFolderName = $this->createSubFolderWithContent($row, $propertyColumns);
                     
-                    $this->fillCellWithContentOrErrors(
+                    $this->fillContentCellOrErrorsCell(
                         $tableId,
                         $sheetName,
                         SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName).$spreadsheetRowNum,
@@ -215,13 +218,15 @@
                     );
                     
                     if (is_null($subFolderName)) {
-                        // Errors found in createSubFolderWithContent method
+                        // Errors found in while creating
                         continue;
                     }
                 } else {
                     $subFolderName = trim($row[$propertyColumns->subFolderName]);
-                    
-                    Log::info('already exists '.$subFolderName);
+    
+                    $message = "Table '".$tableId."' folder already exists ".$subFolderName;
+                    $this->log($message);
+                    Log::info($message);
                 }
                 
                 $message = "Table '".$tableId."' folder name ".$subFolderName;
@@ -237,11 +242,9 @@
                 if ($images !== []) {
                     $links = array_map(
                         function (string $image) use ($tableGuid): string {
-                            Log::info($image);
                             $base64 = base64_encode($image);
                             $urlSafeBase64 = preg_replace(['/\+/', '/\//', '/=/'], ['-', '_', ''], $base64);
                             $fileInfo = $urlSafeBase64;
-                            Log::info('base64 '.$fileInfo);
                             return LinkHelper::getPictureDownloadLink($tableGuid, $fileInfo)." ";
                         },
                         $images
@@ -252,13 +255,13 @@
                     $this->log($message.PHP_EOL.$imagesString);
                     Log::info($message);
                 } else {
-                    $imagesString = '';
+                    $imagesString = null;
                     
                     $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
                     $this->errors[] = 'Не найдено фото в папке '.$subFolderPath;
                 }
                 
-                $this->fillCellWithContentOrErrors(
+                $this->fillContentCellOrErrorsCell(
                     $tableId,
                     $sheetName,
                     SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw).$spreadsheetRowNum,
@@ -277,7 +280,7 @@
          * @param string $cell
          * @param string|null $content
          */
-        private function fillCellWithContentOrErrors(
+        private function fillContentCellOrErrorsCell(
             string $tableId,
             string $sheetName,
             string $cell,
@@ -286,6 +289,7 @@
         {
             if (count($this->errors) > 0) {
                 $content = $this->getContentWithErrors();
+                $cell = $this->errorCell;
             }
             
             if (is_null($content)) {
@@ -327,21 +331,18 @@
                 (trim($row[$column]) != '');
         }
         
-        private function checkAndCreateRootFolders(): void
+        private function ensureCreatedRootFolders() :void
         {
             if (!$this->yandexDiskService->exists('/'.self::$rootFolder)) {
                 $this->yandexDiskService->createFolder(self::$rootFolder);
-                Log::info('folder '.self::$rootFolder.' created');
             }
             
             if (!$this->yandexDiskService->exists('/'.self::$rootFolder.'/'.self::$folderWithImages)) {
                 $this->yandexDiskService->createFolder(self::$folderWithImages, self::$rootFolder);
-                Log::info('folder '.self::$folderWithImages.' created');
             }
             
             if (!$this->yandexDiskService->exists('/'.self::$rootFolder.'/'.self::$folderWithFolders)) {
                 $this->yandexDiskService->createFolder(self::$folderWithFolders, self::$rootFolder);
-                Log::info('folder '.self::$folderWithFolders.' created');
             }
         }
         
@@ -411,15 +412,30 @@
                     $this->log("Does folder ".$sourceFolderPath." exist: ".
                         $this->yandexDiskService->exists($sourceFolderPath));
                     
-                    $this->images[$sourceFolder] = $this->yandexDiskService->listFolderImages($sourceFolderPath);
+                    if (!$this->yandexDiskService->exists($sourceFolderPath)) {
+                        $this->log('folder do not exist '.$sourceFolder);
+                        $this->errors[] = 'Не найдена папка '.$sourceFolderPath;
+                        
+                        continue;
+                    }
+                    
+                    $res = $this->yandexDiskService->listFolderImages($sourceFolderPath);
+                    
+                    if (count($res) === 0) {
+                        $sourceFolderPathOld = '/'.$sourceFolderPath.'/';
+                        return $this->yandexDiskService->listFolderImages($sourceFolderPathOld);
+                    }
+                    
+                    $this->images[$sourceFolder] = $res;
                     
                     $this->log($sourceFolderPath." contains ".count($this->images[$sourceFolder]).
                         " images. Loaded them into cache.");
                 }
                 
                 if (count($this->images[$sourceFolder]) == 0) {
-                    Log::error('folder no images in '.$sourceFolder);
+                    $this->log('folder no images in '.$sourceFolder);
                     $this->errors[] = 'Не найдено фото в папке '.$sourceFolderPath;
+                    
                     continue;
                 }
                 
@@ -464,11 +480,14 @@
          */
         private function getImages(string $subFolderName): array
         {
-            if ($subFolderName == '') {
-                return [];
+            $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
+            $res = $this->yandexDiskService->listFolderImages($subFolderPath);
+            
+            if (count($res) === 0) {
+                $subFolderPathOld = '/'.$subFolderName.'/';
+                return $this->yandexDiskService->listFolderImages($subFolderPathOld);
             }
             
-            $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
-            return $this->yandexDiskService->listFolderImages($subFolderPath);
+            return $res;
         }
     }
