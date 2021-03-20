@@ -257,13 +257,12 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
     {
         $query = "
             UPDATE `".$this->config->getTablesTableName()."`
-            SET
-               `googleDriveId` = ?,
-               `dateExpired` = ?,
-               `isDeleted` = ?,
-               `dateDeleted` = ?,
-               `notes` = ?,
-               `dateLastModified` = ?
+            SET `googleDriveId` = ?,
+                `dateExpired` = ?,
+                `isDeleted` = ?,
+                `dateDeleted` = ?,
+                `notes` = ?,
+                `dateLastModified` = ?
             WHERE `id`=?";
     
         $mysqli = $this->connect();
@@ -274,6 +273,7 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
         $dateDeleted = $table->getDateDeleted();
         $notes = $table->getNotes();
         $dateLastModified = $table->getDateLastModified();
+        $tableId = $table->getTableId();
         $statement->bind_param(
             'siiisii',
             $googleDriveId,

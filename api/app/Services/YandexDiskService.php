@@ -43,25 +43,24 @@
          * @throws Exception
          */
         public function createFolder(
-            string $name = null,
-            string $parentId = null,
+            string $folderName = null,
+            string $parentFolderName = null,
             bool $setPermissions = true,
             bool $toRetry = true): ?string
         {
-            if(is_null($name))
+            if(is_null($folderName))
             {
-                $name = strval(time());
+                $folderName = strval(time());
             }
-            if(is_null($parentId))
+            if(is_null($parentFolderName))
             {
-                $folderPath = '/'.$name;
+                $folderPath = '/'.$folderName;
             } else {
-                $folderPath = '/'.$parentId.'/'.$name;
+                $folderPath = '/'.$parentFolderName.'/'.$folderName;
             }
             
             $result = $this->disk->getResource($folderPath)->create();
             
-            var_dump($result->toArray());
             if ($result) {
                 return $folderPath;
             } else {
@@ -71,19 +70,11 @@
         
         /**
          * @inheritDoc
-         */
-        public function getChildFolderByName(string $folderID, string $subFolderName, bool $toRetry = true): ?string
-        {
-            return '/'.$subFolderName.'/';
-        }
-        
-        /**
-         * @inheritDoc
          * @throws Exception
          */
-        public function listFolderImages(string $folderID, bool $toRetry = true): array
+        public function listFolderImages(string $folderPath, bool $toRetry = true): array
         {
-            $folderPath = $this->cleanupPath("/".$folderID);
+            $folderPath = $this->cleanupPath("/".$folderPath);
             
             try
             {
@@ -98,8 +89,8 @@
             }
             catch (Exception $exc)
             {
-                Log::error("Error during image list: (folderId: ".$folderPath.", exception: ".$exc->getMessage().")");
-                echo "Error during image list: (folderId: ".$folderPath.", exception: ".$exc->getMessage().")".PHP_EOL;
+                Log::error("Error during image list: (folderId: ".$folderPath.", exception: ".$exc->getCode().PHP_EOL.$exc->getMessage().")");
+                echo "Error during image list: (folderId: ".$folderPath.", exception: ".$exc->getCode().PHP_EOL.$exc->getMessage().")".PHP_EOL;
                 return [];
             }
         }
@@ -111,8 +102,8 @@
         public function moveFile(
             string $currentPath,
             string $folderID,
-            string $newName = null,
-            bool $toRetry = true): void
+            string $newName = null
+        ): void
         {
             $folderPath = '/'.$folderID.'/';
             
@@ -147,10 +138,8 @@
         /**
          * @inheritDoc
          */
-        public function exists(string $folderID): bool
+        public function exists(string $folderPath): bool
         {
-            $folderPath = "/".$folderID;
-            
             return $this->disk->getResource($folderPath)->has();
         }
         
