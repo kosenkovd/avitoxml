@@ -17,8 +17,8 @@
     use Ramsey\Uuid\Guid\Guid;
     
     class FillImagesJobYandex extends JobBase {
-        private static string $rootFolder = 'Автозагрузка';
-        private static string $folderWithImages = 'Папки_с_фотографиями';
+        private static string $rootFolder = 'Autoz';
+        private static string $folderWithImages = 'Папки_с_фото';
         private static string $folderWithFolders = 'Генератор_папок';
         
         protected IYandexDiskService $yandexDiskService;
@@ -33,6 +33,7 @@
         private array $images = [];
         private array $errors = [];
         private string $errorCell;
+        private array $alreadyUsedImages = [];
         
         public function __construct(
             ISpreadsheetClientService $spreadsheetClientService,
@@ -221,17 +222,35 @@
                         // Errors found in while creating
                         continue;
                     }
-                } else {
-                    $subFolderName = trim($row[$propertyColumns->subFolderName]);
-    
-                    $message = "Table '".$tableId."' folder already exists ".$subFolderName;
+                    
+                    $message = "Table '".$tableId."' folder name - ".$subFolderName;
                     $this->log($message);
                     Log::info($message);
+                } else {
+                    $subFolderName = trim($row[$propertyColumns->subFolderName]);
+                    
+                    $message = "Table '".$tableId."' folder already in row";
+                    $this->log($message);
+                    Log::info($message);
+                    
+                    $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
+                    $subFolderPathOld = '/'.$subFolderName.'/';
+                    if (
+                    !$this->yandexDiskService->exists($subFolderPath)
+                    ) {
+                        if (!$this->yandexDiskService->exists($subFolderPathOld)) {
+                            $this->log('folder do not exist '.$subFolderName);
+                            $this->errors[] = '❗❗ папка '.$subFolderName.' не найдена';;
+                            
+                            $this->fillErrorsCell(
+                                $tableId,
+                                $sheetName
+                            );
+                            
+                            continue;
+                        }
+                    }
                 }
-                
-                $message = "Table '".$tableId."' folder name ".$subFolderName;
-                $this->log($message);
-                Log::info($message);
                 
                 $images = $this->getImages($subFolderName);
                 
@@ -257,8 +276,7 @@
                 } else {
                     $imagesString = null;
                     
-                    $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
-                    $this->errors[] = 'Не найдено фото в папке '.$subFolderPath;
+                    $this->errors[] = '❗ в папке '.$subFolderName.' нет фото';
                 }
                 
                 $this->fillContentCellOrErrorsCell(
@@ -288,6 +306,7 @@
         ): void
         {
             if (count($this->errors) > 0) {
+                $this->errors = array_unique($this->errors);
                 $content = $this->getContentWithErrors();
                 $cell = $this->errorCell;
             }
@@ -302,6 +321,13 @@
                 $cell,
                 $content,
             );
+        }
+        
+        private function fillErrorsCell(string $tableId, string $sheetName): void
+        {
+            if (count($this->errors) > 0) {
+                $this->fillContentCellOrErrorsCell($tableId, $sheetName, '', null);
+            }
         }
         
         private function getContentWithErrors(): string
@@ -331,7 +357,7 @@
                 (trim($row[$column]) != '');
         }
         
-        private function ensureCreatedRootFolders() :void
+        private function ensureCreatedRootFolders(): void
         {
             if (!$this->yandexDiskService->exists('/'.self::$rootFolder)) {
                 $this->yandexDiskService->createFolder(self::$rootFolder);
@@ -368,11 +394,16 @@
                 
                 $newFolderName = crc32(Guid::uuid4()->toString());
                 $newFolderPath = self::$rootFolder.'/'.self::$folderWithImages.'/'.$newFolderName;
+                
                 foreach ($imageCopyData as $imageCopyDatum) {
-                    $this->yandexDiskService->moveFile(
-                        $imageCopyDatum["image"],
-                        $newFolderPath,
-                        $imageCopyDatum["newName"]);
+                    try {
+                        $this->yandexDiskService->moveFile(
+                            $imageCopyDatum["image"],
+                            $newFolderPath,
+                            $imageCopyDatum["newName"]);
+                    } catch (\Exception $exception) {
+                        Log::error("Error on moving images from ".self::$folderWithFolders.". code: ".$exception->getCode().PHP_EOL.$exception->getMessage());
+                    }
                 }
                 
                 return $newFolderName;
@@ -392,6 +423,8 @@
             $maxNumberOfSymbolsInFileNumber = strlen(strval(count($sourceFolders)));
             $imageCopyData = [];
             $imageNumber = 1;
+            
+            $alreadyUsedImages = [];
             foreach ($sourceFolders as $sourceFolder) {
                 $sourceFolder = trim($sourceFolder);
                 
@@ -405,25 +438,27 @@
                     $this->log("Num of images from ".$sourceFolder." is ".
                         count($this->images[$sourceFolder]));
                 } else {
-                    $sourceFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithFolders.'/'.$sourceFolder.'/';
-                    
                     $this->log("Getting images from "
-                        .$sourceFolderPath);
-                    $this->log("Does folder ".$sourceFolderPath." exist: ".
-                        $this->yandexDiskService->exists($sourceFolderPath));
+                        .$sourceFolder);
                     
-                    if (!$this->yandexDiskService->exists($sourceFolderPath)) {
-                        $this->log('folder do not exist '.$sourceFolder);
-                        $this->errors[] = 'Не найдена папка '.$sourceFolderPath;
-                        
-                        continue;
+                    $sourceFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithFolders.'/'.$sourceFolder.'/';
+                    $sourceFolderPathOld = '/'.$sourceFolder.'/';
+                    if (
+                    !$this->yandexDiskService->exists($sourceFolderPath)
+                    ) {
+                        if (!$this->yandexDiskService->exists($sourceFolderPathOld)) {
+                            $this->log('folder do not exist '.$sourceFolder);
+                            $this->errors[] = '❗❗ папка '.$sourceFolder.' не найдена';;
+                            
+                            continue;
+                        }
                     }
                     
                     $res = $this->yandexDiskService->listFolderImages($sourceFolderPath);
                     
                     if (count($res) === 0) {
                         $sourceFolderPathOld = '/'.$sourceFolderPath.'/';
-                        return $this->yandexDiskService->listFolderImages($sourceFolderPathOld);
+                        $res = $this->yandexDiskService->listFolderImages($sourceFolderPathOld);
                     }
                     
                     $this->images[$sourceFolder] = $res;
@@ -434,16 +469,23 @@
                 
                 if (count($this->images[$sourceFolder]) == 0) {
                     $this->log('folder no images in '.$sourceFolder);
-                    $this->errors[] = 'Не найдено фото в папке '.$sourceFolderPath;
+                    $this->errors[] = '❗ в папке '.$sourceFolder.' нет фото';
                     
                     continue;
                 }
                 
-                /** @var $image File */
-                $image = $this->images[$sourceFolder][0];
+                $image = $this->checkAndGetNextImage($sourceFolder, $alreadyUsedImages);
+                if ($image === '') {
+                    Log::error('not enough images in '.$sourceFolder);
+                    $this->errors[] = '❗ в папке '.$sourceFolder.' недостаточно фото';
+                    
+                    continue;
+                }
+                $alreadyUsedImages[] = $image;
                 
                 $filePathArray = explode('/', $image);
                 $imageName = $filePathArray[count($filePathArray) - 1];
+                Log::channel('test')->info($image);
                 $imageCopyData[] = [
                     "image" => $image,
                     "newName" => str_pad(
@@ -457,6 +499,21 @@
             }
             
             return $imageCopyData;
+        }
+        
+        private function checkAndGetNextImage(string $sourceFolder, array $alreadyUsedImages, $i = 0): string
+        {
+            if ($i === count($this->images[$sourceFolder])) {
+                return '';
+            }
+            
+            $image = $this->images[$sourceFolder][$i];
+            if (in_array($image, $alreadyUsedImages)) {
+                $i++;
+                $image = $this->checkAndGetNextImage($sourceFolder, $alreadyUsedImages, $i);
+            }
+            
+            return $image;
         }
         
         /**
@@ -481,10 +538,11 @@
         private function getImages(string $subFolderName): array
         {
             $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
+            $subFolderPathOld = '/'.$subFolderName.'/';
+            
             $res = $this->yandexDiskService->listFolderImages($subFolderPath);
             
             if (count($res) === 0) {
-                $subFolderPathOld = '/'.$subFolderName.'/';
                 return $this->yandexDiskService->listFolderImages($subFolderPathOld);
             }
             
