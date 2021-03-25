@@ -5,6 +5,8 @@ namespace App\Models\Ads;
 use App\Models\TableHeader;
 use DateTime;
 use DateTimeZone;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 abstract class AdBase
 {
@@ -63,47 +65,36 @@ abstract class AdBase
     public function __construct(array $row, TableHeader $propertyColumns)
     {
         $this->id = htmlspecialchars($row[$propertyColumns->ID]);
-        if(isset($row[$propertyColumns->dateCreated]))
-        {
-            if(strpos($row[$propertyColumns->dateCreated], ":"))
-            {
-                $date = DateTime::createFromFormat(
-                    'd.m.Y H:i', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+        
+        if(isset($row[$propertyColumns->dateCreated])) {
+            $dateRaw = $row[$propertyColumns->dateCreated];
+            if(!strpos($dateRaw, ":")) {
+                $dateRaw .= ' 12:00';
             }
-            else
-            {
-                $date = DateTime::createFromFormat(
-                    'd.m.Y', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
-            }
-            if($date !== false)
-            {
+            
+            try {
+                $date = Carbon::createFromTimeString($dateRaw, "Europe/Moscow");
                 $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
+            } catch (\Exception $exception) {
+                Log::error("Error on 'dateBegin'");
             }
-        }
-        else
-        {
+        } else {
             $this->dateBegin = null;
         }
 
-        if(isset($row[$propertyColumns->dateEnd]))
-        {
-            if(strpos($row[$propertyColumns->dateEnd], ":"))
-            {
-                $date = DateTime::createFromFormat(
-                    'd.m.Y H:i', $row[$propertyColumns->dateEnd], new DateTimeZone("Europe/Moscow"));
+        if(isset($row[$propertyColumns->dateEnd])) {
+            $dateRaw = $row[$propertyColumns->dateEnd];
+            if(!strpos($dateRaw, ":")) {
+                $dateRaw .= ' 12:00';
             }
-            else
-            {
-                $date = DateTime::createFromFormat(
-                    'd.m.Y', $row[$propertyColumns->dateEnd], new DateTimeZone("Europe/Moscow"));
+    
+            try {
+                $date = Carbon::createFromTimeString($dateRaw, "Europe/Moscow");
+                $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
+            } catch (\Exception $exception) {
+                Log::error("Error on 'dateEnd'");
             }
-            if($date !== false)
-            {
-                $this->dateEnd = $date->format('Y-m-d\TH:i:sP');
-            }
-        }
-        else
-        {
+        } else {
             $this->dateEnd = null;
         }
 

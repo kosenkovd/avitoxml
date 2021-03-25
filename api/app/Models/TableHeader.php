@@ -29,7 +29,9 @@ class TableHeader {
     public ?int $house = null;
     public ?int $phone = null;
     public ?int $manager = null;
+    public ?int $contactsType = null;
     public ?int $dateCreated = null;
+    public ?int $timezone = null;
     public ?int $goodsGroup = null;
     public ?int $subTypeApparel = null;
     public ?int $size = null;
@@ -148,6 +150,9 @@ class TableHeader {
                 case "менеджер":
                     $this->manager = $colNum;
                     break;
+                case "способсвязи":
+                    $this->contactsType = $colNum;
+                    break;
                 case "типавтозапчастей":
                     $this->autoPart = $colNum;
                     break;
@@ -156,6 +161,9 @@ class TableHeader {
                 case "датапубликации":
                 case "датаивремяпубликации":
                     $this->dateCreated = $colNum;
+                    break;
+                case "часовойпояс":
+                    $this->timezone = $colNum;
                     break;
                 case "группатоваров":
                     $this->goodsGroup = $colNum;

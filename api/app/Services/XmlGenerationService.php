@@ -9,9 +9,7 @@ use App\Models\Ads;
 use App\Models\TableHeader;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
-use DateTime;
-use DateTimeZone;
-use http\Exception;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -115,23 +113,18 @@ class XmlGenerationService implements IXmlGenerationService
         }
         else
         {
-            if(strpos($row[$propertyColumns->dateCreated], ":"))
-            {
-                $date = DateTime::createFromFormat(
-                    'd.m.Y H:i', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
+            $dateRaw = $row[$propertyColumns->dateCreated];
+            if(!strpos($dateRaw, ":")) {
+                $dateRaw .= ' 12:00';
             }
-            else
-            {
-                $date = DateTime::createFromFormat(
-                    'd.m.Y', $row[$propertyColumns->dateCreated], new DateTimeZone("Europe/Moscow"));
-            }
-
-            if($date !== false)
-            {
+    
+            try {
+                $date = Carbon::createFromTimeString($dateRaw, "Europe/Moscow");
+    
                 return !$idFieldPresent || $date->getTimestamp() <= time();
-            }
-            else
-            {
+            } catch (\Exception $exception) {
+                Log::error("Error on 'shouldSkipYandexRow'");
+                
                 return !$idFieldPresent;
             }
         }

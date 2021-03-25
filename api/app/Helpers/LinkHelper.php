@@ -25,7 +25,7 @@ class LinkHelper
      */
     public static function getXmlGeneratorLink(string $tableGuid, string $generatorGuid) : string
     {
-        return "http://avitoxml.beget.tech/api/tables/".$tableGuid."/generators/".$generatorGuid;
+        return "http://xml.agishev-autoz.ru/api/tables/".$tableGuid."/generators/".$generatorGuid;
     }
 
     public static function getPictureDownloadLink(string $tableId, string $fileInfo) : string
