@@ -36,7 +36,7 @@
             
             $this->setTimezone($row, $propertyColumns);
             
-            if (isset($row[$propertyColumns->dateCreated])) {
+            if (isset($row[$propertyColumns->dateCreated]) && $row[$propertyColumns->dateCreated] != '') {
                 $dateRaw = $row[$propertyColumns->dateCreated];
                 if (!strpos($dateRaw, ":")) {
                     $dateRaw .= ' 12:00';
@@ -52,7 +52,7 @@
                 $this->dateBegin = null;
             }
             
-            if (isset($row[$propertyColumns->dateEnd])) {
+            if (isset($row[$propertyColumns->dateEnd]) && $row[$propertyColumns->dateEnd] != '') {
                 $dateRaw = $row[$propertyColumns->dateEnd];
                 if (!strpos($dateRaw, ":")) {
                     $dateRaw .= ' 12:00';
@@ -97,7 +97,7 @@
                 ? htmlspecialchars($row[$propertyColumns->price])
                 : null;
             $this->images = isset($row[$propertyColumns->imagesRaw])
-                ? explode("\n", $row[$propertyColumns->imagesRaw]) // TODO change to linux version
+                ? explode(PHP_EOL, $row[$propertyColumns->imagesRaw])
                 : [];
             $this->videoURL = isset($row[$propertyColumns->videoURL])
                 ? htmlspecialchars($row[$propertyColumns->videoURL])

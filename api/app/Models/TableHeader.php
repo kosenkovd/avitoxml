@@ -28,13 +28,6 @@ class TableHeader {
     public ?int $street = null;
     public ?int $house = null;
     
-    public ?int $address1 = null;
-    public ?int $region1 = null;
-    public ?int $city1 = null;
-    public ?int $area1 = null;
-    public ?int $street1 = null;
-    public ?int $house1 = null;
-    
     public ?int $address2 = null;
     public ?int $region2 = null;
     public ?int $city2 = null;
@@ -90,6 +83,13 @@ class TableHeader {
     public ?int $area9 = null;
     public ?int $street9 = null;
     public ?int $house9 = null;
+    
+    public ?int $address10 = null;
+    public ?int $region10 = null;
+    public ?int $city10 = null;
+    public ?int $area10 = null;
+    public ?int $street10 = null;
+    public ?int $house10 = null;
     
     public ?int $phone = null;
     public ?int $manager = null;
