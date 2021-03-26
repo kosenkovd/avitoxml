@@ -7,6 +7,7 @@
     use App\Configuration\XmlGeneration;
     use App\Helpers\SpreadsheetHelper;
     use App\Models\Table;
+    use App\Models\TableHeader;
     use App\Services\Interfaces\ISpintaxService;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use Illuminate\Support\Facades\Log;
@@ -23,6 +24,8 @@
         
         protected int $maxJobTime = 60 * 60;
         
+        private bool $needsToUpdate = false;
+        
         private XmlGeneration $xmlGeneration;
         
         /**
@@ -32,8 +35,8 @@
          * @param int $patternCol column to take pattern from.
          * @param int $resultCol column to fill in randomized result.
          * @param int $numRow row number, required for spreadsheet update.
-         * @param string $sheetName sheet name, required for spreadsheet update.
          * @param array $row row data.
+         * @return string
          * @throws \Exception
          */
         private function randomizeText(
@@ -41,17 +44,20 @@
             int $patternCol,
             int $resultCol,
             int $numRow,
-            array $row,
-            string $sheetName
-        ): void
+            array $row
+        ): string
         {
             $alreadyFilled = isset($row[$resultCol]) && $row[$resultCol] != '';
             $noSource = !isset($row[$patternCol]) || $row[$patternCol] == '';
             
-            if ($alreadyFilled || $noSource) {
-                return;
+            if ($alreadyFilled) {
+                return $row[$resultCol];
             }
-    
+            
+            if ($noSource) {
+                return '';
+            }
+            
             // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
             $numRow += +2;
             
@@ -59,38 +65,22 @@
             $this->log($message);
             Log::info($message);
             
-            $text = $this->spintaxService->randomize($row[$patternCol]);
-            
-            try {
-                $columnName = SpreadsheetHelper::getColumnLetterByNumber($resultCol);
-                $this->spreadsheetClientService->updateCellContent(
-                    $tableId,
-                    $sheetName,
-                    $columnName.$numRow,
-                    $text
-                );
-            } catch (\Exception $exception) {
-                $message = "Error on '".$tableId."' while randomizing row ".$numRow.PHP_EOL.
-                    $exception->getMessage();
-                $this->log($message);
-                Log::error($message);
-                throw $exception;
-            }
-            
-            sleep(1);
+            $this->needsToUpdate = true;
+            return $this->spintaxService->randomize($row[$patternCol]);
         }
         
         
         /**
          * Randomize text for specified generator.
          *
-         * @param string $tableID Google spreadsheet id.
+         * @param string $tableId Google spreadsheet id.
          * @param string $sheetName sheet name.
          * @throws \Exception
          */
-        private function processSheet(string $tableID, string $sheetName): void
+        private function processSheet(string $tableId, string $sheetName): void
         {
-            [$propertyColumns, $values] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
+            $values = $this->getFullDataFromTable($tableId, $sheetName);
+            $propertyColumns = new TableHeader(array_shift($values));
             
             if ($propertyColumns && empty($values)) {
                 return;
@@ -110,21 +100,48 @@
                     "result" => is_null($propertyColumns->price) ? $propertyColumns->salary : $propertyColumns->price
                 ]
             ];
-            foreach ($values as $numRow => $row) {
-                foreach ($randomizers as $randomizer) {
-                    if (is_null($randomizer["pattern"]) || is_null($randomizer["result"])) {
-                        continue;
-                    }
-                    
-                    $this->randomizeText(
-                        $tableID,
+            
+            foreach ($randomizers as $randomizer) {
+                if (is_null($randomizer["pattern"]) || is_null($randomizer["result"])) {
+                    continue;
+                }
+                
+                $randomizedText = [];
+                foreach ($values as $numRow => $row) {
+                    $randomizedText[$numRow][] = $this->randomizeText(
+                        $tableId,
                         $randomizer["pattern"],
                         $randomizer["result"],
                         $numRow,
-                        $row,
-                        $sheetName,
+                        $row
                     );
                 }
+                
+                if (!$this->needsToUpdate) {
+                    continue;
+                }
+                
+                try {
+                    $columnLetter = SpreadsheetHelper::getColumnLetterByNumber($randomizer['result']);
+                    $range = $sheetName.'!'.$columnLetter.'2:'.$columnLetter.'5001';
+                    $this->spreadsheetClientService->updateSpreadsheetCellsRange(
+                        $tableId,
+                        $range,
+                        $randomizedText,
+                        [
+                            'valueInputOption' => 'RAW'
+                        ]
+                    );
+                } catch (\Exception $exception) {
+                    $message = "Error on '".$tableId."' while writing to table".PHP_EOL.
+                        $exception->getMessage();
+                    $this->log($message);
+                    Log::error($message);
+                    
+                    throw $exception;
+                }
+                
+                sleep(1);
             }
         }
         
@@ -153,7 +170,7 @@
             Log::info($message);
             
             $this->startTimestamp = time();
-            $tableID = $table->getGoogleSheetId();
+            $tableId = $table->getGoogleSheetId();
             
             $existingSheets = $this->spreadsheetClientService->getSheets(
                 $table->getGoogleSheetId()
@@ -184,7 +201,7 @@
                     $this->log($message);
                     Log::info($message);
                     
-                    $this->processSheet($tableID, $targetSheet);
+                    $this->processSheet($tableId, $targetSheet);
                     $this->stopIfTimeout();
                 }
             }

@@ -13,7 +13,6 @@
     use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\Interfaces\IYandexDiskService;
     use Illuminate\Support\Facades\Log;
-    use Leonied7\Yandex\Disk\Item\File;
     use Ramsey\Uuid\Guid\Guid;
     
     class FillImagesJobYandex extends JobBase {
@@ -30,10 +29,13 @@
         protected bool $loggingEnabled = true;
         protected bool $timeoutEnabled = false;
         
+        private int $imagesColumn = 0;
+        private int $subFolderColumn = 1;
+        private int $errorNumColumn = 0;
         private array $images = [];
         private array $errors = [];
-        private string $errorCell;
-        private array $alreadyUsedImages = [];
+        private array $newValues = [];
+        private bool $needsToUpdate = false;
         
         public function __construct(
             ISpreadsheetClientService $spreadsheetClientService,
@@ -182,20 +184,36 @@
         {
             $values = $this->getFullDataFromTable($tableId, $sheetName);
             $propertyColumns = new TableHeader(array_shift($values));
+            $this->newValues = [];
             
             if ($propertyColumns && empty($values)) {
                 return;
             }
             
             foreach ($values as $numRow => $row) {
+                $this->setEmptyNewValuesForRow($numRow);
                 $this->errors = [];
                 
                 $this->stopIfTimeout();
                 
-                if (
-                    $this->isExistsInRow($row, $propertyColumns->imagesRaw) ||
-                    !$this->canFillImages($row, $propertyColumns)
-                ) {
+                if ($this->isExistsInRow($row, $propertyColumns->imagesRaw)) {
+                    $this->fillNewValueWithContent(
+                        $numRow,
+                        $this->imagesColumn,
+                        trim($row[$propertyColumns->imagesRaw])
+                    );
+                    if ($this->isExistsInRow($row, $propertyColumns->subFolderName)) {
+                        $this->fillNewValueWithContent(
+                            $numRow,
+                            $this->subFolderColumn,
+                            trim($row[$propertyColumns->subFolderName])
+                        );
+                    }
+                    
+                    continue;
+                }
+                
+                if (!$this->canFillImages($row, $propertyColumns)) {
                     continue;
                 }
                 
@@ -206,21 +224,26 @@
                 $this->log($message);
                 Log::info($message);
                 
-                $this->errorCell = SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw).$spreadsheetRowNum;
+                $this->needsToUpdate = true;
                 
                 if (!$this->isExistsInRow($row, $propertyColumns->subFolderName)) {
                     $subFolderName = $this->createSubFolderWithContent($row, $propertyColumns);
                     
-                    $this->fillContentCellOrErrorsCell(
-                        $tableId,
-                        $sheetName,
-                        SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName).$spreadsheetRowNum,
-                        $subFolderName
-                    );
-                    
                     if (is_null($subFolderName)) {
-                        // Errors found in while creating
+                        // Errors found while creating
+                        if (!$this->hasErrors()) {
+                            $this->errors[] = 'Неизвестная ошибка';
+                        }
+                        $this->fillNewValueWithErrors($numRow);
+                        
                         continue;
+                    } else {
+                        $this->fillNewValueWithContent(
+                            $numRow,
+                            $this->subFolderColumn,
+                            $subFolderName
+                        );
+                        $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
                     }
                     
                     $message = "Table '".$tableId."' folder name - ".$subFolderName;
@@ -228,111 +251,92 @@
                     Log::info($message);
                 } else {
                     $subFolderName = trim($row[$propertyColumns->subFolderName]);
+                    $this->fillNewValueWithContent(
+                        $numRow,
+                        $this->subFolderColumn,
+                        $subFolderName
+                    );
                     
-                    $message = "Table '".$tableId."' folder already in row";
+                    $message = "Table '".$tableId."' folder '".$subFolderName."' already in row";
                     $this->log($message);
                     Log::info($message);
                     
-                    $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
-                    $subFolderPathOld = '/'.$subFolderName.'/';
-                    if (
-                    !$this->yandexDiskService->exists($subFolderPath)
-                    ) {
-                        if (!$this->yandexDiskService->exists($subFolderPathOld)) {
-                            $this->log('folder do not exist '.$subFolderName);
-                            $this->errors[] = '❗❗ папка '.$subFolderName.' не найдена';;
-                            
-                            $this->fillErrorsCell(
-                                $tableId,
-                                $sheetName
-                            );
-                            
-                            continue;
+                    $subFolderPath = $this->checkAndGetFolder($subFolderName, self::$folderWithImages);
+                    // check errors if folder does not exist
+                    if (is_null($subFolderPath)) {
+                        if (!$this->hasErrors()) {
+                            $this->errors[] = 'Неизвестная ошибка';
                         }
+                        $this->fillNewValueWithErrors($numRow);
+                        
+                        continue;
                     }
                 }
                 
-                $images = $this->getImages($subFolderName);
+                $images = $this->getImages($subFolderPath);
                 
                 $message = "Table '".$tableId."' found ".count($images)." images";
                 $this->log($message);
                 Log::info($message);
                 
                 if ($images !== []) {
-                    $links = array_map(
-                        function (string $image) use ($tableGuid): string {
-                            $base64 = base64_encode($image);
-                            $urlSafeBase64 = preg_replace(['/\+/', '/\//', '/=/'], ['-', '_', ''], $base64);
-                            $fileInfo = $urlSafeBase64;
-                            return LinkHelper::getPictureDownloadLink($tableGuid, $fileInfo)." ";
-                        },
-                        $images
-                    );
-                    $imagesString = join(PHP_EOL, $links);
+                    $imagesString = $this->getEncodedImageString($images, $tableGuid);
                     
                     $message = "Table '".$tableId."' filling ".$spreadsheetRowNum."...";
                     $this->log($message.PHP_EOL.$imagesString);
                     Log::info($message);
-                } else {
-                    $imagesString = null;
                     
-                    $this->errors[] = '❗ в папке '.$subFolderName.' нет фото';
+                    $this->fillNewValueWithContent(
+                        $numRow,
+                        $this->imagesColumn,
+                        $imagesString
+                    );
+                } else {
+                    $this->errors[] = "❗ в папке '".$subFolderName."' нет фото";
+                    $this->fillNewValueWithErrors($numRow);
                 }
-                
-                $this->fillContentCellOrErrorsCell(
-                    $tableId,
-                    $sheetName,
-                    SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw).$spreadsheetRowNum,
-                    $imagesString
-                );
-                
-                sleep(1);
             }
+            
+            $this->fillSheet($tableId, $sheetName, $propertyColumns);
+        }
+        
+        /**
+         * Set empty value due fix php arrays keys
+         *
+         * @param int $numRow
+         */
+        private function setEmptyNewValuesForRow(int $numRow): void
+        {
+            $this->newValues[$numRow][0] = '';
+            $this->newValues[$numRow][1] = '';
         }
         
         /**
          * Fill sheet cell with Content or Errors if any
          *
-         * @param string $tableId
-         * @param string $sheetName
-         * @param string $cell
+         * @param int $numRow
+         * @param int $numColumn
          * @param string|null $content
          */
-        private function fillContentCellOrErrorsCell(
-            string $tableId,
-            string $sheetName,
-            string $cell,
-            ?string $content
+        private function fillNewValueWithContent(
+            int $numRow,
+            int $numColumn,
+            string $content
         ): void
         {
-            if (count($this->errors) > 0) {
-                $this->errors = array_unique($this->errors);
-                $content = $this->getContentWithErrors();
-                $cell = $this->errorCell;
-            }
-            
-            if (is_null($content)) {
-                return;
-            }
-            
-            $this->spreadsheetClientService->updateCellContent(
-                $tableId,
-                $sheetName,
-                $cell,
-                $content,
-            );
+            $this->newValues[$numRow][$numColumn] = $content;
         }
         
-        private function fillErrorsCell(string $tableId, string $sheetName): void
+        private function fillNewValueWithErrors(int $numRow): void
         {
-            if (count($this->errors) > 0) {
-                $this->fillContentCellOrErrorsCell($tableId, $sheetName, '', null);
-            }
+            $errorsUnique = array_unique($this->errors);
+            $errorsString = implode(PHP_EOL, $errorsUnique);
+            $this->newValues[$numRow][$this->errorNumColumn] = $errorsString;
         }
         
-        private function getContentWithErrors(): string
+        private function hasErrors(): bool
         {
-            return implode(PHP_EOL, $this->errors);
+            return count($this->errors) > 0;
         }
         
         /**
@@ -400,14 +404,17 @@
                         $this->yandexDiskService->moveFile(
                             $imageCopyDatum["image"],
                             $newFolderPath,
-                            $imageCopyDatum["newName"]);
+                            $imageCopyDatum["newName"]
+                        );
                     } catch (\Exception $exception) {
-                        Log::error("Error on moving images from ".self::$folderWithFolders.". code: ".$exception->getCode().PHP_EOL.$exception->getMessage());
+                        Log::error("Error on moving images from ".
+                            self::$folderWithFolders.". code: ".$exception->getCode().PHP_EOL.$exception->getMessage());
                     }
                 }
                 
                 return $newFolderName;
             } else {
+                // errors found earlier
                 return null;
             }
         }
@@ -441,26 +448,12 @@
                     $this->log("Getting images from "
                         .$sourceFolder);
                     
-                    $sourceFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithFolders.'/'.$sourceFolder.'/';
-                    $sourceFolderPathOld = '/'.$sourceFolder.'/';
-                    if (
-                    !$this->yandexDiskService->exists($sourceFolderPath)
-                    ) {
-                        if (!$this->yandexDiskService->exists($sourceFolderPathOld)) {
-                            $this->log('folder do not exist '.$sourceFolder);
-                            $this->errors[] = '❗❗ папка '.$sourceFolder.' не найдена';;
-                            
-                            continue;
-                        }
+                    $sourceFolderPath = $this->checkAndGetFolder($sourceFolder, self::$folderWithFolders);
+                    if (is_null($sourceFolderPath)) {
+                        continue;
                     }
                     
-                    $res = $this->yandexDiskService->listFolderImages($sourceFolderPath);
-                    
-                    if (count($res) === 0) {
-                        $sourceFolderPathOld = '/'.$sourceFolderPath.'/';
-                        $res = $this->yandexDiskService->listFolderImages($sourceFolderPathOld);
-                    }
-                    
+                    $res = $this->getFolderImages($sourceFolderPath);
                     $this->images[$sourceFolder] = $res;
                     
                     $this->log($sourceFolderPath." contains ".count($this->images[$sourceFolder]).
@@ -469,23 +462,19 @@
                 
                 if (count($this->images[$sourceFolder]) == 0) {
                     $this->log('folder no images in '.$sourceFolder);
-                    $this->errors[] = '❗ в папке '.$sourceFolder.' нет фото';
+                    $this->errors[] = "❗ в папке '".$sourceFolder."' нет фото";
                     
                     continue;
                 }
                 
                 $image = $this->checkAndGetNextImage($sourceFolder, $alreadyUsedImages);
-                if ($image === '') {
-                    Log::error('not enough images in '.$sourceFolder);
-                    $this->errors[] = '❗ в папке '.$sourceFolder.' недостаточно фото';
-                    
+                if (is_null($image)) {
                     continue;
                 }
                 $alreadyUsedImages[] = $image;
                 
                 $filePathArray = explode('/', $image);
                 $imageName = $filePathArray[count($filePathArray) - 1];
-                Log::channel('test')->info($image);
                 $imageCopyData[] = [
                     "image" => $image,
                     "newName" => str_pad(
@@ -501,10 +490,27 @@
             return $imageCopyData;
         }
         
-        private function checkAndGetNextImage(string $sourceFolder, array $alreadyUsedImages, $i = 0): string
+        /**
+         * @param string $sourceFolderPath
+         * @return string[]
+         */
+        private function getFolderImages(string $sourceFolderPath): array
+        {
+            $res = $this->yandexDiskService->listFolderImages($sourceFolderPath);
+            if (count($res) === 0) {
+                $sourceFolderPathOld = '/'.$sourceFolderPath.'/';
+                $res = $this->yandexDiskService->listFolderImages($sourceFolderPathOld);
+            }
+            
+            return $res;
+        }
+        
+        private function checkAndGetNextImage(string $sourceFolder, array $alreadyUsedImages, $i = 0): ?string
         {
             if ($i === count($this->images[$sourceFolder])) {
-                return '';
+                Log::error('not enough images in '.$sourceFolder);
+                $this->errors[] = "❗ в папке '".$sourceFolder."' недостаточно фото";
+                return null;
             }
             
             $image = $this->images[$sourceFolder][$i];
@@ -532,20 +538,78 @@
         /**
          * Get Images from Yandex Disk.
          *
-         * @param string $subFolderName folder name.
+         * @param string $subFolderPath folder path.
          * @return array images in folder
          */
-        private function getImages(string $subFolderName): array
+        private function getImages(string $subFolderPath): array
         {
-            $subFolderPath = '/'.self::$rootFolder.'/'.self::$folderWithImages.'/'.$subFolderName.'/';
-            $subFolderPathOld = '/'.$subFolderName.'/';
+            return $this->yandexDiskService->listFolderImages($subFolderPath);
+        }
+        
+        private function getEncodedImageString(array $images, string $tableGuid): string
+        {
+            $links = array_map(
+                function (string $image) use ($tableGuid): string {
+                    $base64 = base64_encode($image);
+                    $urlSafeBase64 = preg_replace(['/\+/', '/\//', '/=/'], ['-', '_', ''], $base64);
+                    $fileInfo = $urlSafeBase64;
+                    return LinkHelper::getPictureDownloadLink($tableGuid, $fileInfo)." ";
+                },
+                $images
+            );
+            return join(PHP_EOL, $links);
+        }
+        
+        private function checkAndGetFolder(string $folderName, string $subRootFolder): ?string
+        {
+            $folderPath = '/'.self::$rootFolder.'/'.$subRootFolder.'/'.$folderName.'/';
+            $folderPathOld = '/'.$folderName.'/';
             
-            $res = $this->yandexDiskService->listFolderImages($subFolderPath);
-            
-            if (count($res) === 0) {
-                return $this->yandexDiskService->listFolderImages($subFolderPathOld);
+            if (!$this->yandexDiskService->exists($folderPath)) {
+                if (!$this->yandexDiskService->exists($folderPathOld)) {
+                    $this->log('folder do not exist '.$folderName);
+                    $this->errors[] = "❗❗ папка '".$folderName."' не найдена";
+                    
+                    return null;
+                }
+                
+                return $folderPathOld;
             }
             
-            return $res;
+            return $folderPath;
+        }
+        
+        private function fillSheet(string $tableId, string $sheetName, TableHeader $propertyColumns): void
+        {
+            if (!$this->needsToUpdate) {
+                $message = "Table '".$tableId."' is already filled.";
+                Log::info($message);
+                return;
+            }
+            
+            $columnLetterImages = SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->imagesRaw);
+            $columnLetterSubFolder = SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->subFolderName);
+            $range = $sheetName.'!'.$columnLetterImages.'2:'.$columnLetterSubFolder.'5001';
+            
+            $message = "Table '".$tableId."' writing values to table...";
+            Log::info($message);
+            
+            try {
+                $this->spreadsheetClientService->updateSpreadsheetCellsRange(
+                    $tableId,
+                    $range,
+                    $this->newValues,
+                    [
+                        'valueInputOption' => 'RAW'
+                    ]
+                );
+            } catch (\Exception $exception) {
+                $message = "Error on '".$tableId."' while writing to table".PHP_EOL.
+                    $exception->getMessage();
+                $this->log($message);
+                Log::error($message);
+                
+                throw $exception;
+            }
         }
     }

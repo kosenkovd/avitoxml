@@ -45,10 +45,19 @@
         private function processSheet(Table $table, Generator $generator): void
         {
             try {
-                $content = $this->xmlGenerationService->generateAvitoXML(
-                    $table->getGoogleSheetId(),
-                    $generator->getTargetPlatform()
-                );
+                switch ($generator->getTargetPlatform()) {
+                    case "Яндекс":
+                        $content = $this->xmlGenerationService->generateYandexXML(
+                            $table->getGoogleSheetId(),
+                            $generator->getTargetPlatform()
+                        );
+                        break;
+                    default:
+                        $content = $this->xmlGenerationService->generateAvitoXML(
+                            $table->getGoogleSheetId(),
+                            $generator->getTargetPlatform()
+                        );
+                }
                 $this->generatorRepository->setLastGeneration($generator->getGeneratorId(), $content);
             } catch (Exception $exception) {
                 $message = "Error on '".$table->getGoogleSheetId()."' while processSheet".PHP_EOL.

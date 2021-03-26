@@ -9,6 +9,7 @@ use App\Models\Ads;
 use App\Models\TableHeader;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
+use DateTimeZone;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -119,9 +120,8 @@ class XmlGenerationService implements IXmlGenerationService
             }
     
             try {
-                $date = Carbon::createFromTimeString($dateRaw, "Europe/Moscow");
-    
-                return !$idFieldPresent || $date->getTimestamp() <= time();
+                $date = Carbon::createFromTimeString($dateRaw, new DateTimeZone("Europe/Moscow"));
+                return !$idFieldPresent || $date->getTimestamp() > time();
             } catch (\Exception $exception) {
                 Log::error("Error on 'shouldSkipYandexRow'");
                 
@@ -131,76 +131,105 @@ class XmlGenerationService implements IXmlGenerationService
     }
 
     /**
-     * Create ads from sheet rows.
+     * Create ads from sheet rows for Avito.
      *
      * @param array $values rows from sheet.
      * @param TableHeader $propertyColumns
      * @param string $targetSheet
      * @return string generated ads.
      */
-    private function createAdsForSheet(array $values, TableHeader $propertyColumns, string $targetSheet): string
+    private function createAdsForAvitoSheet(array $values, TableHeader $propertyColumns, string $targetSheet): string
     {
         $xml = "";
-        foreach ($values as $numRow => $row)
-        {
-            if($this->shouldSkipRow($row, $propertyColumns, $targetSheet))
-            {
+        foreach ($values as $numRow => $row) {
+            if($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
                 continue;
             }
 
-            $category = $row[$propertyColumns->category];
-            switch(trim($category))
-            {
-                case "Велосипеды":
-                    $ad = new Ads\BicycleAd($row, $propertyColumns);
-                    break;
-                case "Вакансии":
-                    $ad = new Ads\JobAd($row, $propertyColumns);
-                    break;
-                case "Предложение услуг":
-                    $ad = new Ads\ServiceAd($row, $propertyColumns);
-                    break;
-                case "Одежда, обувь, аксессуары":
-                case "Детская одежда и обувь":
-                    $ad = new Ads\ClothingAd($row, $propertyColumns);
-                    break;
-                case "Собаки":
-                case "Кошки":
-                    $ad = new Ads\PetAd($row, $propertyColumns);
-                    break;
-                case "Запчасти и аксессуары":
-                    $ad = new Ads\AvitoAutoPartAd($row, $propertyColumns);
-                    break;
-                case "Ремонт и строительство":
-                    if($this->isConstructionMaterial($row, $propertyColumns))
-                    {
-                        $ad = new Ads\ConstructionMaterialAd($row, $propertyColumns);
-                    }
-                    else
-                    {
-                        $ad = new Ads\GeneralAd($row, $propertyColumns);
-                    }
-                    break;
-                case "Запчасти и автотовары":
-                    if($this->isAutoPart($row, $propertyColumns))
-                    {
-                        $ad = new Ads\AutoPartAd($row, $propertyColumns);
-                    }
-                    else
-                    {
-                        $ad = new Ads\GeneralAd($row, $propertyColumns);
-                    }
-                    break;
-                default:
-                    $ad = new Ads\GeneralAd($row, $propertyColumns);
-            }
+            $ad = $this->getAvitoAd($row, $propertyColumns);
 
             $xml.= $ad->toAvitoXml().PHP_EOL;
         }
 
         return $xml;
     }
-
+    
+    private function getAvitoAd(array $row, TableHeader $propertyColumns): Ads\AdBase
+    {
+        $category = $row[$propertyColumns->category];
+        switch(trim($category))
+        {
+            case "Велосипеды":
+                $ad = new Ads\BicycleAd($row, $propertyColumns);
+                break;
+            case "Вакансии":
+                $ad = new Ads\JobAd($row, $propertyColumns);
+                break;
+            case "Предложение услуг":
+                $ad = new Ads\ServiceAd($row, $propertyColumns);
+                break;
+            case "Одежда, обувь, аксессуары":
+            case "Детская одежда и обувь":
+                $ad = new Ads\ClothingAd($row, $propertyColumns);
+                break;
+            case "Собаки":
+            case "Кошки":
+                $ad = new Ads\PetAd($row, $propertyColumns);
+                break;
+            case "Запчасти и аксессуары":
+                $ad = new Ads\AvitoAutoPartAd($row, $propertyColumns);
+                break;
+            case "Ремонт и строительство":
+                if($this->isConstructionMaterial($row, $propertyColumns))
+                {
+                    $ad = new Ads\ConstructionMaterialAd($row, $propertyColumns);
+                }
+                else
+                {
+                    $ad = new Ads\GeneralAd($row, $propertyColumns);
+                }
+                break;
+            case "Запчасти и автотовары":
+                if($this->isAutoPart($row, $propertyColumns))
+                {
+                    $ad = new Ads\AutoPartAd($row, $propertyColumns);
+                }
+                else
+                {
+                    $ad = new Ads\GeneralAd($row, $propertyColumns);
+                }
+                break;
+            default:
+                $ad = new Ads\GeneralAd($row, $propertyColumns);
+        }
+        
+        return $ad;
+    }
+    
+    /**
+     * Create ads from sheet rows for Yandex.
+     *
+     * @param array $values rows from sheet.
+     * @param TableHeader $propertyColumns
+     * @param string $targetSheet
+     * @return string generated ads.
+     */
+    private function createAdsForYandexSheet(array $values, TableHeader $propertyColumns, string $targetSheet): string
+    {
+        $xml = "";
+        foreach ($values as $numRow => $row) {
+            if($this->shouldSkipRow($row, $propertyColumns, $targetSheet))
+            {
+                continue;
+            }
+            
+            $ad = new Ads\YandexAd($row, $propertyColumns);
+            
+            $xml.= $ad->toYandexXml().PHP_EOL;
+        }
+    
+        return $xml;
+    }
 
     public function __construct(
         ISpreadsheetClientService $spreadsheetClientService, SheetNames $sheetNames, XmlGeneration $xmlGeneration)
@@ -262,9 +291,64 @@ class XmlGenerationService implements IXmlGenerationService
             
             sleep(1);
             
-            $xml.= $this->createAdsForSheet($values, $propertyColumns, $targetSheet);
+            $xml.= $this->createAdsForAvitoSheet($values, $propertyColumns, $targetSheet);
         }
 
         return $xml.'</Ads>';
+    }
+    
+    /**
+     * @inheritDoc
+     */
+    public function generateYandexXML(string $spreadsheetId, string $targetSheet) : string
+    {
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
+            '<feed version="1">'.PHP_EOL.
+            '<offers>'.PHP_EOL;
+    
+        switch($targetSheet) {
+            case "Яндекс":
+                $targetSheets = $this->xmlGeneration->getYandexTabs();
+                break;
+            default:
+                return $xml.'</offers>'.PHP_EOL.
+                    '</feed>';
+        }
+    
+        $splitTargetSheets = explode(",", $targetSheets);
+
+        $existingSheets = $this->spreadsheetClientService->getSheets(
+            $spreadsheetId
+        );
+    
+        foreach ($splitTargetSheets as $targetSheet)
+        {
+            $targetSheet = trim($targetSheet);
+            if(!in_array($targetSheet, $existingSheets))
+            {
+                continue;
+            }
+        
+            try {
+                $range = $targetSheet.'!A1:FZ5001';
+                $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                    $spreadsheetId,
+                    $range
+                );
+                $propertyColumns = new TableHeader(array_shift($values));
+            } catch (\Exception $exception) {
+                $message = "Error on '". $spreadsheetId."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
+                Log::error($message);
+            
+                throw $exception;
+            }
+        
+            sleep(1);
+        
+            $xml.= $this->createAdsForYandexSheet($values, $propertyColumns, $targetSheet);
+        }
+    
+        return $xml.'</offers>'.PHP_EOL.
+            '</feed>';
     }
 }
