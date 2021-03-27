@@ -4,14 +4,15 @@
     
     use App\Models\Dict\UlaCategory;
     use App\Models\TableHeader;
-
+    
     class UlaAd extends AdBase {
         protected ?UlaCategory $ulaCategory;
         
-        /** @var UlaCategory[]  */
+        /** @var UlaCategory[] */
         protected array $ulaCategories;
         
         protected ?string $subCategory;
+        protected ?string $autoPart;
         protected ?string $urlAd;
         
         public function __construct(array $row, TableHeader $propertyColumns, $ulaCategories)
@@ -21,12 +22,15 @@
             $this->ulaCategories = $ulaCategories;
             
             $this->urlAd = isset($row[$propertyColumns->urlAd])
-                ? htmlspecialchars($row[$propertyColumns->urlAd])
+                ? htmlspecialchars(trim($row[$propertyColumns->urlAd]))
                 : null;
             $this->subCategory = isset($row[$propertyColumns->goodsType])
                 ? htmlspecialchars($row[$propertyColumns->goodsType])
                 : null;
-    
+            $this->autoPart = isset($row[$propertyColumns->autoPart])
+                ? htmlspecialchars($row[$propertyColumns->autoPart])
+                : null;
+            
             $this->description = null;
             if (isset($row[$propertyColumns->description])) {
                 $this->description = str_replace("\n\r", "\n", $row[$propertyColumns->description]);
@@ -57,12 +61,16 @@ ULAXML;
         {
             $ulaCategory = $this->generateUlaCategory();
             $ulaSubCategory = $this->generateUlaSubCategory();
-    
+            $ulaAutoPartCategory = $this->generateUlaAutoPartCategory();
+            $condition = $this->generateCondition();
+            
             $imageTags = $this->generateImageUlaTags($this->images);
             
             $resultXml = $this->addTagIfPropertySet($this->urlAd, "url");
             $resultXml .= $this->addTagIfPropertySet($ulaCategory, "youlaCategoryId");
             $resultXml .= $this->addTagIfPropertySet($ulaSubCategory, "youlaSubcategoryId");
+            $resultXml .= $this->addTagIfPropertySet($ulaAutoPartCategory, "avtozapchasti_tip");
+            $resultXml .= $condition;
             $resultXml .= $this->addTagIfPropertySet($this->address, "address");
             $resultXml .= $this->addTagIfPropertySet($this->price, "price");
             $resultXml .= $this->addTagIfPropertySet($this->contactPhone, "phone");
@@ -76,10 +84,13 @@ ULAXML;
         
         protected function generateUlaCategory(): string
         {
-            $category = mb_strtolower(preg_replace('/\s/i', "", $this->category));
+            if (!$this->category) {
+                return "";
+            }
+            $name = mb_strtolower(preg_replace('/\s/i', "", $this->category));
             
             foreach ($this->ulaCategories as $ulaCategory) {
-                if ($ulaCategory->getName() === $category) {
+                if ($ulaCategory->getName() === $name) {
                     return $ulaCategory->getId();
                 }
             }
@@ -88,13 +99,77 @@ ULAXML;
         
         protected function generateUlaSubCategory(): string
         {
-            $category = mb_strtolower(preg_replace('/\s/i', "", $this->subCategory));
-    
+            if (!$this->subCategory) {
+                return "";
+            }
+            $name = mb_strtolower(preg_replace('/\s/i', "", $this->subCategory));
+            
             foreach ($this->ulaCategories as $ulaCategory) {
-                if ($ulaCategory->getName() === $category) {
+                if ($ulaCategory->getName() === $name) {
                     return $ulaCategory->getId();
                 }
             }
+            return "";
+        }
+        
+        protected function generateUlaAutoPartCategory(): string
+        {
+            if (!$this->autoPart) {
+                return "";
+            }
+            $name = mb_strtolower(preg_replace('/\s/i', "", $this->autoPart));
+            
+            foreach ($this->ulaCategories as $ulaCategory) {
+                if ($ulaCategory->getName() === $name) {
+                    return $ulaCategory->getId();
+                }
+            }
+            return "";
+        }
+        
+        protected function generateCondition(): string
+        {
+            $name = mb_strtolower(preg_replace('/\s/i', "", $this->condition));
+
+            switch ($name) {
+                case "выезднадом":
+                    $id = 167448;
+                    return $this->addTagIfPropertySet($id, "okazanie_uslug");
+                case "всалоне":
+                    $id = 167449;
+                    return $this->addTagIfPropertySet($id, "okazanie_uslug");
+                case "домаумастера":
+                    $id = 167450;
+                    return $this->addTagIfPropertySet($id, "okazanie_uslug");
+            }
+
+            $subCategoryName = mb_strtolower(preg_replace('/\s/i', "", $this->subCategory));
+            switch ($subCategoryName) {
+                case "запчасти":
+                case "шиныидиски":
+                    switch ($name) {
+                        case "б/у":
+                        case "used":
+                            $id = 165659;
+                            return $this->addTagIfPropertySet($id, "zapchast_sostoyanie");
+                        case "новое":
+                        case "new":
+                            $id = 165658;
+                            return $this->addTagIfPropertySet($id, "zapchast_sostoyanie");
+                    }
+            }
+
+            switch ($name) {
+                case "б/у":
+                case "used":
+                    $id = 166110;
+                    return $this->addTagIfPropertySet($id, "sostojanie_garderob");
+                case "новое":
+                case "new":
+                    $id = 166111;
+                    return $this->addTagIfPropertySet($id, "sostojanie_garderob");
+            }
+
             return "";
         }
         

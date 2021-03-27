@@ -255,7 +255,6 @@ class XmlGenerationService implements IXmlGenerationService
             {
                 continue;
             }
-            
             $ad = new Ads\UlaAd($row, $propertyColumns, $ulaCategories);
             
             $xml.= $ad->toUlaXml().PHP_EOL;
@@ -392,8 +391,8 @@ class XmlGenerationService implements IXmlGenerationService
     
     public function generateUlaXML(string $spreadsheetId, string $targetSheet): string
     {
-        $defaultTime = Carbon::createFromTimeString('12:00', new DateTimeZone("Europe/Moscow"))
-            ->format('Y-m-d\TH:i:sP');
+        $defaultTime = Carbon::now(new DateTimeZone("Europe/Moscow"))
+            ->format('Y-m-d H:i:s');
         
         switch ($targetSheet) {
             case "Юла":
@@ -437,21 +436,7 @@ class XmlGenerationService implements IXmlGenerationService
         
             sleep(1);
     
-//            if (isset($row[$propertyColumns->dateCreated]) && $row[$propertyColumns->dateCreated] != '') {
-//                $dateRaw = $row[$propertyColumns->dateCreated];
-//                if (!strpos($dateRaw, ":")) {
-//                    $dateRaw .= ' 12:00';
-//                }
-//
-//                try {
-//                    $date = Carbon::createFromTimeString($dateRaw, new DateTimeZone("Europe/Moscow"));
-//                    $dateBegin = $date->format('Y-m-d\TH:i:sP');
-//                } catch (\Exception $exception) {
-//                    Log::error("Error on '".$dateRaw."'");
-//                }
-//            } else {
-                $dateBegin = $defaultTime;
-//            }
+            $dateBegin = $defaultTime;
             
             $xml = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
                 '<yml_catalog date="'.$dateBegin.'">'.PHP_EOL.
