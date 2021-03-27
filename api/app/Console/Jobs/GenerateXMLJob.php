@@ -46,6 +46,12 @@
         {
             try {
                 switch ($generator->getTargetPlatform()) {
+                    case "Юла":
+                        $content = $this->xmlGenerationService->generateUlaXML(
+                            $table->getGoogleSheetId(),
+                            $generator->getTargetPlatform()
+                        );
+                        break;
                     case "Яндекс":
                         $content = $this->xmlGenerationService->generateYandexXML(
                             $table->getGoogleSheetId(),

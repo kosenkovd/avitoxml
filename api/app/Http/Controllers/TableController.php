@@ -6,6 +6,7 @@ use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Console\Jobs\FillAmountJob;
 use App\Console\Jobs\FillImagesJobYandex;
+use App\Console\Jobs\GenerateXMLJob;
 use App\Console\Jobs\RandomizeTextJob;
 use App\DTOs\ErrorResponse;
 use App\DTOs\TableDTO;
@@ -21,17 +22,22 @@ use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IYandexDiskService;
 use App\Services\SpintaxService;
 use App\Services\SpreadsheetClientService;
+use App\Services\XmlGenerationService;
 use App\Services\YandexDiskService;
+use Http\Client\Exception\HttpException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
 
+use App\Models;
 use App\Mappers\TableDtoMapper;
 use App\Repositories\Interfaces;
 use App\Enums\Roles;
 use JsonMapper;
 use Ramsey\Uuid\Guid\Guid;
+use Symfony\Component\HttpFoundation\Exception\JsonException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
  * Class TableController
@@ -80,11 +86,6 @@ class TableController extends BaseController
      */
     private SheetNames $sheetNamesConfig;
 
-	/**
-	 * @var User authenticated user through query hash
-	 */
-	private User $currentUser;
-
 	private JsonMapper $jsonMapper;
 
 	public function __construct(
@@ -107,8 +108,6 @@ class TableController extends BaseController
         $this->sheetNamesConfig = $sheetNames;
         $this->jsonMapper = $jsonMapper;
         $this->roles = new Roles();
-
-        $this->currentUser = request()->input("currentUser");
     }
 
     /**
@@ -233,7 +232,7 @@ class TableController extends BaseController
 //        $client->init("AgAAAAAMMp_iAAbO9-TN2FLhf0a7kQr5Ju2mlII");
 //        $resp = $client->listFolderImages("Виджеты");
 //        dd($resp);
-        return response("", 200);
+        return response()->json('',200);
     }
 
     /**
@@ -245,11 +244,11 @@ class TableController extends BaseController
      */
     public function store(Request $request) : JsonResponse
     {
-        $this->createTable($this->currentUser->getUserId());
-        // work in progress
-        die();
+        $user = $request->input("currentUser");
         
-    	if ($this->currentUser->getRoleId() !== $this->roles->Admin) {
+        $this->createTable($user->getUserId());
+        
+    	if ($user->getRoleId() !== $this->roles->Admin) {
     		return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
 		}
 

@@ -7,6 +7,7 @@ use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Models\Ads;
 use App\Models\TableHeader;
+use App\Repositories\Interfaces\IDictRepository;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
 use DateTimeZone;
@@ -34,6 +35,11 @@ class XmlGenerationService implements IXmlGenerationService
      * @var XmlGeneration xml generation configs.
      */
     private XmlGeneration $xmlGeneration;
+
+    /**
+     * @var IDictRepository dict repository.
+     */
+    private IDictRepository $dictRepository;
 
     /**
      * Checks if row contains all required properties.
@@ -230,13 +236,45 @@ class XmlGenerationService implements IXmlGenerationService
     
         return $xml;
     }
+    
+    /**
+     * Create ads from sheet rows for Ula.
+     *
+     * @param array $values rows from sheet.
+     * @param TableHeader $propertyColumns
+     * @param string $targetSheet
+     * @return string generated ads.
+     */
+    private function createAdsForUlaSheet(array $values, TableHeader $propertyColumns, string $targetSheet): string
+    {
+        $ulaCategories = $this->dictRepository->getUlaCategories();
+        
+        $xml = "";
+        foreach ($values as $numRow => $row) {
+            if($this->shouldSkipRow($row, $propertyColumns, $targetSheet))
+            {
+                continue;
+            }
+            
+            $ad = new Ads\UlaAd($row, $propertyColumns, $ulaCategories);
+            
+            $xml.= $ad->toUlaXml().PHP_EOL;
+        }
+    
+        return $xml;
+    }
 
     public function __construct(
-        ISpreadsheetClientService $spreadsheetClientService, SheetNames $sheetNames, XmlGeneration $xmlGeneration)
+        ISpreadsheetClientService $spreadsheetClientService,
+        SheetNames $sheetNames,
+        XmlGeneration $xmlGeneration,
+        IDictRepository $dictRepository
+    )
     {
         $this->spreadsheetClientService = $spreadsheetClientService;
         $this->sheetNamesConfig = $sheetNames;
         $this->xmlGeneration = $xmlGeneration;
+        $this->dictRepository = $dictRepository;
     }
 
     /**
@@ -350,5 +388,82 @@ class XmlGenerationService implements IXmlGenerationService
     
         return $xml.'</offers>'.PHP_EOL.
             '</feed>';
+    }
+    
+    public function generateUlaXML(string $spreadsheetId, string $targetSheet): string
+    {
+        $defaultTime = Carbon::createFromTimeString('12:00', new DateTimeZone("Europe/Moscow"))
+            ->format('Y-m-d\TH:i:sP');
+        
+        switch ($targetSheet) {
+            case "Юла":
+                $targetSheets = $this->xmlGeneration->getYoulaTabs();
+                break;
+            default:
+                $xml = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
+                    '<yml_catalog date="'.$defaultTime.'">'.PHP_EOL.
+                    '<shop>'.PHP_EOL.
+                    '<offers>'.PHP_EOL.
+                    '</offers>'.PHP_EOL.
+                    '</shop>'.PHP_EOL.
+                    '</yml_catalog>';
+        }
+    
+        $splitTargetSheets = explode(",", $targetSheets);
+    
+        $existingSheets = $this->spreadsheetClientService->getSheets(
+            $spreadsheetId
+        );
+    
+        foreach ($splitTargetSheets as $targetSheet) {
+            $targetSheet = trim($targetSheet);
+            if (!in_array($targetSheet, $existingSheets)) {
+                continue;
+            }
+        
+            try {
+                $range = $targetSheet.'!A1:FZ5001';
+                $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                    $spreadsheetId,
+                    $range
+                );
+                $propertyColumns = new TableHeader(array_shift($values));
+            } catch (\Exception $exception) {
+                $message = "Error on '".$spreadsheetId."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
+                Log::error($message);
+            
+                throw $exception;
+            }
+        
+            sleep(1);
+    
+//            if (isset($row[$propertyColumns->dateCreated]) && $row[$propertyColumns->dateCreated] != '') {
+//                $dateRaw = $row[$propertyColumns->dateCreated];
+//                if (!strpos($dateRaw, ":")) {
+//                    $dateRaw .= ' 12:00';
+//                }
+//
+//                try {
+//                    $date = Carbon::createFromTimeString($dateRaw, new DateTimeZone("Europe/Moscow"));
+//                    $dateBegin = $date->format('Y-m-d\TH:i:sP');
+//                } catch (\Exception $exception) {
+//                    Log::error("Error on '".$dateRaw."'");
+//                }
+//            } else {
+                $dateBegin = $defaultTime;
+//            }
+            
+            $xml = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
+                '<yml_catalog date="'.$dateBegin.'">'.PHP_EOL.
+                '<shop>'.PHP_EOL.
+                '<offers>'.PHP_EOL;
+        
+            $xml .= $this->createAdsForUlaSheet($values, $propertyColumns, $targetSheet);
+            return $xml.'</offers>'.PHP_EOL.
+                '</shop>'.PHP_EOL.
+                '</yml_catalog>';
+        }
+        
+        return $xml;
     }
 }

@@ -21,6 +21,7 @@ class TableHeader {
     public ?int $subFolderName = null;
     public ?int $imagesRaw = null;
     public ?int $videoURL = null;
+    public ?int $urlAd = null;
     public ?int $address = null;
     public ?int $region = null;
     public ?int $city = null;
@@ -188,6 +189,9 @@ class TableHeader {
                     break;
                 case "ссылканавидео":
                     $this->videoURL = $colNum;
+                    break;
+                case "ссылканаобъявление":
+                    $this->urlAd = $colNum;
                     break;
                 case "адрес":
                     $this->address = $colNum;

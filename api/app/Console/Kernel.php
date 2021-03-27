@@ -11,6 +11,7 @@
     use App\Console\Jobs\JobBase;
     use App\Console\Jobs\RandomizeTextJob;
     use App\Models\Table;
+    use App\Repositories\DictRepository;
     use App\Repositories\GeneratorRepository;
     use App\Repositories\Interfaces\ITableRepository;
     use App\Repositories\TableRepository;
@@ -190,7 +191,8 @@
                     new XmlGenerationService(
                         new SpreadsheetClientService(),
                         new SheetNames(),
-                        new XmlGeneration()
+                        new XmlGeneration(),
+                        new DictRepository()
                     ),
                     new SheetNames()
                 ))
