@@ -10,6 +10,7 @@ class Config {
     private string $usersTableName;
     private string $tablesTableName;
     private string $tableUpdateLockTableName;
+    private string $tableUlaName;
     private string $generatorsTableName;
     private string $copySpreadsheetId;
     private string $baseFolderId;
@@ -27,6 +28,14 @@ class Config {
                 $this->$key = strval($value);
             }
         }
+    }
+    
+    /**
+     * @return string
+     */
+    public function getTableUlaName(): string
+    {
+        return $this->tableUlaName;
     }
 
     /**
