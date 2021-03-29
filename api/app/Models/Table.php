@@ -72,6 +72,16 @@ class Table {
         $this->dateLastModified = $dateLastModified;
         $this->generators = $generators;
     }
+    
+    /**
+     * @param int|null $dateExpired
+     * @return Table
+     */
+    public function setDateExpired(?int $dateExpired): Table
+    {
+        $this->dateExpired = $dateExpired;
+        return $this;
+    }
 
     /**
      * @return ?string

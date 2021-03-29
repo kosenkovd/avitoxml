@@ -53,4 +53,12 @@ interface ITableRepository
      * @throws Exception
      */
     public function updateYandexToken(int $tableId, string $yandexToken) : void;
+
+	/**
+	 * Delete table
+	 *
+	 * @param int $tableId
+	 * @return bool
+	 */
+    public function delete(int $tableId) : bool;
 }

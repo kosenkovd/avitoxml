@@ -11,46 +11,34 @@ class TableDTO extends TableDtoBase
     public bool $isActive;
 
     public bool $isYandexTokenPresent;
-
+    
     /**
-     * TableDTO constructor.
-     * @param int $tableId
-     * @param int $userId
-     * @param string|null $userPhoneNumber
-     * @param string|null $userSocialNetworkUrl
-     * @param string $googleSheetUrl
-     * @param string|null $googleDriveUrl
-     * @param GeneratorDTO[] $generators
-     * @param string|null $notes
      * @param string|null $dateExpired
-     * @param bool $isActive
-     * @param bool $isYandexTokenPresent
+     * @return TableDTO
      */
-    public function __construct(
-        int $tableId,
-        int $userId,
-        ?string $userPhoneNumber,
-        ?string $userSocialNetworkUrl,
-        string $googleSheetUrl,
-        ?string $googleDriveUrl,
-        array $generators,
-        ?string $notes,
-        ?string $dateExpired,
-        bool $isActive,
-        bool $isYandexTokenPresent)
+    public function setDateExpired(?string $dateExpired): TableDTO
     {
-        parent::__construct(
-            $tableId,
-            $userId,
-            $userPhoneNumber,
-            $userSocialNetworkUrl,
-            $googleSheetUrl,
-            $googleDriveUrl,
-            $generators,
-            $notes);
-
         $this->dateExpired = $dateExpired;
+        return $this;
+    }
+    
+    /**
+     * @param bool $isActive
+     * @return TableDTO
+     */
+    public function setIsActive(bool $isActive): TableDTO
+    {
         $this->isActive = $isActive;
+        return $this;
+    }
+    
+    /**
+     * @param bool $isYandexTokenPresent
+     * @return TableDTO
+     */
+    public function setIsYandexTokenPresent(bool $isYandexTokenPresent): TableDTO
+    {
         $this->isYandexTokenPresent = $isYandexTokenPresent;
+        return $this;
     }
 }

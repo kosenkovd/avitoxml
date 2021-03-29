@@ -22,6 +22,7 @@ Route::apiResources([
 
 Route::get('/users/myAccount', [C\UserController::class, 'myAccount']);
 Route::get('/users/', [C\UserController::class, 'index']);
+Route::post('/users/', [C\UserController::class, 'store']);
 Route::put('/users/{id}', [C\UserController::class, 'update']);
 Route::put('/users/{id}/token', [C\UserController::class, 'refreshToken']);
 

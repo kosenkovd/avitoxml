@@ -18,6 +18,39 @@ class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
     {
         parent::__construct();
     }
+    
+    public function get(string $generatorGuid): ?Generator
+    {
+        $mysqli = $this->connect();
+        $generatorGuid = $mysqli->real_escape_string($generatorGuid);
+    
+        $res = $mysqli->query("
+        SELECT
+               `id`,
+               `tableId`,
+               `generatorGuid`,
+               `targetPlatform`,
+               `dateLastGenerated`,
+               `maxAds`
+        FROM ".$this->config->getGeneratorsTableName()."
+        WHERE `generatorGuid`= '".$generatorGuid."'");
+        
+        if(!$res || !$res->data_seek(0))
+        {
+            return null;
+        }
+        $row = $res->fetch_assoc();
+        $mysqli->close();
+    
+        return new Generator(
+            $row["id"],
+            $row["tableId"],
+            $row["generatorGuid"],
+            $row["dateLastGenerated"],
+            $row["targetPlatform"],
+            $row["maxAds"]
+        );
+    }
 
     /**
      * Persist new generator in database.
@@ -29,16 +62,20 @@ class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
     public function insert(Generator $generator) : int
     {
         $statement = "
-INSERT INTO `".$this->config->getGeneratorsTableName()."`(
-    `tableId`,
-    `generatorGuid`,
-    `dateLastGenerated`,
-    `targetPlatform`)
-VALUES (
-    ".$generator->getTableId().",
-    '".$generator->getGeneratorGuid()."',
-    ".$generator->getLastGenerated().",
-    '".$generator->getTargetPlatform()."')";
+            INSERT INTO `".$this->config->getGeneratorsTableName()."` (
+                `tableId`,
+                `generatorGuid`,
+                `dateLastGenerated`,
+                `targetPlatform`,
+                `maxAds`
+            )
+            VALUES (
+                ".$generator->getTableId().",
+                '".$generator->getGeneratorGuid()."',
+                ".$generator->getLastGenerated().",
+                '".$generator->getTargetPlatform()."',
+                ".$generator->getMaxAds()."
+                )";
 
         $mysqli = $this->connect();
         $mysqli->query($statement);
@@ -129,22 +166,27 @@ WHERE `id`=?";
      */
     public function update(Generator $generator) : void
     {
-        if(is_null($generator->getGeneratorId()))
-        {
-            return;
-        }
-
-        $statement = "
-UPDATE `".$this->config->getGeneratorsTableName()."`
-SET `id`=".$generator->getGeneratorId().",
-    `tableId`=".$generator->getTableId().",
-    `generatorGuid`='".$generator->getGeneratorGuid()."',
-    `dateLastGenerated`=".$generator->getLastGenerated().",
-    `targetPlatform`='".$generator->getTargetPlatform()."'
-WHERE `id`=".$generator->getGeneratorId();
-
         $mysqli = $this->connect();
-        $mysqli->query($statement);
+
+        $query = "
+            UPDATE `".$this->config->getGeneratorsTableName()."`
+            SET
+                `maxAds`= ?
+            WHERE `id`= ?";
+    
+        $statement = $mysqli->prepare($query);
+        
+        $maxAds = $generator->getMaxAds();
+        $generatorId = $generator->getGeneratorId();
+        
+        $statement->bind_param(
+            'ii',
+            $maxAds,
+            $generatorId
+        );
+    
+        $result = $statement->execute();
+        
         $mysqli->close();
     }
 }

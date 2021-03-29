@@ -3,17 +3,29 @@
 
 namespace App\Http\Controllers;
 
+use App\Configuration\Spreadsheet\SheetNames;
 use App\DTOs\ErrorResponse;
 use App\DTOs\UserDTO;
 use App\Enums\Roles;
+use App\Helpers\LinkHelper;
 use App\Mappers\UserDTOMapper;
+use App\Models\Generator;
+use App\Models\Table;
 use App\Models\User;
+use App\Repositories\GeneratorRepository;
+use App\Repositories\Interfaces\IGeneratorRepository;
+use App\Repositories\Interfaces\ITableRepository;
 use App\Repositories\Interfaces\IUserRepository;
+use App\Repositories\TableRepository;
+use App\Services\Interfaces\ISpreadsheetClientService;
+use App\Services\MailService;
+use App\Services\SpreadsheetClientService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Log;
 use JsonMapper;
 use Ramsey\Uuid\Guid\Guid;
@@ -32,22 +44,37 @@ class UserController extends BaseController
     private IUserRepository $userRepository;
     
     private JsonMapper $jsonMapper;
-
-	/**
-	 * @var User authenticated user through query hash
-	 */
-	private User $currentUser;
-
-	public function __construct(
+    /**
+     * @var ISpreadsheetClientService
+     */
+    private ISpreadsheetClientService $spreadsheetClientService;
+    /**
+     * @var ITableRepository
+     */
+    private ITableRepository $tableRepository;
+    /**
+     * @var MailService
+     */
+    private MailService $mailService;
+    /**
+     * @var IGeneratorRepository
+     */
+    private IGeneratorRepository $generatorRepository;
+    /**
+     * @var SheetNames
+     */
+    private SheetNames $sheetNamesConfig;
+    
+    public function __construct(
         IUserRepository $userRepository,
+        ITableRepository $tableRepository,
         JsonMapper $jsonMapper
     )
     {
         $this->userRepository = $userRepository;
+        $this->tableRepository = $tableRepository;
         $this->jsonMapper = $jsonMapper;
         $this->roles = new Roles();
-
-        $this->currentUser = request()->input("currentUser");
     }
     
     /**
@@ -60,7 +87,8 @@ class UserController extends BaseController
      */
     public function myAccount(Request $request) : JsonResponse
     {
-        return response()->json(UserDTOMapper::mapModelToDTO($this->currentUser), 200);
+        $currentUser = $request->input("currentUser");
+        return response()->json(UserDTOMapper::mapModelToDTO($currentUser), 200);
     }
     
     /**
@@ -74,7 +102,10 @@ class UserController extends BaseController
      */
     public function index(Request $request): JsonResponse
     {
-        if ($this->currentUser->getRoleId() !== $this->roles->Admin) {
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
+        
+        if ($currentUser->getRoleId() !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
         
@@ -99,16 +130,20 @@ class UserController extends BaseController
 	 */
     public function store(Request $request): JsonResponse
 	{
-	    // work in progress
-        die();
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
         
-		if ($this->currentUser->getRoleId() === $this->roles->Admin) {
+		if ($currentUser->getRoleId() !== $this->roles->Admin) {
 			return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
 		}
 
 		$count = $request->query('count') ? (int)$request->query('count') : 1;
+		if ($count > 20) {
+            return response()->json(new ErrorResponse(''), 400);
+        }
+		
 		$users = [];
-		for ($i = 1; $i < $count; $i++) {
+		for ($i = 0; $i < $count; $i++) {
 			$apiKey = md5(Guid::uuid4()->toString());
 
 			$user = new User(
@@ -123,13 +158,9 @@ class UserController extends BaseController
 				null
 			);
 
-			try {
-				$this->userRepository->insert($user);
-				$createdUser = $this->userRepository->getUserByApiKey($apiKey);
-				$users[] = UserDTOMapper::mapModelToDTO($createdUser);
-			} catch (Exception $exception) {
-				Log::channel('api')->error("Error on inserting ".User::class.PHP_EOL.$exception->getMessage());
-			}
+            $this->userRepository->insert($user);
+            $createdUser = $this->userRepository->getUserByApiKey($apiKey);
+            $users[] = UserDTOMapper::mapModelToDTO($createdUser);
 		}
 
 		return response()->json($users, 201);
@@ -145,8 +176,11 @@ class UserController extends BaseController
 	 */
     public function update(Request $request, $id): JsonResponse
     {
-        if (!(($this->currentUser->getUserId() === (int)$id) ||
-            ($this->currentUser->getRoleId() === $this->roles->Admin)))
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
+        
+        if (!(($currentUser->getUserId() === (int)$id) ||
+            ($currentUser->getRoleId() === $this->roles->Admin)))
         {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
@@ -163,10 +197,15 @@ class UserController extends BaseController
         }
     
         $user = UserDTOMapper::mapDTOToModel($userDTO);
-
-		// TODO disable all tables and generators for user if isBlocked
-        
         $this->userRepository->update($user);
+        
+        if ((int)$request->query->get('recentlyCreated') === 1) {
+            $existingUserTables = $this->tableRepository->getTables($user->getUserId());
+            if (count($existingUserTables) === 0) {
+                $table = $this->createTable($user->getUserId());
+            }
+        }
+        
         return response()->json(null, 200);
     }
 
@@ -180,7 +219,10 @@ class UserController extends BaseController
 	 */
     public function refreshToken(Request $request, $id): JsonResponse
     {
-        if ($this->currentUser->getRoleId() !== $this->roles->Admin) {
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
+        
+        if ($currentUser->getRoleId() !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
     
@@ -188,11 +230,95 @@ class UserController extends BaseController
         if (is_null($user)) {
             return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
         }
+    
+        if ($user->getRoleId() === $this->roles->Admin) {
+            return response()->json($user->getApiKey(), 200);
+        }
         
         $newApiKey = md5(Guid::uuid4()->toString());
         $user->setApiKey($newApiKey);
         $this->userRepository->update($user);
         
         return response()->json($newApiKey, 200);
+    }
+    
+    /**
+     * Create table for specified user
+     *
+     * @param int $userId
+     * @return Table
+     */
+    private function createTable(int $userId): Table
+    {
+        // TODO make service for that
+        
+        $this->spreadsheetClientService = new SpreadsheetClientService();
+        $this->sheetNamesConfig = new SheetNames();
+        $this->generatorRepository = new GeneratorRepository();
+        $this->mailService = new MailService();
+        
+        $googleTableId = $this->spreadsheetClientService->copyTable();
+    
+        $dateExpired = Carbon::now()->addDays(3)->getTimestamp();
+        
+        $table = new Table(
+            null,
+            $userId,
+            $googleTableId,
+            null,
+            null,
+            $dateExpired,
+            false,
+            null,
+            null,
+            Guid::uuid4()->toString(),
+            0,
+            []
+        );
+        
+        $newTableId = $this->tableRepository->insert($table);
+        
+        $targetsToAdd = [
+            [
+                "cell" => "C3",
+                "target" => $this->sheetNamesConfig->getAvito()
+            ],
+            [
+                "cell" => "C4",
+                "target" => $this->sheetNamesConfig->getYoula()
+            ],
+            [
+                "cell" => "C5",
+                "target" => $this->sheetNamesConfig->getYandex()
+            ]
+        ];
+        
+        $table->setTableId($newTableId);
+        
+        foreach ($targetsToAdd as $target) {
+            $generator = new Generator(
+                null,
+                $newTableId,
+                Guid::uuid4()->toString(),
+                0,
+                $target["target"],
+                30
+            );
+            
+            $newGeneratorId = $this->generatorRepository->insert($generator);
+            
+            $table->addGenerator($generator->setGeneratorId($newGeneratorId));
+            
+            $this->spreadsheetClientService->updateCellContent(
+                $googleTableId,
+                $this->sheetNamesConfig->getInformation(),
+                $target["cell"],
+                LinkHelper::getXmlGeneratorLink($table->getTableGuid(), $generator->getGeneratorGuid())
+            );
+        }
+        
+        $this->mailService->sendEmailWithTableData($table);
+        
+        return $table;
     }
 }

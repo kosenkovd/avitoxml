@@ -4,6 +4,10 @@
 namespace App\Http\Controllers;
 
 use App\Configuration\Spreadsheet\SheetNames;
+use App\DTOs\ErrorResponse;
+use App\DTOs\GeneratorDTO;
+use App\Enums\Roles;
+use App\Models\User;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
 use Exception;
@@ -15,6 +19,7 @@ use Illuminate\Routing\Controller as BaseController;
 use App\Models;
 use App\Repositories\Interfaces;
 use Illuminate\Support\Facades\Log;
+use JsonMapper;
 
 /**
  * Class GeneratorController
@@ -27,7 +32,7 @@ class GeneratorController extends BaseController
     /**
      * @var Interfaces\ITableRepository Models\Table repository.
      */
-    private Interfaces\ITableRepository $tablesRepository;
+    private Interfaces\ITableRepository $tableRepository;
 
     /**
      * @var Interfaces\IGeneratorRepository Models\Generator repository.
@@ -48,19 +53,30 @@ class GeneratorController extends BaseController
      * @var SheetNames configuration with sheet names.
      */
     private SheetNames $sheetNamesConfig;
+    
+    private JsonMapper $jsonMapper;
+    
+    /**
+     * @var Roles Enum of roles.
+     */
+    private Roles $roles;
 
     public function __construct(
-        Interfaces\ITableRepository $tablesRepository,
+        Interfaces\ITableRepository $tableRepository,
         Interfaces\IGeneratorRepository  $generatorsRepository,
         IXmlGenerationService $xmlGenerator,
         ISpreadsheetClientService $spreadsheetClientService,
-        SheetNames $sheetNames)
+        SheetNames $sheetNames,
+        JsonMapper $jsonMapper
+    )
     {
-        $this->tablesRepository = $tablesRepository;
+        $this->tableRepository = $tableRepository;
         $this->generatorsRepository = $generatorsRepository;
         $this->xmlGenerator = $xmlGenerator;
         $this->spreadsheetClientService = $spreadsheetClientService;
         $this->sheetNamesConfig = $sheetNames;
+        $this->jsonMapper = $jsonMapper;
+        $this->roles = new Roles();
     }
 
     /**
@@ -80,7 +96,7 @@ class GeneratorController extends BaseController
     }
 
     /**
-     * GET /$id
+     * GET /tables/$tableGuid/generators/$generatorGuid
      *
      * Get generated XML file.
      * @param $tableGuid string table guid.
@@ -89,7 +105,7 @@ class GeneratorController extends BaseController
      */
     public function show(string $tableGuid, string $generatorGuid) : Response
     {
-        $table = $this->tablesRepository->get($tableGuid);
+        $table = $this->tableRepository->get($tableGuid);
         if(is_null($table))
         {
             return response("Table not found", 404);
@@ -112,6 +128,47 @@ class GeneratorController extends BaseController
     
         return response($content, 200)
             ->header("Content-Type", "application/xml");
+    }
+    
+    /**
+     * PUT /tables/$tableGuid/generators/$generatorGuid
+     *
+     * Update table.
+     * @param $request Request update request.
+     * @param string $tableGuid table guid.
+     * @param string $generatorGuid
+     * @return JsonResponse updated table resource.
+     */
+    public function update(Request $request, string $tableGuid, string $generatorGuid) : JsonResponse
+    {
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
+    
+        if ($currentUser->getRoleId() !== $this->roles->Admin) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+        }
+    
+        $existingTable = $this->tableRepository->get($tableGuid);
+        if (is_null($existingTable)) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+        }
+    
+        $existingGenerator = $this->generatorsRepository->get($generatorGuid);
+        if (is_null($existingGenerator)) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+        }
+    
+        /** @var GeneratorDTO $generatorDTO */
+        try {
+            $generatorDTO = $this->jsonMapper->map($request->json(), new GeneratorDTO());
+        } catch (\Exception $e) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[400]), 400);
+        }
+
+        $existingGenerator->setMaxAds($generatorDTO->maxAds);
+        $this->generatorsRepository->update($existingGenerator);
+        
+        return response()->json(null, 200);
     }
 
     /**
