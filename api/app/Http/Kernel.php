@@ -2,6 +2,7 @@
 
 namespace App\Http;
 
+use App\Http\Middleware\Cors;
 use Illuminate\Foundation\Http\Kernel as HttpKernel;
 
 class Kernel extends HttpKernel
@@ -42,7 +43,8 @@ class Kernel extends HttpKernel
         'api' => [
             'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \App\Http\Middleware\Authenticate::class
+            \App\Http\Middleware\Authenticate::class,
+            'cors' => Cors::class,
         ],
     ];
 
