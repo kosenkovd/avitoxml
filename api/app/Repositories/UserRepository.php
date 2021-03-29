@@ -131,24 +131,22 @@ FROM ".$this->config->getUsersTableName());
             	`apiKey`
             )
             VALUES (
-                `roleId` = ?,
-                `dateCreated` = ?,
-            	`apiKey` = ?
-            )
-            WHERE id = ?";
+                ?,
+                ?,
+            	?
+            )";
 
 		$statement = $mysqli->prepare($query);
 
 		$roleId = $user->getRoleId();
-		$dateCreated = $user;
+		$dateCreated = $user->getDateCreated();
 		$apiKey = $user->getApiKey();
-		$userId = $user->getUserId();
 
-		$statement->bind_param('iisi',
+		$statement->bind_param(
+		    'iis',
 			$roleId,
 			$dateCreated,
 			$apiKey,
-			$userId
 		);
 
 		$result = $statement->execute();
@@ -171,23 +169,28 @@ FROM ".$this->config->getUsersTableName());
                 `phoneNumber` = ?,
                 `socialNetworkUrl` = ?,
                 `isBlocked` = ?,
+                `apiKey` = ?,
                 `notes` = ?,
                 `name` = ?
             WHERE id=".$user->getUserId();
 
         $statement = $mysqli->prepare($query);
+        
         $roleId = $user->getRoleId();
         $phoneNumber = $user->getPhoneNumber();
         $socialNetworkUrl = $user->getSocialNetworkUrl();
+        $apiKey = $user->getApiKey();
         $isBlocked = (int)$user->isBlocked();
         $notes = $user->getNotes();
         $name = $user->getName();
         
-        $statement->bind_param('ississ',
+        $statement->bind_param(
+            'ississs',
             $roleId,
             $phoneNumber,
             $socialNetworkUrl,
             $isBlocked,
+            $apiKey,
             $notes,
             $name
         );
@@ -196,6 +199,6 @@ FROM ".$this->config->getUsersTableName());
         
         $mysqli->close();
 
-        return !!$result;
+        return !!$result; //TODO delete this bool
     }
 }

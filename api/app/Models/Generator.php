@@ -15,22 +15,51 @@ class Generator
     private ?int $lastGenerated;
 
     private string $targetPlatform;
-
+    
+    private int $maxAds;
+    
     /**
      * Generator constructor.
-     * @param ?int $generatorId
+     * @param int|null $generatorId
      * @param int $tableId
      * @param string $generatorGuid
      * @param int|null $lastGenerated
      * @param string $targetPlatform
+     * @param int $maxAds
      */
-    public function __construct(?int $generatorId, int $tableId, string $generatorGuid, ?int $lastGenerated, string $targetPlatform)
+    public function __construct(
+        ?int $generatorId,
+        int $tableId,
+        string $generatorGuid,
+        ?int $lastGenerated,
+        string $targetPlatform,
+        int $maxAds
+    )
     {
         $this->generatorId = $generatorId;
         $this->tableId = $tableId;
         $this->generatorGuid = $generatorGuid;
         $this->lastGenerated = $lastGenerated;
         $this->targetPlatform = $targetPlatform;
+        $this->maxAds = $maxAds;
+    }
+    
+    /**
+     * @return int
+     */
+    public function getMaxAds(): int
+    {
+        return $this->maxAds;
+    }
+    
+    /**
+     * @param int $maxAds
+     * @return Generator
+     */
+    public function setMaxAds(int $maxAds): Generator
+    {
+        $this->maxAds = $maxAds;
+        return $this;
     }
 
     /**

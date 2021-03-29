@@ -12,7 +12,6 @@ interface IUserRepository
      *
      * @param string $apiKey user api key
      * @return User|null user if found, otherwise null.
-     * @throws Exception in case of DB connection failure.
      */
     public function getUserByApiKey(string $apiKey) : ?User;
     
@@ -21,7 +20,6 @@ interface IUserRepository
      *
      * @param int $userId user id
      * @return User|null user if found, otherwise null.
-     * @throws Exception in case of DB connection failure.
      */
     public function getUserById(int $userId) : ?User;
     
@@ -29,7 +27,6 @@ interface IUserRepository
      * Get all users.
      *
      * @return User[]
-     * @throws Exception in case of DB connection failure.
      */
     public function get() : array;
 
@@ -38,7 +35,6 @@ interface IUserRepository
      *
 	 * @param User $user
 	 * @return bool
-	 * @throws Exception in case of DB connection failure.
 	 */
     public function insert(User $user) : bool;
     
@@ -47,17 +43,6 @@ interface IUserRepository
      *
      * @param User $user
      * @return bool
-	 * @throws Exception in case of DB connection failure.
      */
     public function update(User $user) : bool;
-    
-    /**
-     * Update user ApiKey
-     *
-     * @param int $userId
-     * @param string $newApiKey
-     * @return bool
-	 * @throws Exception in case of DB connection failure.
-     */
-    public function updateApiKey(int $userId, string $newApiKey) : bool;
 }

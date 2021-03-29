@@ -12,6 +12,7 @@ use App\DTOs\ErrorResponse;
 use App\DTOs\TableDTO;
 use App\DTOs\UserDTO;
 use App\Helpers\LinkHelper;
+use App\Mappers\UserDTOMapper;
 use App\Models\Generator;
 use App\Models\Table;
 use App\Models\User;
@@ -34,6 +35,7 @@ use App\Models;
 use App\Mappers\TableDtoMapper;
 use App\Repositories\Interfaces;
 use App\Enums\Roles;
+use Illuminate\Support\Carbon;
 use JsonMapper;
 use Ramsey\Uuid\Guid\Guid;
 use Symfony\Component\HttpFoundation\Exception\JsonException;
@@ -50,6 +52,11 @@ class TableController extends BaseController
      * @var Interfaces\ITableRepository Models\Table repository.
      */
     private Interfaces\ITableRepository $tableRepository;
+    
+    /**
+     * @var Interfaces\IUserRepository Models\User repository.
+     */
+    private Interfaces\IUserRepository $userRepository;
 
     /**
      * @var Interfaces\IGeneratorRepository Models\Generator repository.
@@ -90,6 +97,7 @@ class TableController extends BaseController
 
 	public function __construct(
         Interfaces\ITableRepository $tableRepository,
+        Interfaces\IUserRepository $userRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
         IGoogleDriveClientService $googleDriveClientService,
         ISpreadsheetClientService $spreadsheetClientService,
@@ -100,6 +108,7 @@ class TableController extends BaseController
 	)
     {
         $this->tableRepository = $tableRepository;
+        $this->userRepository = $userRepository;
         $this->generatorRepository = $generatorRepository;
         $this->googleDriveClientService = $googleDriveClientService;
         $this->spreadsheetClientService = $spreadsheetClientService;
@@ -119,6 +128,7 @@ class TableController extends BaseController
      */
     public function index(Request $request) : JsonResponse
     {
+        /** @var User $user */
         $user = $request->input("currentUser");
         $tables = [];
 
@@ -132,6 +142,7 @@ class TableController extends BaseController
                 break;
         }
 
+        /** @var TableDTO[] $tableDtos */
         $tableDtos = [];
         foreach ($tables as $table)
         {
@@ -172,7 +183,9 @@ class TableController extends BaseController
                     $table->getTableId(),
                     Guid::uuid4()->toString(),
                     0,
-                    $target["target"]);
+                    $target["target"],
+                    30
+                );
 
                 $newGeneratorId = $this->generatorRepository->insert($generator);
 
@@ -190,48 +203,6 @@ class TableController extends BaseController
      */
     public function show(string $id, Request $request)
     {
-        $table = $this->tableRepository->get($id);
-
-        $yaService = new FillImagesJobYandex(
-            new SpreadsheetClientService(),
-            new YandexDiskService(),
-            new TableRepository(),
-            new XmlGeneration());
-        $yaService->start($table);
-
-//        $service = new FillImagesJob(
-//            new SpreadsheetClientService(),
-//            new GoogleDriveClientService()
-//        );
-//
-        /*$spintaxService = new RandomizeTextJob(
-            new SpintaxService(),
-            new SpreadsheetClientService(),
-            new XmlGeneration());
-        $spintaxService->start($table);*/
-
-//        $triggerService = new TriggerSpreadsheetJob(
-//            new SpreadsheetClientService(),
-//            new Spreadsheet()
-//        );
-
-//        $triggerService->start();
-
-//        if(is_null($table))
-//        {
-//            echo $id;
-//        }
-//        else
-//        {
-//            //$service->start($table);
-//            $yaService->start($table);
-//            //$spintaxService->start($table);
-//        }
-
-//        $client = new YandexDiskService();
-//        $client->init("AgAAAAAMMp_iAAbO9-TN2FLhf0a7kQr5Ju2mlII");
-//        $resp = $client->listFolderImages("Виджеты");
-//        dd($resp);
         return response()->json('',200);
     }
 
@@ -244,45 +215,66 @@ class TableController extends BaseController
      */
     public function store(Request $request) : JsonResponse
     {
-        $user = $request->input("currentUser");
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
         
-        $this->createTable($user->getUserId());
-        
-    	if ($user->getRoleId() !== $this->roles->Admin) {
+    	if ($currentUser->getRoleId() !== $this->roles->Admin) {
     		return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
 		}
 
-        /** @var UserDTO[] $userDTOs */
-    	$userDTOs = [];
-    	foreach ($request->json('users') as $user) {
-    		try {
-				$userDTOs[] = $this->jsonMapper->map($request->json(), new UserDTO());
-			} catch (\Exception $exception) {
-    			return response()->json(new ErrorResponse(Response::$statusTexts[400]), 400);
-			}
+        /** @var UserDTO $userDTO */
+        try {
+            $userDTO = $this->jsonMapper->map($request->json(), new UserDTO());
+        } catch (\Exception $exception) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[400]), 400);
         }
     
-    	/** @var TableDTO[] $tableDTOs */
-        $tableDTOs = [];
-    	foreach ($userDTOs as $userDTO) {
-            $table = $this->createTable($userDTO->userId);
-            $tableDTOs[] = TableDtoMapper::mapModelToDTO($table, $user);
+        $existingUserTables = $this->tableRepository->getTables($userDTO->userId);
+        if (count($existingUserTables) !== 0) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
+        
+        $table = $this->createTable($userDTO->userId);
+        
+        $userModel = UserDTOMapper::mapDTOToModel($userDTO);
+        $tableDTO = TableDtoMapper::mapModelToDTO($table, $userModel);
     
-        return response()->json($tableDTOs, 201);
+        return response()->json($tableDTO, 201);
     }
 
     /**
-     * PUT /tables/{$id}
+     * PUT /tables/{$tableGuid}
      *
      * Update table.
-     * @param string $id table guid.
+     * @param string $tableGuid table guid.
      * @param $request Request update request.
      * @return JsonResponse updated table resource.
      */
-    public function update(string $id, Request $request) : JsonResponse
+    public function update(string $tableGuid, Request $request) : JsonResponse
     {
-        return response()->json($request, 200);
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
+    
+        if ($currentUser->getRoleId() !== $this->roles->Admin) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+        }
+    
+        $existingTable = $this->tableRepository->get($tableGuid);
+        if (is_null($existingTable)) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+        }
+    
+        /** @var TableDTO $tableDTO */
+        try {
+            $tableDTO = $this->jsonMapper->map($request->json(), new TableDTO());
+        } catch (\Exception $e) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[400]), 400);
+        }
+        
+        $existingTable->setDateExpired($tableDTO->dateExpired);
+        $this->tableRepository->update($existingTable);
+        
+        return response()->json(null, 200);
     }
     
     /**
@@ -307,6 +299,8 @@ class TableController extends BaseController
     private function createTable(int $userId): Table
 	{
 		$googleTableId = $this->spreadsheetClientService->copyTable();
+        
+        $dateExpired = Carbon::now()->addDays(3)->getTimestamp();
 
 		$table = new Table(
 			null,
@@ -314,7 +308,7 @@ class TableController extends BaseController
 			$googleTableId,
 			null,
 			null,
-			null,
+			$dateExpired,
 			false,
 			null,
 			null,
@@ -348,7 +342,9 @@ class TableController extends BaseController
 				$newTableId,
 				Guid::uuid4()->toString(),
 				0,
-				$target["target"]);
+				$target["target"],
+                30
+            );
 
 			$newGeneratorId = $this->generatorRepository->insert($generator);
 

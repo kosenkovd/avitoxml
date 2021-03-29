@@ -42,6 +42,7 @@ SELECT `t`.`id` AS `tableId`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
        `g`.`targetPlatform`,
+       `g`.`maxAds`,
        `g`.`dateLastGenerated`
 FROM `".$this->config->getTablesTableName()."` `t`
 LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
@@ -63,7 +64,8 @@ WHERE 1";
                 $tableId,
                 $row["generatorGuid"],
                 $row["dateLastGenerated"],
-                $row["targetPlatform"]
+                $row["targetPlatform"],
+                $row["maxAds"]
             );
             if(!isset($tables["table".$tableId]))
             {
@@ -198,6 +200,7 @@ SELECT `t`.`id` AS `tableId`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
        `g`.`targetPlatform`,
+       `g`.`maxAds`,
        `g`.`dateLastGenerated`
 FROM `".$this->config->getTablesTableName()."` `t`
 LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
@@ -220,7 +223,8 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
                 $tableId,
                 $row["generatorGuid"],
                 $row["dateLastGenerated"],
-                $row["targetPlatform"]
+                $row["targetPlatform"],
+                $row["maxAds"]
             );
             if(is_null($table))
             {
@@ -257,31 +261,21 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
     {
         $query = "
             UPDATE `".$this->config->getTablesTableName()."`
-            SET `googleDriveId` = ?,
+            SET
                 `dateExpired` = ?,
-                `isDeleted` = ?,
-                `dateDeleted` = ?,
-                `notes` = ?,
                 `dateLastModified` = ?
             WHERE `id`=?";
     
         $mysqli = $this->connect();
         $statement = $mysqli->prepare($query);
-        $googleDriveId = $table->getGoogleDriveId();
         $dateExpired = $table->getDateExpired();
-        $isDeleted = $table->isDeleted();
-        $dateDeleted = $table->getDateDeleted();
         $notes = $table->getNotes();
-        $dateLastModified = $table->getDateLastModified();
         $tableId = $table->getTableId();
+        
         $statement->bind_param(
-            'siiisii',
-            $googleDriveId,
+            'iii',
             $dateExpired,
-            $isDeleted,
-            $dateDeleted,
             $notes,
-            $dateLastModified,
             $tableId
         );
     
@@ -308,4 +302,17 @@ WHERE `id`=?";
 
         $statement->execute();
     }
+
+    public function delete(int $tableId) : bool
+	{
+		$query = "
+			DELETE FROM `".$this->config->getTablesTableName()."`
+			WHERE `id`=?";
+
+		$mysqli = $this->connect();
+		$statement = $mysqli->prepare($query);
+		$statement->bind_param('i', $tableId);
+
+		$statement->execute();
+	}
 }
