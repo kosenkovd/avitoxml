@@ -61,6 +61,12 @@ return [
             'days' => 14,
         ],
         
+        'fatal' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/fatal/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+        ],
+
         'test' => [
             'driver' => 'single',
             'path' => storage_path('logs/test/laravel.log'),
