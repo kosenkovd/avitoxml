@@ -8,6 +8,7 @@ use App\Models\Table;
 use App\Repositories\Interfaces\ITableRepository;
 use App\Repositories\Interfaces\ITableUpdateLockRepository;
 use Exception;
+use mysqli;
 
 class TableRepository extends RepositoryBase implements ITableRepository
 {
@@ -250,7 +251,7 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
 
         return $table;
     }
-    
+
     /**
      * Update yandex token for table.
      *
@@ -265,20 +266,20 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
                 `dateExpired` = ?,
                 `dateLastModified` = ?
             WHERE `id`=?";
-    
+
         $mysqli = $this->connect();
         $statement = $mysqli->prepare($query);
         $dateExpired = $table->getDateExpired();
         $notes = $table->getNotes();
         $tableId = $table->getTableId();
-        
+
         $statement->bind_param(
             'iii',
             $dateExpired,
             $notes,
             $tableId
         );
-    
+
         $statement->execute();
     }
 
@@ -303,15 +304,44 @@ WHERE `id`=?";
         $statement->execute();
     }
 
-    public function delete(int $tableId) : bool
+	/**
+	 * Delete table from DB
+	 *
+	 * @param Table $table
+	 * @return bool
+	 * @throws Exception
+	 */
+    public function delete(Table $table): bool
 	{
+		$mysqli = $this->connect();
+
 		$query = "
 			DELETE FROM `".$this->config->getTablesTableName()."`
 			WHERE `id`=?";
 
-		$mysqli = $this->connect();
 		$statement = $mysqli->prepare($query);
+		$tableId = $table->getTableId();
+
 		$statement->bind_param('i', $tableId);
+
+		$statement->execute();
+
+		foreach ($table->getGenerators() as $generator) {
+			$this->deleteGenerator($mysqli, $generator);
+		}
+
+		$mysqli->close();
+	}
+
+	private function deleteGenerator(mysqli $mysqli, Generator $generator) {
+		$query = "
+			DELETE FROM `".$this->config->getGeneratorsTableName()."`
+			WHERE `id`=?";
+
+		$statement = $mysqli->prepare($query);
+		$generatorId = $generator->getGeneratorId();
+
+		$statement->bind_param('i', $generatorId);
 
 		$statement->execute();
 	}

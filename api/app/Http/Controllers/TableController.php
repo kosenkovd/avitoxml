@@ -275,16 +275,30 @@ class TableController extends BaseController
     }
     
     /**
-     * DELETE /tables/{$id}
+     * DELETE /tables/{$tableGuid}
      *
      * Delete table from google and BD and delete Generators with content
-     * @param string $id table guid.
+     * @param string $tableGuid table guid.
      * @param Request $request delete request.
      * @return JsonResponse deleted table resource.
      */
-    public function destroy(string $id, Request $request): JsonResponse
+    public function destroy(string $tableGuid, Request $request): JsonResponse
 	{
-	    return response()->json($request, 200);
+		/** @var User $currentUser */
+		$currentUser = $request->input("currentUser");
+
+		if ($currentUser->getRoleId() !== $this->roles->Admin) {
+			return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+		}
+
+		$existingTable = $this->tableRepository->get($tableGuid);
+		if (is_null($existingTable)) {
+			return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+		}
+
+		$this->tableRepository->delete($existingTable);
+
+		return response()->json(null, 200);
 	}
     
     /**
