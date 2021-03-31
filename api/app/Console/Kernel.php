@@ -10,6 +10,7 @@
     use App\Console\Jobs\GenerateXMLJob;
     use App\Console\Jobs\JobBase;
     use App\Console\Jobs\RandomizeTextJob;
+    use App\Console\Jobs\UpdateXMLJob;
     use App\Models\Table;
     use App\Repositories\DictRepository;
     use App\Repositories\GeneratorRepository;
@@ -21,6 +22,7 @@
     use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\SpintaxService;
     use App\Services\SpreadsheetClientService;
+    use App\Services\SpreadsheetClientServiceSecond;
     use App\Services\XmlGenerationService;
     use App\Services\YandexDiskService;
     use Exception;
@@ -60,6 +62,19 @@
                 Log::alert("Ending Schedule");
             })
                 ->name("Tables2") // имя процесса сбрасывается withoutOverlapping через 24 часа
+                ->withoutOverlapping();
+    
+            $schedule->call(function () {
+                Log::channel('xml')->alert("Starting Schedule");
+                $tableRepository = new TableRepository();
+                $tables = $tableRepository->getTables();
+        
+                foreach ($tables as $table) {
+                    $this->processUpdateXml($table);
+                }
+                Log::channel('xml')->alert("Ending Schedule");
+            })
+                ->name("UpdateXML1")
                 ->withoutOverlapping();
         }
         
@@ -242,6 +257,75 @@
             Log::info("Table '".$table->getGoogleSheetId()."' updated.");
         }
         
+        private function processUpdateXml(Table $table): void
+        {
+            Log::channel('xml')->info("Table '".$table->getGoogleSheetId()."' started");
+            try {
+                Log::channel('xml')->info("Table '".$table->getGoogleSheetId()."' updating...");
+                $this->startXMLUpdateJob($table);
+            } catch (Exception $exception) {
+                Log::channel('xml')->error($exception->getMessage());
+            }
+            Log::channel('xml')->info("Table '".$table->getGoogleSheetId()."' finished.");
+        
+            $timeToSleep = 1;
+            Log::channel('xml')->info("sleep ".$timeToSleep);
+            sleep($timeToSleep);
+        }
+    
+        private function startXMLUpdateJob(Table $table): void
+        {
+            $this->handleSecondJob(
+                $table,
+                (new UpdateXMLJob(
+                    new SpreadsheetClientServiceSecond(),
+                    new XmlGeneration(),
+                    new TableRepository(),
+                    new GeneratorRepository(),
+                    new XmlGenerationService(
+                        new SpreadsheetClientServiceSecond(),
+                        new SheetNames(),
+                        new XmlGeneration(),
+                        new DictRepository()
+                    ),
+                    new SheetNames()
+                ))
+            );
+        }
+    
+        /**
+         * @param Table $table
+         * @param JobBase $job
+         */
+        private function handleSecondJob(
+            Table $table,
+            JobBase $job
+        ): void
+        {
+            $actionType = 'starting';
+            $this->logTableHandlingSecond($table, $job, $actionType);
+        
+            try {
+                $job->start($table);
+            } catch (Exception $exception) {
+                $this->logTableErrorSecond($table, $exception);
+            }
+        }
+        
+        private function logTableHandlingSecond($table, $job, string $actionType): void
+        {
+            $message = "Table '".$table->getGoogleSheetId()."' ".$actionType." '".get_class($job)."'...";
+            Log::channel('xml')->info($message);
+            echo $message;
+        }
+        
+        private function logTableErrorSecond(Table $table, Exception $exception): void
+        {
+            $message = "Error on '".$table->getGoogleSheetId()."' Kernel".PHP_EOL.$exception->getMessage();
+            Log::channel('xml')->error($message);
+            echo $message;
+        }
+    
         /**
          * Register the commands for the application.
          *
