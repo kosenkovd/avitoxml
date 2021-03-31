@@ -55,6 +55,8 @@ class GeneratorController extends BaseController
     private SheetNames $sheetNamesConfig;
     
     private JsonMapper $jsonMapper;
+
+    private Interfaces\IUserRepository $userRepository;
     
     /**
      * @var Roles Enum of roles.
@@ -64,6 +66,7 @@ class GeneratorController extends BaseController
     public function __construct(
         Interfaces\ITableRepository $tableRepository,
         Interfaces\IGeneratorRepository  $generatorsRepository,
+		Interfaces\IUserRepository  $userRepository,
         IXmlGenerationService $xmlGenerator,
         ISpreadsheetClientService $spreadsheetClientService,
         SheetNames $sheetNames,
@@ -72,6 +75,7 @@ class GeneratorController extends BaseController
     {
         $this->tableRepository = $tableRepository;
         $this->generatorsRepository = $generatorsRepository;
+        $this->userRepository = $userRepository;
         $this->xmlGenerator = $xmlGenerator;
         $this->spreadsheetClientService = $spreadsheetClientService;
         $this->sheetNamesConfig = $sheetNames;
@@ -108,8 +112,20 @@ class GeneratorController extends BaseController
         $table = $this->tableRepository->get($tableGuid);
         if(is_null($table))
         {
-            return response("Table not found", 404);
+            return response(Response::$statusTexts[404], 404);
         }
+
+		$user = $this->userRepository->getUserById($table->getUserId());
+		if (is_null($user)) {
+			Log::channel('fatal')
+				->error("Error on '".$table->getGoogleSheetId()."' table have no user!");
+			return response(Response::$statusTexts[500], 500);
+		}
+
+		if ($user->isBlocked()) {
+			return response('User is blocked', 403);
+		}
+
         $generator = null;
         foreach ($table->getGenerators() as $curGenerator)
         {
@@ -121,7 +137,7 @@ class GeneratorController extends BaseController
         }
         if(is_null($generator))
         {
-            return response("File not found", 404);
+            return response(Response::$statusTexts[404], 404);
         }
     
         $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());

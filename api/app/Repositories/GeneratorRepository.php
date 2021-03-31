@@ -18,7 +18,10 @@ class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
     {
         parent::__construct();
     }
-    
+
+	/**
+	 * @inheritDoc
+	 */
     public function get(string $generatorGuid): ?Generator
     {
         $mysqli = $this->connect();
@@ -52,13 +55,9 @@ class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
         );
     }
 
-    /**
-     * Persist new generator in database.
-     *
-     * @param Generator $generator generator data to insert.
-     * @return int new table id.
-     * @throws Exception in case of DB connection failure.
-     */
+	/**
+	 * @inheritDoc
+	 */
     public function insert(Generator $generator) : int
     {
         $statement = "
@@ -85,13 +84,9 @@ class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
         return $newGeneratorId;
     }
 
-    /**
-     * Retrieve last saved generated XML.
-     *
-     * @param int $generatorId generator id.
-     * @return string generated XML, if it exists.
-     * @throws Exception in case of DB connection failure.
-     */
+	/**
+	 * @inheritDoc
+	 */
     public function getLastGeneration(int $generatorId) : ?string
     {
         $query = "
@@ -122,11 +117,7 @@ WHERE `id`=?";
     }
 
     /**
-     * Save new XML generation.
-     *
-     * @param int $generatorId generator id.
-     * @param string $content new generation content.
-     * @throws Exception in case of DB connection failure.
+     * @inheritDoc
      */
     public function setLastGeneration(int $generatorId, string $content) : void
     {
@@ -159,10 +150,7 @@ WHERE `id`=?";
     }
 
     /**
-     * Update model in database.
-     *
-     * @param Generator $generator generator resource to update.
-     * @throws Exception in case of DB connection failure.
+     * @inheritDoc
      */
     public function update(Generator $generator) : void
     {
