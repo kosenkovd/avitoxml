@@ -112,7 +112,8 @@ class XmlGenerationService implements IXmlGenerationService
     private function shouldSkipYandexRow(array $row, TableHeader $propertyColumns) : bool
     {
         $idFieldPresent = @$row[@$propertyColumns->ID] != '';
-
+//        return !$idFieldPresent;
+    
         $dateCreated = @$row[@$propertyColumns->dateCreated];
         if(is_null($dateCreated) || $dateCreated == '')
         {
@@ -122,7 +123,7 @@ class XmlGenerationService implements IXmlGenerationService
         {
             $dateRaw = $row[$propertyColumns->dateCreated];
             if(!strpos($dateRaw, ":")) {
-                $dateRaw .= ' 12:00';
+                $dateRaw .= ' 00:00';
             }
     
             try {
@@ -286,8 +287,11 @@ class XmlGenerationService implements IXmlGenerationService
         
         $xml = "";
         foreach ($values as $numRow => $row) {
-            if($this->shouldSkipRow($row, $propertyColumns, $targetSheet))
-            {
+            if($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
+                continue;
+            }
+            
+            if ($this->shouldSkipUlaRow($row, $propertyColumns)) {
                 continue;
             }
 
@@ -303,6 +307,34 @@ class XmlGenerationService implements IXmlGenerationService
         }
     
         return $xml;
+    }
+    
+    private function shouldSkipUlaRow(array $row, TableHeader $propertyColumns): bool
+    {
+        if (!$this->isExistsInRow($row, $propertyColumns->dateCreated)) {
+            return false;
+        }
+        
+        $dateRaw = $row[$propertyColumns->dateCreated];
+        if(!strpos($dateRaw, ":")) {
+            $dateRaw .= ' 00:00';
+        }
+    
+        try {
+            $date = Carbon::createFromTimeString($dateRaw, new DateTimeZone("Europe/Moscow"));
+            return $date->getTimestamp() > time();
+        } catch (\Exception $exception) {
+            Log::error("Error on 'shouldSkipUlaRow' ".$dateRaw);
+        
+            return true;
+        }
+    }
+    
+    private function isExistsInRow(array $row, ?int $column): bool
+    {
+        return !is_null($column) &&
+            isset($row[$column]) &&
+            (trim($row[$column]) != '');
     }
 
     public function __construct(
@@ -363,7 +395,7 @@ class XmlGenerationService implements IXmlGenerationService
                 $propertyColumns = new TableHeader(array_shift($values));
             } catch (\Exception $exception) {
                 $message = "Error on '". $spreadsheetId."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
-                Log::error($message);
+//                Log::error($message);
                 
                 throw $exception;
             }
@@ -417,7 +449,7 @@ class XmlGenerationService implements IXmlGenerationService
                 $propertyColumns = new TableHeader(array_shift($values));
             } catch (\Exception $exception) {
                 $message = "Error on '". $spreadsheetId."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
-                Log::error($message);
+//                Log::error($message);
             
                 throw $exception;
             }
@@ -471,7 +503,7 @@ class XmlGenerationService implements IXmlGenerationService
                 $propertyColumns = new TableHeader(array_shift($values));
             } catch (\Exception $exception) {
                 $message = "Error on '".$spreadsheetId."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
-                Log::error($message);
+//                Log::error($message);
             
                 throw $exception;
             }

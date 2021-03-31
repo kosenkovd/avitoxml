@@ -46,7 +46,7 @@
                     $date = Carbon::createFromTimeString($dateRaw, $this->timezone);
                     $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
                 } catch (\Exception $exception) {
-                    Log::error("Error on '".$dateRaw."'");
+                    Log::error("Error on dateBegin '".$dateRaw."'");
                 }
             } else {
                 $this->dateBegin = null;
@@ -62,7 +62,7 @@
                     $date = Carbon::createFromTimeString($dateRaw, $this->timezone);
                     $this->dateEnd = $date->format('Y-m-d\TH:i:sP');
                 } catch (\Exception $exception) {
-                    Log::error("Error on '".$dateRaw."'");
+                    Log::error("Error on dateEnd '".$dateRaw."'");
                 }
             } else {
                 $this->dateEnd = null;

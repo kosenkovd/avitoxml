@@ -53,6 +53,13 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,
         ],
+        
+        'xml' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/xml/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+        ],
 
         'api' => [
             'driver' => 'daily',

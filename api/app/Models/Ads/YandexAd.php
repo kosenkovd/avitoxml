@@ -80,8 +80,14 @@ YANDEXXML;
         
         protected function generateCondition(): string
         {
-            switch ($this->condition) {
+            if (!$this->condition) {
+                return "";
+            }
+            $condition = mb_strtolower($this->condition);
+            
+            switch ($condition) {
                 case "новый":
+                case "новое":
                 case "new":
                     $result = "new";
                     break;
@@ -113,7 +119,12 @@ YANDEXXML;
     
         protected function generateContactMethod(): string
         {
-            switch ($this->contactsType) {
+            if (!$this->contactsType) {
+                return "";
+            }
+            $contactsType = mb_strtolower($this->contactsType);
+            
+            switch ($contactsType) {
                 case "только звонки":
                     $result = "only-phone";
                     break;

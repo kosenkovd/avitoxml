@@ -270,13 +270,13 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
         $mysqli = $this->connect();
         $statement = $mysqli->prepare($query);
         $dateExpired = $table->getDateExpired();
-        $notes = $table->getNotes();
+        $dateLastModified = $table->getDateLastModified();
         $tableId = $table->getTableId();
 
         $statement->bind_param(
             'iii',
             $dateExpired,
-            $notes,
+            $dateLastModified,
             $tableId
         );
 

@@ -139,7 +139,7 @@ class UserController extends BaseController
 
 		$count = $request->query('count') ? (int)$request->query('count') : 1;
 		if ($count > 20) {
-            return response()->json(new ErrorResponse(''), 400);
+            return response()->json(new ErrorResponse('Count is to high'), 400);
         }
 		
 		$users = [];

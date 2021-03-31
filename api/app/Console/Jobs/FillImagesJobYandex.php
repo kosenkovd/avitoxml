@@ -388,6 +388,13 @@
             $this->log("Source folders ".$row[$propertyColumns->photoSourceFolder]);
             
             $sourceFolders = explode(PHP_EOL, $row[$propertyColumns->photoSourceFolder]);
+            $sourceFolders = array_filter(
+                $sourceFolders,
+                function ($sourceFolder) {
+                    return trim($sourceFolder) !== "";
+                }
+            );
+            ksort($sourceFolders);
             $imageCopyData = $this->getImageCopyData($sourceFolders);
             
             if (
@@ -436,6 +443,7 @@
                 $sourceFolder = trim($sourceFolder);
                 
                 if ($sourceFolder === "") {
+                    Log::error("Empty source folder given after filtering");
                     continue;
                 }
                 
@@ -450,6 +458,7 @@
                     
                     $sourceFolderPath = $this->checkAndGetFolder($sourceFolder, self::$folderWithFolders);
                     if (is_null($sourceFolderPath)) {
+                        // errors found earlier
                         continue;
                     }
                     
@@ -469,6 +478,7 @@
                 
                 $image = $this->checkAndGetNextImage($sourceFolder, $alreadyUsedImages);
                 if (is_null($image)) {
+                    // errors found earlier
                     continue;
                 }
                 $alreadyUsedImages[] = $image;

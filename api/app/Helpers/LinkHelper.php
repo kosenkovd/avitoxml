@@ -30,6 +30,6 @@ class LinkHelper
 
     public static function getPictureDownloadLink(string $tableId, string $fileInfo) : string
     {
-        return "http://agishev-autoz.ru/tables/".$tableId."/images/".$fileInfo;
+        return "https://agishev-autoz.ru/tables/".$tableId."/images/".$fileInfo;
     }
 }

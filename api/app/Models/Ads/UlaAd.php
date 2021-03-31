@@ -4,13 +4,17 @@
     
     use App\Models\Dict\UlaCategory;
     use App\Models\TableHeader;
-    
+    use DateTimeZone;
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Log;
+
     class UlaAd extends AdBase {
         protected ?UlaCategory $ulaCategory;
         
         /** @var UlaCategory[] */
         protected array $ulaCategories;
         
+        protected ?string $datePublication;
         protected ?string $subCategory;
         protected ?string $autoPart;
         protected ?string $urlAd;
@@ -21,6 +25,9 @@
             
             $this->ulaCategories = $ulaCategories;
             
+            $this->datePublication = isset($row[$propertyColumns->dateCreated])
+                ? htmlspecialchars(trim($row[$propertyColumns->dateCreated]))
+                : null;
             $this->urlAd = isset($row[$propertyColumns->urlAd])
                 ? htmlspecialchars(trim($row[$propertyColumns->urlAd]))
                 : null;
@@ -59,6 +66,7 @@ ULAXML;
         
         protected function generateUlaXML(): string
         {
+            $datePublication = $this->generateDatePublication();
             $ulaCategory = $this->generateUlaCategory();
             $ulaSubCategory = $this->generateUlaSubCategory();
             $ulaAutoPartCategory = $this->generateUlaAutoPartCategory();
@@ -66,7 +74,8 @@ ULAXML;
             
             $imageTags = $this->generateImageUlaTags($this->images);
             
-            $resultXml = $this->addTagIfPropertySet($this->urlAd, "url");
+            $resultXml = $this->addTagIfPropertySet($datePublication, "datePublication");
+            $resultXml .= $this->addTagIfPropertySet($this->urlAd, "url");
             $resultXml .= $this->addTagIfPropertySet($ulaCategory, "youlaCategoryId");
             $resultXml .= $this->addTagIfPropertySet($ulaSubCategory, "youlaSubcategoryId");
             $resultXml .= $this->addTagIfPropertySet($ulaAutoPartCategory, "avtozapchasti_tip");
@@ -80,6 +89,26 @@ ULAXML;
             $resultXml .= $this->addTagIfPropertySet($this->managerName, 'managerName');
             
             return $resultXml;
+        }
+        
+        protected function generateDatePublication(): string
+        {
+            if (is_null($this->datePublication)) {
+                return "";
+            }
+            
+            $dateRaw = $this->datePublication;
+            if (!strpos($dateRaw, ":")) {
+                $dateRaw .= ' 12:00';
+            }
+    
+            try {
+                $date = Carbon::createFromTimeString($dateRaw, new DateTimeZone("Europe/Moscow"));
+                return $date->format('d-m-Y');
+            } catch (\Exception $exception) {
+                Log::error("Error on 'generateDatePublication' '".$dateRaw."'");
+                return "";
+            }
         }
         
         protected function generateUlaCategory(): string
