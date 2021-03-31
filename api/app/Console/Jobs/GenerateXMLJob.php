@@ -49,19 +49,22 @@
                     case "Юла":
                         $content = $this->xmlGenerationService->generateUlaXML(
                             $table->getGoogleSheetId(),
-                            $generator->getTargetPlatform()
+                            $generator->getTargetPlatform(),
+							$generator->getMaxAds()
                         );
                         break;
                     case "Яндекс":
                         $content = $this->xmlGenerationService->generateYandexXML(
                             $table->getGoogleSheetId(),
-                            $generator->getTargetPlatform()
+                            $generator->getTargetPlatform(),
+							$generator->getMaxAds()
                         );
                         break;
                     default:
                         $content = $this->xmlGenerationService->generateAvitoXML(
                             $table->getGoogleSheetId(),
-                            $generator->getTargetPlatform()
+                            $generator->getTargetPlatform(),
+							$generator->getMaxAds()
                         );
                 }
                 $this->generatorRepository->setLastGeneration($generator->getGeneratorId(), $content);

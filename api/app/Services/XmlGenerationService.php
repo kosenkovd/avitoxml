@@ -136,21 +136,33 @@ class XmlGenerationService implements IXmlGenerationService
         }
     }
 
-    /**
-     * Create ads from sheet rows for Avito.
-     *
-     * @param array $values rows from sheet.
-     * @param TableHeader $propertyColumns
-     * @param string $targetSheet
-     * @return string generated ads.
-     */
-    private function createAdsForAvitoSheet(array $values, TableHeader $propertyColumns, string $targetSheet): string
+	/**
+	 * Create ads from sheet rows for Avito.
+	 *
+	 * @param array       $values rows from sheet.
+	 * @param TableHeader $propertyColumns
+	 * @param string      $targetSheet
+	 * @param int         $adsLimit
+	 * @return string generated ads.
+	 */
+    private function createAdsForAvitoSheet(
+    	array $values,
+		TableHeader $propertyColumns,
+		string $targetSheet,
+		int $adsLimit
+	): string
     {
         $xml = "";
         foreach ($values as $numRow => $row) {
             if($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
                 continue;
             }
+
+            // array started from 0
+            $adNumber = $numRow + 1;
+            if ($this->isAdsLimitReached($adNumber, $adsLimit)) {
+            	break;
+			}
 
             $ad = $this->getAvitoAd($row, $propertyColumns);
 
@@ -159,6 +171,11 @@ class XmlGenerationService implements IXmlGenerationService
 
         return $xml;
     }
+
+    private function isAdsLimitReached(int $adNumber, int $limit): bool
+	{
+		return $adNumber > $limit;
+	}
     
     private function getAvitoAd(array $row, TableHeader $propertyColumns): Ads\AdBase
     {
@@ -211,16 +228,22 @@ class XmlGenerationService implements IXmlGenerationService
         
         return $ad;
     }
-    
-    /**
-     * Create ads from sheet rows for Yandex.
-     *
-     * @param array $values rows from sheet.
-     * @param TableHeader $propertyColumns
-     * @param string $targetSheet
-     * @return string generated ads.
-     */
-    private function createAdsForYandexSheet(array $values, TableHeader $propertyColumns, string $targetSheet): string
+
+	/**
+	 * Create ads from sheet rows for Yandex.
+	 *
+	 * @param array       $values rows from sheet.
+	 * @param TableHeader $propertyColumns
+	 * @param string      $targetSheet
+	 * @param int         $adsLimit
+	 * @return string generated ads.
+	 */
+    private function createAdsForYandexSheet(
+    	array $values,
+		TableHeader $propertyColumns,
+		string $targetSheet,
+		int $adsLimit
+	): string
     {
         $xml = "";
         foreach ($values as $numRow => $row) {
@@ -228,6 +251,12 @@ class XmlGenerationService implements IXmlGenerationService
             {
                 continue;
             }
+
+			// array started from 0
+			$adNumber = $numRow + 1;
+			if ($this->isAdsLimitReached($adNumber, $adsLimit)) {
+				break;
+			}
             
             $ad = new Ads\YandexAd($row, $propertyColumns);
             
@@ -236,16 +265,22 @@ class XmlGenerationService implements IXmlGenerationService
     
         return $xml;
     }
-    
-    /**
-     * Create ads from sheet rows for Ula.
-     *
-     * @param array $values rows from sheet.
-     * @param TableHeader $propertyColumns
-     * @param string $targetSheet
-     * @return string generated ads.
-     */
-    private function createAdsForUlaSheet(array $values, TableHeader $propertyColumns, string $targetSheet): string
+
+	/**
+	 * Create ads from sheet rows for Ula.
+	 *
+	 * @param array       $values rows from sheet.
+	 * @param TableHeader $propertyColumns
+	 * @param string      $targetSheet
+	 * @param int         $adsLimit
+	 * @return string generated ads.
+	 */
+    private function createAdsForUlaSheet(
+    	array $values,
+		TableHeader $propertyColumns,
+		string $targetSheet,
+		int $adsLimit
+	): string
     {
         $ulaCategories = $this->dictRepository->getUlaCategories();
         
@@ -255,6 +290,13 @@ class XmlGenerationService implements IXmlGenerationService
             {
                 continue;
             }
+
+			// array started from 0
+			$adNumber = $numRow + 1;
+			if ($this->isAdsLimitReached($adNumber, $adsLimit)) {
+				break;
+			}
+
             $ad = new Ads\UlaAd($row, $propertyColumns, $ulaCategories);
             
             $xml.= $ad->toUlaXml().PHP_EOL;
@@ -279,7 +321,7 @@ class XmlGenerationService implements IXmlGenerationService
     /**
      * @inheritDoc
      */
-    public function generateAvitoXML(string $spreadsheetId, string $targetSheet) : string
+    public function generateAvitoXML(string $spreadsheetId, string $targetSheet, int $adsLimit) : string
     {
         $xml = '<?xml version=\'1.0\' encoding=\'UTF-8\'?>'
             .PHP_EOL."<Ads formatVersion=\"3\" target=\"Avito.ru\">".PHP_EOL;
@@ -328,7 +370,7 @@ class XmlGenerationService implements IXmlGenerationService
             
             sleep(1);
             
-            $xml.= $this->createAdsForAvitoSheet($values, $propertyColumns, $targetSheet);
+            $xml.= $this->createAdsForAvitoSheet($values, $propertyColumns, $targetSheet, $adsLimit);
         }
 
         return $xml.'</Ads>';
@@ -337,7 +379,7 @@ class XmlGenerationService implements IXmlGenerationService
     /**
      * @inheritDoc
      */
-    public function generateYandexXML(string $spreadsheetId, string $targetSheet) : string
+    public function generateYandexXML(string $spreadsheetId, string $targetSheet, int $adsLimit) : string
     {
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
             '<feed version="1">'.PHP_EOL.
@@ -382,14 +424,14 @@ class XmlGenerationService implements IXmlGenerationService
         
             sleep(1);
         
-            $xml.= $this->createAdsForYandexSheet($values, $propertyColumns, $targetSheet);
+            $xml.= $this->createAdsForYandexSheet($values, $propertyColumns, $targetSheet, $adsLimit);
         }
     
         return $xml.'</offers>'.PHP_EOL.
             '</feed>';
     }
     
-    public function generateUlaXML(string $spreadsheetId, string $targetSheet): string
+    public function generateUlaXML(string $spreadsheetId, string $targetSheet, int $adsLimit): string
     {
         $defaultTime = Carbon::now(new DateTimeZone("Europe/Moscow"))
             ->format('Y-m-d H:i:s');
@@ -443,7 +485,7 @@ class XmlGenerationService implements IXmlGenerationService
                 '<shop>'.PHP_EOL.
                 '<offers>'.PHP_EOL;
         
-            $xml .= $this->createAdsForUlaSheet($values, $propertyColumns, $targetSheet);
+            $xml .= $this->createAdsForUlaSheet($values, $propertyColumns, $targetSheet, $adsLimit);
             return $xml.'</offers>'.PHP_EOL.
                 '</shop>'.PHP_EOL.
                 '</yml_catalog>';
