@@ -44,7 +44,7 @@ interface ITableRepository
      * @param Table $table
      */
     public function update(Table $table) : void;
-    
+
     /**
      * Update yandex token for table.
      *
@@ -55,10 +55,10 @@ interface ITableRepository
     public function updateYandexToken(int $tableId, string $yandexToken) : void;
 
 	/**
-	 * Delete table
+	 * Delete table from database.
 	 *
-	 * @param int $tableId
+	 * @param Table $table
 	 * @return bool
 	 */
-    public function delete(int $tableId) : bool;
+    public function delete(Table $table) : bool;
 }
