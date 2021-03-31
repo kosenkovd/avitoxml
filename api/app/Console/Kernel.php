@@ -14,8 +14,10 @@
     use App\Repositories\DictRepository;
     use App\Repositories\GeneratorRepository;
     use App\Repositories\Interfaces\ITableRepository;
-    use App\Repositories\TableRepository;
-    use App\Services\GoogleDriveClientService;
+	use App\Repositories\Interfaces\IUserRepository;
+	use App\Repositories\TableRepository;
+	use App\Repositories\UserRepository;
+	use App\Services\GoogleDriveClientService;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use App\Services\SpintaxService;
     use App\Services\SpreadsheetClientService;
@@ -48,97 +50,98 @@
             $schedule->call(function () {
                 Log::alert("Starting Schedule");
                 $tableRepository = new TableRepository();
+                $userRepository = new UserRepository();
                 $spreadsheetClientService = new SpreadsheetClientService();
                 $tables = $tableRepository->getTables();
                 
                 foreach ($tables as $table) {
-                    $this->processTable($table, $tableRepository, $spreadsheetClientService);
+                    $this->processTable($table, $tableRepository, $userRepository, $spreadsheetClientService);
                 }
                 Log::alert("Ending Schedule");
             })
                 ->name("Tables2") // имя процесса сбрасывается withoutOverlapping через 24 часа
-                ->withoutOverlapping();
-            
-            
-            $schedule->call(function () {
-                Log::alert("Starting AmountParser");
-                try {
-                    $tableGoogleId = '1VJdo7mkIHk2I8D_fCol21sOSrVi6wuVmRz3NEvvLQe0';
-                    $table = new Table(
-                        null,
-                        1,
-                        $tableGoogleId,
-                        null,
-                        null,
-                        null,
-                        0,
-                        null,
-                        null,
-                        'null',
-                        time()
-                    );
-                    
-                    $fillAmountJob = new FillAmountJob(
-                        new SpreadsheetClientService(),
-                        new TableRepository(),
-                        new XmlGeneration()
-                    );
-                    $fillAmountJob->start($table);
-                } catch (Exception $exception) {
-                    Log::error("Error on AmountParser".PHP_EOL.
-                        $exception->getMessage());
-                }
-                Log::alert("Finished AmountParser");
-            })
-                ->name("AmountParser") // имя процесса сбрасывается withoutOverlapping через 24 часа
                 ->withoutOverlapping();
         }
         
         private function processTable(
             Table $table,
             ITableRepository $tableRepository,
+            IUserRepository $userRepository,
             ISpreadsheetClientService $spreadsheetClientService
         ): void
         {
             Log::info("Table '".$table->getGoogleSheetId()."' started");
             try {
-                if ($this->isModified($table, $spreadsheetClientService)) {
+                if (
+                	!$this->isBlocked($table, $userRepository) &&
+                	$this->isModified($table, $spreadsheetClientService)
+				) {
                     Log::info("Table '".$table->getGoogleSheetId()."' updating...");
                     $this->startRandomizeTextJob($table);
                     $this->startFillImagesJob($table);
                     $this->startXMLGenerationJob($table);
                     $this->updateLastModified($table, $tableRepository);
-                } else {
-                    Log::info("Table '".$table->getGoogleSheetId()."' is up to date.");
                 }
             } catch (Exception $exception) {
-                Log::error($exception->getMessage());
+				$this->logTableError($table, $exception);
             }
             Log::info("Table '".$table->getGoogleSheetId()."' finished.");
-            
-            Log::info("sleep 1");
-            sleep(1);
         }
-        
+
+		/**
+		 * @param Table           $table
+		 * @param IUserRepository $userRepository
+		 * @return bool
+		 * @throws Exception
+		 */
+        private function isBlocked(Table $table, IUserRepository $userRepository): bool
+		{
+			$user = $userRepository->getUserById($table->getUserId());
+
+			if (is_null($user)) {
+				$message = "Error on '".$table->getGoogleSheetId()."' table have no user!";
+				Log::channel('fatal')->error($message);
+				throw new Exception($message);
+			}
+
+			if ($user->isBlocked()) {
+				Log::info("Table '".$table->getGoogleSheetId()."' user is blocked, do nothing.");
+				return true;
+			}
+
+			return false;
+		}
+
+		/**
+		 * @param Table                     $table
+		 * @param ISpreadsheetClientService $spreadsheetClientService
+		 * @return bool
+		 * @throws Exception
+		 */
         private function isModified(
             Table $table,
             ISpreadsheetClientService $spreadsheetClientService
         ): bool
         {
-            try {
-                $timeModified = $spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
-            } catch (Exception $exception) {
-                $this->logTableError($table, $exception);
-            }
-    
-            $isTableExpiredOrDeleted = $table->isDeleted() ||
-                (!is_null($table->getDateExpired()) && $table->getDateExpired() < time());
-    
-            if ($isTableExpiredOrDeleted) {
-                return false;
-            }
-    
-            return $table->getDateLastModified() < $timeModified->getTimestamp();
+			$isTableExpired = !is_null($table->getDateExpired()) && ($table->getDateExpired() < time());
+			if ($isTableExpired) {
+				Log::info("Table '".$table->getGoogleSheetId()."' expired.");
+				return false;
+			}
+
+			try {
+				$timeModified = $spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
+			} catch (Exception $exception) {
+				throw new Exception("Table '".$table->getGoogleSheetId()."' google error.".PHP_EOL.
+					$exception->getMessage());
+			}
+
+			$isModified = $table->getDateLastModified() < $timeModified->getTimestamp();
+            if (!$isModified) {
+				Log::info("Table '".$table->getGoogleSheetId()."' is up to date.");
+			}
+
+            return $isModified;
         }
         
         private function startRandomizeTextJob(Table $table): void
