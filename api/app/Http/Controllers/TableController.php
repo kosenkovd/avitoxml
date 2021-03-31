@@ -222,24 +222,21 @@ class TableController extends BaseController
     		return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
 		}
 
-        /** @var UserDTO $userDTO */
-        try {
-            $userDTO = $this->jsonMapper->map($request->json(), new UserDTO());
-        } catch (\Exception $exception) {
-            return response()->json(new ErrorResponse(Response::$statusTexts[400]), 400);
-        }
-    
-        $existingUserTables = $this->tableRepository->getTables($userDTO->userId);
-        if (count($existingUserTables) !== 0) {
-            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
-        }
-        
-        $table = $this->createTable($userDTO->userId);
-        
-        $userModel = UserDTOMapper::mapDTOToModel($userDTO);
-        $tableDTO = TableDtoMapper::mapModelToDTO($table, $userModel);
-    
-        return response()->json($tableDTO, 201);
+    	if (is_null($request->query('userId'))) {
+			$table = $this->createTable($currentUser->getUserId());
+
+			return response()->json(TableDtoMapper::mapModelToDTO($table, $currentUser), 201);
+		}
+
+		$userId = (int)$request->query('userId');
+    	$user = $this->userRepository->getUserById($userId);
+		if (is_null($user)) {
+			return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+		}
+
+		$table = $this->createTable($user->getUserId());
+
+        return response()->json(TableDtoMapper::mapModelToDTO($table, $user), 201);
     }
 
     /**
