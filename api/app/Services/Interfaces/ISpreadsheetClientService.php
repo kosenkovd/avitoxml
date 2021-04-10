@@ -71,4 +71,11 @@
          * @return array list of sheet names.
          */
         public function getSheets(string $tableId): array;
+    
+        /**
+         * Rename Table to (удалена)
+         *
+         * @param string $fileId
+         */
+        public function markAsDeleted(string $fileId): void;
     }

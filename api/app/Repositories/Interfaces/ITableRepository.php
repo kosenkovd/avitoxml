@@ -60,5 +60,5 @@ interface ITableRepository
 	 * @param Table $table
 	 * @return bool
 	 */
-    public function delete(Table $table) : bool;
+    public function delete(Table $table) : void;
 }

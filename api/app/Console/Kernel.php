@@ -138,7 +138,8 @@
             ISpreadsheetClientService $spreadsheetClientService
         ): bool
         {
-			$isTableExpired = !is_null($table->getDateExpired()) && ($table->getDateExpired() < time());
+			$isTableExpired = !is_null($table->getDateExpired()) &&
+                (($table->getDateExpired() + 86400) < time());
 			if ($isTableExpired) {
 				Log::info("Table '".$table->getGoogleSheetId()."' expired.");
 				return false;

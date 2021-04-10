@@ -183,6 +183,7 @@ class Table {
     
     /**
      * @param int $dateLastModified
+     * @return Table
      */
     public function setDateLastModified(int $dateLastModified): Table
     {

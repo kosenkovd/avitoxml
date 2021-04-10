@@ -297,6 +297,8 @@ class TableController extends BaseController
 		}
 
 		$this->tableRepository->delete($existingTable);
+        
+        $this->spreadsheetClientService->markAsDeleted($existingTable->getGoogleSheetId());
 
 		return response()->json(null, 200);
 	}

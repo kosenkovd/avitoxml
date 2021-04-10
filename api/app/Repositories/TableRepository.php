@@ -311,7 +311,7 @@ WHERE `id`=?";
 	 * @return bool
 	 * @throws Exception
 	 */
-    public function delete(Table $table): bool
+    public function delete(Table $table): void
 	{
 		$mysqli = $this->connect();
 

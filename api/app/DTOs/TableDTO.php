@@ -6,17 +6,17 @@ namespace App\DTOs;
 
 class TableDTO extends TableDtoBase
 {
-    public ?string $dateExpired;
+    public ?int $dateExpired;
 
     public bool $isActive;
 
     public bool $isYandexTokenPresent;
     
     /**
-     * @param string|null $dateExpired
+     * @param int|null $dateExpired
      * @return TableDTO
      */
-    public function setDateExpired(?string $dateExpired): TableDTO
+    public function setDateExpired(?int $dateExpired): TableDTO
     {
         $this->dateExpired = $dateExpired;
         return $this;

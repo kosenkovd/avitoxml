@@ -34,17 +34,6 @@ class TableDtoMapper
 
     public static function mapModelToDTO(Models\Table $table, Models\User $user) : DTOs\TableDTO
     {
-        if(is_null($table->getDateExpired()))
-        {
-            $dateExpiredString = null;
-        }
-        else
-        {
-            $dateExpired = new DateTime();
-            $dateExpired->setTimestamp($table->getDateExpired());
-            $dateExpiredString = $dateExpired->format(DateTime::ISO8601);
-        }
-
         $isActive = !$user->isBlocked() && (is_null($table->getDateExpired()) || $table->getDateExpired() > time());
 
         $googleDriveUrl = $table->getGoogleDriveId() != null
@@ -60,7 +49,7 @@ class TableDtoMapper
             ->setGoogleDriveUrl($googleDriveUrl)
             ->setGenerators(self::GetGenerators($table->getTableGuid(), $table->getGenerators()))
             ->setNotes($table->getNotes())
-            ->setDateExpired($dateExpiredString)
+            ->setDateExpired($table->getDateExpired())
             ->setIsActive($isActive)
             ->setIsYandexTokenPresent($table->getYandexToken() != null);
         

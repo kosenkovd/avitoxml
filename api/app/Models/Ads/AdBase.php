@@ -38,15 +38,17 @@
             
             if (isset($row[$propertyColumns->dateCreated]) && $row[$propertyColumns->dateCreated] != '') {
                 $dateRaw = $row[$propertyColumns->dateCreated];
-                if (!strpos($dateRaw, ":")) {
-                    $dateRaw .= ' 12:00';
+                $dateRawFixed = $dateRaw;
+                if(!strpos($dateRawFixed, ":")) {
+                    $dateRawFixed .= ' 12:00';
                 }
+                $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
                 
                 try {
-                    $date = Carbon::createFromTimeString($dateRaw, $this->timezone);
+                    $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
                     $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
                 } catch (\Exception $exception) {
-                    Log::error("Error on dateBegin '".$dateRaw."'");
+                    Log::notice("Notice on 'dateBegin' ".$dateRaw);
                 }
             } else {
                 $this->dateBegin = null;
@@ -54,15 +56,17 @@
             
             if (isset($row[$propertyColumns->dateEnd]) && $row[$propertyColumns->dateEnd] != '') {
                 $dateRaw = $row[$propertyColumns->dateEnd];
-                if (!strpos($dateRaw, ":")) {
-                    $dateRaw .= ' 12:00';
+                $dateRawFixed = $dateRaw;
+                if(!strpos($dateRawFixed, ":")) {
+                    $dateRawFixed .= ' 12:00';
                 }
+                $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
                 
                 try {
-                    $date = Carbon::createFromTimeString($dateRaw, $this->timezone);
+                    $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
                     $this->dateEnd = $date->format('Y-m-d\TH:i:sP');
                 } catch (\Exception $exception) {
-                    Log::error("Error on dateEnd '".$dateRaw."'");
+                    Log::notice("Notice on 'dateEnd' ".$dateRaw);
                 }
             } else {
                 $this->dateEnd = null;

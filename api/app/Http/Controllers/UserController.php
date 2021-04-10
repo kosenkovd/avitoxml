@@ -138,7 +138,7 @@ class UserController extends BaseController
 		}
 
 		$count = $request->query('count') ? (int)$request->query('count') : 1;
-		if ($count > 20) {
+		if ($count > 500) {
             return response()->json(new ErrorResponse('Count is to high'), 400);
         }
 		
@@ -162,6 +162,14 @@ class UserController extends BaseController
             $createdUser = $this->userRepository->getUserByApiKey($apiKey);
             $users[] = UserDTOMapper::mapModelToDTO($createdUser);
 		}
+		
+		$userLinks = array_map(
+		    function (UserDTO $user) {
+		        return "http://lk.agishev-autoz.ru/tables?hash=".$user->token;
+            },
+            $users
+        );
+		mail('maksimagishev@mail.ru', 'Новые пользователи', implode(PHP_EOL, $userLinks));
 
 		return response()->json($users, 201);
 	}

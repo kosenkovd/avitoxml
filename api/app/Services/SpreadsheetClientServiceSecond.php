@@ -55,12 +55,7 @@
             $drivePermissions->setRole('writer');
             $drivePermissions->setType('anyone');
             $driveService->permissions->create($id, $drivePermissions);
-            
-            $drivePermissions->setRole('writer');
-            $drivePermissions->setType('user');
-            $drivePermissions->setEmailAddress('wdenkosw@gmail.com');
-            $driveService->permissions->create($id, $drivePermissions);
-            
+
             $drivePermissions->setRole('writer');
             $drivePermissions->setType('user');
             $drivePermissions->setEmailAddress('xml.avito@gmail.com');
@@ -297,5 +292,10 @@
             }
             
             return $sheets;
+        }
+    
+        public function markAsDeleted(string $fileId): void
+        {
+            // stub
         }
     }

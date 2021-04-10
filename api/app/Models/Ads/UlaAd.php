@@ -96,17 +96,19 @@ ULAXML;
             if (is_null($this->datePublication)) {
                 return "";
             }
-            
+    
             $dateRaw = $this->datePublication;
-            if (!strpos($dateRaw, ":")) {
-                $dateRaw .= ' 12:00';
+            $dateRawFixed = $dateRaw;
+            if(!strpos($dateRawFixed, ":")) {
+                $dateRawFixed .= ' 12:00';
             }
+            $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
     
             try {
-                $date = Carbon::createFromTimeString($dateRaw, new DateTimeZone("Europe/Moscow"));
+                $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
                 return $date->format('d-m-Y');
             } catch (\Exception $exception) {
-                Log::error("Error on 'generateDatePublication' '".$dateRaw."'");
+                Log::notice("Notice on 'generating date of publication' ".$dateRaw);
                 return "";
             }
         }
@@ -128,16 +130,18 @@ ULAXML;
         
         protected function generateUlaSubCategory(): string
         {
-            if (!$this->subCategory) {
+            if (!$this->subCategory && !$this->category) {
                 return "";
             }
             $name = mb_strtolower(preg_replace('/\s/i', "", $this->subCategory));
+            $category = mb_strtolower(preg_replace('/\s/i', "", $this->category));
             
             foreach ($this->ulaCategories as $ulaCategory) {
-                if ($ulaCategory->getName() === $name) {
+                if ($ulaCategory->getName() === $category.$name) {
                     return $ulaCategory->getId();
                 }
             }
+            
             return "";
         }
         

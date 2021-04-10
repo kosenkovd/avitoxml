@@ -5,6 +5,7 @@
     
     
     use App\Configuration\Config;
+    use App\Models\Table;
     use App\Services\Interfaces\ISpreadsheetClientService;
     use DateTime;
     use Exception;
@@ -93,7 +94,10 @@
                 $this->logTableError($tableId, $exception);
                 
                 $status = (int)$exception->getCode();
-                if (!is_null($status) && $this->isQuota($status)) {
+                if (
+                    !is_null($status) &&
+                    ($this->isQuota($status) || $this->isDriveQuota($exception))
+                ) {
                     Log::alert('sleep '.$this->secondToSleep);
                     sleep($this->secondToSleep);
     
@@ -116,6 +120,12 @@
         private function isQuota(int $status): bool
         {
             return $status === 429;
+        }
+    
+        private function isDriveQuota(Exception $exception): bool
+        {
+            return ((int)$exception->getCode() === 403) &&
+                (strpos($exception->getMessage(), "User Rate Limit Exceeded") !== false);
         }
     
         private function logTableError(string $tableId, Exception $exception): void
@@ -292,5 +302,24 @@
             }
             
             return $sheets;
+        }
+    
+        public function markAsDeleted(string $fileId): void
+        {
+            return;
+            $this->client->addScope(Google_Service_Drive::DRIVE);
+            $driveService = new Google_Service_Drive($this->client);
+    
+            $this->handleQuota(
+                $fileId,
+                function () use ($driveService, $fileId) {
+                    $file = $driveService->files->get($fileId);
+                    $name = $file->getName();
+                    $file->setName($name." (удалена)");
+    
+                    $driveService->files->update($fileId, $file);
+                }
+            );
+            
         }
     }

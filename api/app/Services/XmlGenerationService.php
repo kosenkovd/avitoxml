@@ -40,6 +40,8 @@ class XmlGenerationService implements IXmlGenerationService
      * @var IDictRepository dict repository.
      */
     private IDictRepository $dictRepository;
+    
+    private bool $adsLimitEnabled = true;
 
     /**
      * Checks if row contains all required properties.
@@ -122,15 +124,17 @@ class XmlGenerationService implements IXmlGenerationService
         else
         {
             $dateRaw = $row[$propertyColumns->dateCreated];
-            if(!strpos($dateRaw, ":")) {
-                $dateRaw .= ' 00:00';
+            $dateRawFixed = $dateRaw;
+            if(!strpos($dateRawFixed, ":")) {
+                $dateRawFixed .= ' 00:00';
             }
+            $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
     
             try {
-                $date = Carbon::createFromTimeString($dateRaw, new DateTimeZone("Europe/Moscow"));
+                $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
                 return !$idFieldPresent || $date->getTimestamp() > time();
             } catch (\Exception $exception) {
-                Log::error("Error on 'shouldSkipYandexRow'");
+                Log::notice("Notice on 'yandex' ". $dateRaw);
                 
                 return !$idFieldPresent;
             }
@@ -154,14 +158,14 @@ class XmlGenerationService implements IXmlGenerationService
 	): string
     {
         $xml = "";
+        $ads = 0;
         foreach ($values as $numRow => $row) {
             if($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
                 continue;
             }
-
-            // array started from 0
-            $adNumber = $numRow + 1;
-            if ($this->isAdsLimitReached($adNumber, $adsLimit)) {
+            
+            $ads++;
+            if ($this->isAdsLimitReached($ads, $adsLimit)) {
             	break;
 			}
 
@@ -175,7 +179,7 @@ class XmlGenerationService implements IXmlGenerationService
 
     private function isAdsLimitReached(int $adNumber, int $limit): bool
 	{
-		return $adNumber > $limit;
+		return $this->adsLimitEnabled && ($adNumber > $limit);
 	}
     
     private function getAvitoAd(array $row, TableHeader $propertyColumns): Ads\AdBase
@@ -247,15 +251,15 @@ class XmlGenerationService implements IXmlGenerationService
 	): string
     {
         $xml = "";
+        $ads = 0;
         foreach ($values as $numRow => $row) {
             if($this->shouldSkipRow($row, $propertyColumns, $targetSheet))
             {
                 continue;
             }
-
-			// array started from 0
-			$adNumber = $numRow + 1;
-			if ($this->isAdsLimitReached($adNumber, $adsLimit)) {
+    
+            $ads++;
+			if ($this->isAdsLimitReached($ads, $adsLimit)) {
 				break;
 			}
             
@@ -286,6 +290,7 @@ class XmlGenerationService implements IXmlGenerationService
         $ulaCategories = $this->dictRepository->getUlaCategories();
         
         $xml = "";
+        $ads = 0;
         foreach ($values as $numRow => $row) {
             if($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
                 continue;
@@ -294,10 +299,9 @@ class XmlGenerationService implements IXmlGenerationService
             if ($this->shouldSkipUlaRow($row, $propertyColumns)) {
                 continue;
             }
-
-			// array started from 0
-			$adNumber = $numRow + 1;
-			if ($this->isAdsLimitReached($adNumber, $adsLimit)) {
+    
+            $ads++;
+			if ($this->isAdsLimitReached($ads, $adsLimit)) {
 				break;
 			}
 
@@ -316,15 +320,17 @@ class XmlGenerationService implements IXmlGenerationService
         }
         
         $dateRaw = $row[$propertyColumns->dateCreated];
-        if(!strpos($dateRaw, ":")) {
-            $dateRaw .= ' 00:00';
+        $dateRawFixed = $dateRaw;
+        if(!strpos($dateRawFixed, ":")) {
+            $dateRawFixed .= ' 00:00';
         }
+        $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
     
         try {
-            $date = Carbon::createFromTimeString($dateRaw, new DateTimeZone("Europe/Moscow"));
+            $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
             return $date->getTimestamp() > time();
         } catch (\Exception $exception) {
-            Log::error("Error on 'shouldSkipUlaRow' ".$dateRaw);
+            Log::notice("Notice on 'ula' ".$dateRaw);
         
             return true;
         }

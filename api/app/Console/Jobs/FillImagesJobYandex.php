@@ -27,7 +27,7 @@
         
         protected int $maxJobTime = 60 * 5;
         protected bool $loggingEnabled = true;
-        protected bool $timeoutEnabled = false;
+        protected bool $timeoutEnabled = true;
         
         private int $imagesColumn = 0;
         private int $subFolderColumn = 1;
@@ -105,11 +105,16 @@
                     Log::info($message);
                     
                     $this->processSheet(
-                        $table->getTableGuid(),
-                        $table->getGoogleSheetId(),
+                        $table,
                         $targetSheet
                     );
-                    $this->stopIfTimeout();
+                    
+                    if ($this->checkIsTimeout()) {
+                        Log::alert("Table '".$table->getGoogleSheetId()."' finished by timeout.");
+                        $table->setDateLastModified(0);
+                        $this->tableRepository->update($table);
+                        break;
+                    }
                 }
             }
             
@@ -167,34 +172,46 @@
             
             return true;
         }
-        
+    
         /**
          * Fills images for specified generator.
          *
-         * @param string $tableGuid table guid.
-         * @param string $tableId Google spreadsheet id.
+         * @param Table $table
          * @param string $sheetName target sheet.
          * @throws \Exception
          */
         private function processSheet(
-            string $tableGuid,
-            string $tableId,
+            Table $table,
             string $sheetName
         ): void
         {
+            $tableGuid = $table->getTableGuid();
+            $tableId = $table->getGoogleSheetId();
+            
             $values = $this->getFullDataFromTable($tableId, $sheetName);
             $propertyColumns = new TableHeader(array_shift($values));
+            
             $this->newValues = [];
             
             if ($propertyColumns && empty($values)) {
                 return;
             }
             
+             if (is_null($propertyColumns->imagesRaw)) {
+                Log::error("no images column");
+                return;
+            }
+            
             foreach ($values as $numRow => $row) {
+                if ($this->checkIsTimeout()) {
+                    $table->setDateLastModified(0);
+                    $this->tableRepository->update($table);
+                    Log::alert("Table '".$tableId."' finished by timeout.");
+                    break;
+                }
+                
                 $this->setEmptyNewValuesForRow($numRow);
                 $this->errors = [];
-                
-                $this->stopIfTimeout();
                 
                 if ($this->isExistsInRow($row, $propertyColumns->imagesRaw)) {
                     $this->fillNewValueWithContent(
@@ -559,8 +576,9 @@
         private function getEncodedImageString(array $images, string $tableGuid): string
         {
             $links = array_map(
-                function (string $image) use ($tableGuid): string {
-                    $base64 = base64_encode($image);
+                function (string $imageRaw) use ($tableGuid): string {
+                    $imagePath = preg_replace('/disk:\//', '', $imageRaw);
+                    $base64 = base64_encode($imagePath);
                     $urlSafeBase64 = preg_replace(['/\+/', '/\//', '/=/'], ['-', '_', ''], $base64);
                     $fileInfo = $urlSafeBase64;
                     return LinkHelper::getPictureDownloadLink($tableGuid, $fileInfo)." ";
