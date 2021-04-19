@@ -17,6 +17,7 @@ class Config {
     private string $rootDirectory;
     private string $dbCertificateName;
     private bool $isLoggingEnabled;
+    private int $needsToUpdateTimeStamp;
 
     public function __construct()
     {
@@ -28,6 +29,14 @@ class Config {
                 $this->$key = strval($value);
             }
         }
+    }
+    
+    /**
+     * @return int
+     */
+    public function getNeedsToUpdateTimeStamp(): int
+    {
+        return $this->needsToUpdateTimeStamp;
     }
     
     /**

@@ -3,6 +3,7 @@
     
     namespace App\Console\Jobs;
     
+    use App\Configuration\Config;
     use App\Configuration\Spreadsheet\SheetNames;
     use App\Configuration\XmlGeneration;
     use App\Helpers\LinkHelper;
@@ -24,6 +25,7 @@
         protected SheetNames $sheetNamesConfig;
         private ITableRepository $tableRepository;
         private XmlGeneration $xmlGeneration;
+        private int $needsToUpdateTimeStamp;
         
         protected int $maxJobTime = 60 * 5;
         protected bool $loggingEnabled = true;
@@ -36,18 +38,21 @@
         private array $errors = [];
         private array $newValues = [];
         private bool $needsToUpdate = false;
-        
+    
         public function __construct(
             ISpreadsheetClientService $spreadsheetClientService,
             IYandexDiskService $yandexDiskService,
             ITableRepository $tableRepository,
-            XmlGeneration $xmlGeneration)
+            XmlGeneration $xmlGeneration,
+            int $needsToUpdateTimeStamp
+        )
         {
             parent::__construct($spreadsheetClientService);
             $this->yandexDiskService = $yandexDiskService;
             $this->tableRepository = $tableRepository;
             $this->sheetNamesConfig = new SheetNames();
             $this->xmlGeneration = $xmlGeneration;
+            $this->needsToUpdateTimeStamp = $needsToUpdateTimeStamp;
         }
         
         /**
@@ -111,7 +116,7 @@
                     
                     if ($this->checkIsTimeout()) {
                         Log::alert("Table '".$table->getGoogleSheetId()."' finished by timeout.");
-                        $table->setDateLastModified(0);
+                        $table->setDateLastModified($this->needsToUpdateTimeStamp);
                         $this->tableRepository->update($table);
                         break;
                     }
@@ -202,9 +207,14 @@
                 return;
             }
             
+             if (is_null($propertyColumns->subFolderName)) {
+                Log::error("no sub folder column");
+                return;
+            }
+            
             foreach ($values as $numRow => $row) {
                 if ($this->checkIsTimeout()) {
-                    $table->setDateLastModified(0);
+                    $table->setDateLastModified($this->needsToUpdateTimeStamp);
                     $this->tableRepository->update($table);
                     Log::alert("Table '".$tableId."' finished by timeout.");
                     break;
@@ -312,6 +322,11 @@
                     $this->errors[] = "❗ в папке '".$subFolderName."' нет фото";
                     $this->fillNewValueWithErrors($numRow);
                 }
+            }
+    
+            if (!$this->checkIsTimeout()) {
+                $table->setDateLastModified(0);
+                $this->tableRepository->update($table);
             }
             
             $this->fillSheet($tableId, $sheetName, $propertyColumns);

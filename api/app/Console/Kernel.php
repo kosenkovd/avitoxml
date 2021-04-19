@@ -2,6 +2,7 @@
     
     namespace App\Console;
     
+    use App\Configuration\Config;
     use App\Configuration\Spreadsheet\SheetNames;
     use App\Configuration\XmlGeneration;
     use App\Console\Jobs\FillAmountJob;
@@ -55,9 +56,16 @@
                 $userRepository = new UserRepository();
                 $spreadsheetClientService = new SpreadsheetClientService();
                 $tables = $tableRepository->getTables();
+                $needsToUpdateTimeStamp = (new Config())->getNeedsToUpdateTimeStamp();
                 
                 foreach ($tables as $table) {
-                    $this->processTable($table, $tableRepository, $userRepository, $spreadsheetClientService);
+                    $this->processTable(
+                        $table,
+                        $tableRepository,
+                        $userRepository,
+                        $spreadsheetClientService,
+                        $needsToUpdateTimeStamp
+                    );
                 }
                 Log::alert("Ending Schedule");
             })
@@ -82,7 +90,8 @@
             Table $table,
             ITableRepository $tableRepository,
             IUserRepository $userRepository,
-            ISpreadsheetClientService $spreadsheetClientService
+            ISpreadsheetClientService $spreadsheetClientService,
+            int $needsToUpdateTimeStamp
         ): void
         {
             Log::info("Table '".$table->getGoogleSheetId()."' started");
@@ -93,9 +102,9 @@
 				) {
                     Log::info("Table '".$table->getGoogleSheetId()."' updating...");
                     $this->startRandomizeTextJob($table);
-                    $this->startFillImagesJob($table);
+                    $this->startFillImagesJob($table, $needsToUpdateTimeStamp);
                     $this->startXMLGenerationJob($table);
-                    $this->updateLastModified($table, $tableRepository);
+                    $this->updateLastModified($table, $tableRepository, $needsToUpdateTimeStamp);
                 }
             } catch (Exception $exception) {
 				$this->logTableError($table, $exception);
@@ -172,7 +181,7 @@
             );
         }
         
-        private function startFillImagesJob(Table $table): void
+        private function startFillImagesJob(Table $table, int $needsToUpdateTimeStamp): void
         {
             switch ($table->getTableId()) {
                 case 99999:
@@ -192,7 +201,8 @@
                             new SpreadsheetClientService(),
                             new YandexDiskService(),
                             new TableRepository(),
-                            new XmlGeneration()
+                            new XmlGeneration(),
+                            $needsToUpdateTimeStamp
                         ))
                     );
             }
@@ -251,8 +261,17 @@
             echo $message;
         }
         
-        private function updateLastModified(Table $table, ITableRepository $tableRepository): void
+        private function updateLastModified(
+            Table $table,
+            ITableRepository $tableRepository,
+            int $needsToUpdateTimeStamp
+        ): void
         {
+            $existingTable = $tableRepository->get($table->getTableGuid());
+            if ($existingTable && ($existingTable->getDateLastModified() === $needsToUpdateTimeStamp)) {
+                return;
+            }
+            
             $table->setDateLastModified(time());
             $tableRepository->update($table);
             Log::info("Table '".$table->getGoogleSheetId()."' updated.");
