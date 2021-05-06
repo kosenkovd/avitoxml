@@ -4,7 +4,7 @@ namespace App\Models\Ads;
 
 use App\Models\TableHeader;
 
-class BicycleAd extends AdBase
+class VehicleTypeAd extends AdBase
 {
     protected ?string $vehicleType = null;
 
