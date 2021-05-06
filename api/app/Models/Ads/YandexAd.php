@@ -60,6 +60,7 @@ YANDEXXML;
             $resultXml .= $this->addTagIfPropertySet("<![CDATA[$this->description]]>", "description");
             $resultXml .= $this->addTagIfPropertySet($this->category, "category");
             $resultXml .= $this->addTagIfPropertySet($imageTags, "images");
+            $resultXml .= $this->addTagIfPropertySet($this->videoURL, "video");
             $resultXml .= $payment;
             
             return $resultXml;
