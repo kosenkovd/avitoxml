@@ -27,7 +27,7 @@
             $this->address7 = $this->getFullAddress($row, $propertyColumns, 7);
             $this->address8 = $this->getFullAddress($row, $propertyColumns, 8);
             $this->address9 = $this->getFullAddress($row, $propertyColumns, 9);
-            $this->address9 = $this->getFullAddress($row, $propertyColumns, 10);
+            $this->address10 = $this->getFullAddress($row, $propertyColumns, 10);
         }
         
         public function toAvitoXml(): string

@@ -64,7 +64,7 @@ class Authenticate
         if(($user->getRoleId() !== $this->roles->Admin) && $user->isBlocked())
         {
             return response()->json(
-                new ErrorResponse("User is blocked"),
+                new ErrorResponse("User is blocked", 'BLOCKED'),
                 403
             );
         }

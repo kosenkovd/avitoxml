@@ -6,7 +6,6 @@ use App\Configuration\Config;
 use App\Models\Generator;
 use App\Models\Table;
 use App\Repositories\Interfaces\ITableRepository;
-use App\Repositories\Interfaces\ITableUpdateLockRepository;
 use Exception;
 use mysqli;
 
