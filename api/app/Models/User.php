@@ -4,7 +4,7 @@ namespace App\Models;
 
 class User
 {
-    private int $userId;
+    private ?int $userId;
 
     private int $roleId;
 
@@ -19,27 +19,32 @@ class User
     private string $apiKey;
 
     private ?string $notes;
+    
+    private ?string $name;
 
-    /**
-     * User constructor.
-     * @param int $userId
-     * @param int $roleId
-     * @param int $dateCreated
-     * @param string|null $phoneNumber
-     * @param string|null $socialNetworkUrl
-     * @param bool $isBlocked
-     * @param string $apiKey
-     * @param string|null $notes
-     */
+	/**
+	 * User constructor.
+	 * @param int|null    $userId
+	 * @param int         $roleId
+	 * @param int         $dateCreated
+	 * @param string|null $phoneNumber
+	 * @param string|null $socialNetworkUrl
+	 * @param bool        $isBlocked
+	 * @param string      $apiKey
+	 * @param string|null $notes
+	 * @param string|null $name
+	 */
     public function __construct(
-        int $userId,
+        ?int $userId,
         int $roleId,
         int $dateCreated,
         ?string $phoneNumber,
         ?string $socialNetworkUrl,
         bool $isBlocked,
         string $apiKey,
-        ?string $notes)
+        ?string $notes,
+        ?string $name
+    )
     {
         $this->userId = $userId;
         $this->roleId = $roleId;
@@ -49,6 +54,7 @@ class User
         $this->isBlocked = $isBlocked;
         $this->apiKey = $apiKey;
         $this->notes = $notes;
+        $this->name = $name;
     }
 
     /**
@@ -113,5 +119,23 @@ class User
     public function getNotes(): ?string
     {
         return $this->notes;
+    }
+    
+    /**
+     * @return string|null
+     */
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+    
+    /**
+     * @param string $apiKey
+     * @return User
+     */
+    public function setApiKey(string $apiKey): User
+    {
+        $this->apiKey = $apiKey;
+        return $this;
     }
 }

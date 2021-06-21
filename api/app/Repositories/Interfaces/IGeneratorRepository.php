@@ -9,6 +9,14 @@ interface IGeneratorRepository
     /**
      * Persist new generator in database.
      *
+     * @param string $generatorGuid get generator.
+     * @return Generator|null new table id.
+     */
+    public function get(string $generatorGuid) : ?Generator;
+    
+    /**
+     * Persist new generator in database.
+     *
      * @param Generator $generator generator data to insert.
      * @return int new table id.
      */

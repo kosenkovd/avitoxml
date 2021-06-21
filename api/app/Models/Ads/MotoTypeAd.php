@@ -4,15 +4,15 @@ namespace App\Models\Ads;
 
 use App\Models\TableHeader;
 
-class BicycleAd extends AdBase
+class MotoTypeAd extends AdBase
 {
-    protected ?string $vehicleType = null;
+    protected ?string $motoType = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
         parent::__construct($row, $propertyColumns);
 
-        $this->vehicleType = isset($row[$propertyColumns->goodsType])
+        $this->motoType = isset($row[$propertyColumns->goodsType])
             ? htmlspecialchars($row[$propertyColumns->goodsType])
             : null;
     }
@@ -21,7 +21,7 @@ class BicycleAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
-        $resultXml = $this->addTagIfPropertySet($this->vehicleType, "VehicleType");
+        $resultXml = $this->addTagIfPropertySet($this->motoType, "MotoType");
 
         return <<<AVITOXML
     <Ad>

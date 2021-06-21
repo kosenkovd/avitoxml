@@ -10,12 +10,14 @@ class Config {
     private string $usersTableName;
     private string $tablesTableName;
     private string $tableUpdateLockTableName;
+    private string $tableUlaName;
     private string $generatorsTableName;
     private string $copySpreadsheetId;
     private string $baseFolderId;
     private string $rootDirectory;
     private string $dbCertificateName;
     private bool $isLoggingEnabled;
+    private int $needsToUpdateTimeStamp;
 
     public function __construct()
     {
@@ -27,6 +29,22 @@ class Config {
                 $this->$key = strval($value);
             }
         }
+    }
+    
+    /**
+     * @return int
+     */
+    public function getNeedsToUpdateTimeStamp(): int
+    {
+        return $this->needsToUpdateTimeStamp;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getTableUlaName(): string
+    {
+        return $this->tableUlaName;
     }
 
     /**

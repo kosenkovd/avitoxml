@@ -17,63 +17,42 @@ class TableDtoMapper
      */
     private static function GetGenerators(string $tableGuid, array $generators) : array
     {
-        $generatorDtos = [];
+        $generatorDTOs = [];
         foreach ($generators as $generator)
         {
-            $generatorDtos[] = new DTOs\GeneratorDTO(
-                $generator->getTargetPlatform(),
-                LinkHelper::getXmlGeneratorLink($tableGuid, $generator->getGeneratorGuid())
-            );
+            $generatorDTO = new DTOs\GeneratorDTO();
+            $generatorDTO->setTargetPlatform($generator->getTargetPlatform())
+                ->setGeneratorUrl(LinkHelper::getXmlGeneratorLink($tableGuid, $generator->getGeneratorGuid()))
+                ->setGeneratorGuid($generator->getGeneratorGuid())
+                ->setMaxAds($generator->getMaxAds());
+            
+            $generatorDTOs[] = $generatorDTO;
         }
 
-        return $generatorDtos;
+        return $generatorDTOs;
     }
 
-    public static function MapTableDTO(Models\Table $table, Models\User $user) : DTOs\TableDTO
+    public static function mapModelToDTO(Models\Table $table, Models\User $user) : DTOs\TableDTO
     {
-        if(is_null($table->getDateExpired()))
-        {
-            $dateExpiredString = null;
-        }
-        else
-        {
-            $dateExpired = new DateTime();
-            $dateExpired->setTimestamp($table->getDateExpired());
-            $dateExpiredString = $dateExpired->format(DateTime::ISO8601);
-        }
-
         $isActive = !$user->isBlocked() && (is_null($table->getDateExpired()) || $table->getDateExpired() > time());
 
         $googleDriveUrl = $table->getGoogleDriveId() != null
             ? LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId())
             : null;
 
-        return new DTOs\TableDTO(
-            $table->getTableId(),
-            $user->getUserId(),
-            $user->getPhoneNumber(),
-            $user->getSocialNetworkUrl(),
-            LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
-            $googleDriveUrl,
-            self::GetGenerators($table->getTableGuid(), $table->getGenerators()),
-            $table->getNotes(),
-            $dateExpiredString,
-            $isActive,
-            $table->getYandexToken() != null);
-    }
-
-    public static function MapDeletedTableDTO(Models\Table $table, Models\User $user)
-        : DTOs\DeletedTableDTO
-    {
-        return new DTOs\DeletedTableDTO(
-            $table->getTableId(),
-            $user->getUserId(),
-            $user->getPhoneNumber(),
-            $user->getSocialNetworkUrl(),
-            LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()),
-            LinkHelper::getGoogleDriveFolderLink($table->getGoogleDriveId()),
-            self::GetGenerators($table->getTableGuid(), $table->getGenerators()),
-            $table->getNotes(),
-            $table->getDateDeleted());
+        $tableDTO = new DTOs\TableDTO();
+        $tableDTO->setTableId($table->getTableId())
+            ->setUserId($table->getUserId())
+            ->setTableGuid($table->getTableGuid())
+            ->setGoogleSheetId($table->getGoogleSheetId())
+            ->setGoogleSheetUrl(LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()))
+            ->setGoogleDriveUrl($googleDriveUrl)
+            ->setGenerators(self::GetGenerators($table->getTableGuid(), $table->getGenerators()))
+            ->setNotes($table->getNotes())
+            ->setDateExpired($table->getDateExpired())
+            ->setIsActive($isActive)
+            ->setIsYandexTokenPresent($table->getYandexToken() != null);
+        
+        return $tableDTO;
     }
 }

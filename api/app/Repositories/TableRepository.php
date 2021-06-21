@@ -6,8 +6,8 @@ use App\Configuration\Config;
 use App\Models\Generator;
 use App\Models\Table;
 use App\Repositories\Interfaces\ITableRepository;
-use App\Repositories\Interfaces\ITableUpdateLockRepository;
 use Exception;
+use mysqli;
 
 class TableRepository extends RepositoryBase implements ITableRepository
 {
@@ -38,9 +38,11 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`dateDeleted`,
        `t`.`notes`,
        `t`.`tableGuid`,
+       `t`.`dateLastModified`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
        `g`.`targetPlatform`,
+       `g`.`maxAds`,
        `g`.`dateLastGenerated`
 FROM `".$this->config->getTablesTableName()."` `t`
 LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
@@ -62,7 +64,8 @@ WHERE 1";
                 $tableId,
                 $row["generatorGuid"],
                 $row["dateLastGenerated"],
-                $row["targetPlatform"]
+                $row["targetPlatform"],
+                $row["maxAds"]
             );
             if(!isset($tables["table".$tableId]))
             {
@@ -77,6 +80,7 @@ WHERE 1";
                     $row["dateDeleted"],
                     $row["notes"],
                     $row["tableGuid"],
+                    $row["dateLastModified"],
                     [$generator]);
             }
             else
@@ -107,6 +111,7 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`dateDeleted`,
        `t`.`notes`,
        `t`.`tableGuid`,
+       `t`.`dateLastModified`,
        `g`.`generatorGuid`
 FROM `".$this->config->getTablesTableName()."` `t`
 LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
@@ -129,6 +134,7 @@ WHERE generatorGuid IS NULL";
                 $row["dateDeleted"],
                 $row["notes"],
                 $row["tableGuid"],
+                $row["dateLastModified"],
                 []);
         }
 
@@ -190,9 +196,11 @@ SELECT `t`.`id` AS `tableId`,
        `t`.`dateDeleted`,
        `t`.`notes`,
        `t`.`tableGuid`,
+       `t`.`dateLastModified`,
        `g`.`id` AS `generatorId`,
        `g`.`generatorGuid`,
        `g`.`targetPlatform`,
+       `g`.`maxAds`,
        `g`.`dateLastGenerated`
 FROM `".$this->config->getTablesTableName()."` `t`
 LEFT JOIN `".$this->config->getGeneratorsTableName()."` `g` ON `t`.`id`=`g`.`tableId`
@@ -215,7 +223,8 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
                 $tableId,
                 $row["generatorGuid"],
                 $row["dateLastGenerated"],
-                $row["targetPlatform"]
+                $row["targetPlatform"],
+                $row["maxAds"]
             );
             if(is_null($table))
             {
@@ -230,6 +239,7 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
                     $row["dateDeleted"],
                     $row["notes"],
                     $row["tableGuid"],
+                    $row["dateLastModified"],
                     [$generator]);
             }
             else
@@ -239,6 +249,37 @@ WHERE `t`.`tableGuid`='".$tableGuid."'";
         }
 
         return $table;
+    }
+
+    /**
+     * Update yandex token for table.
+     *
+     * @param Table $table
+     * @throws Exception
+     */
+    public function update(Table $table) : void
+    {
+        $query = "
+            UPDATE `".$this->config->getTablesTableName()."`
+            SET
+                `dateExpired` = ?,
+                `dateLastModified` = ?
+            WHERE `id`=?";
+
+        $mysqli = $this->connect();
+        $statement = $mysqli->prepare($query);
+        $dateExpired = $table->getDateExpired();
+        $dateLastModified = $table->getDateLastModified();
+        $tableId = $table->getTableId();
+
+        $statement->bind_param(
+            'iii',
+            $dateExpired,
+            $dateLastModified,
+            $tableId
+        );
+
+        $statement->execute();
     }
 
     /**
@@ -261,4 +302,46 @@ WHERE `id`=?";
 
         $statement->execute();
     }
+
+	/**
+	 * Delete table from DB
+	 *
+	 * @param Table $table
+	 * @return bool
+	 * @throws Exception
+	 */
+    public function delete(Table $table): void
+	{
+		$mysqli = $this->connect();
+
+		$query = "
+			DELETE FROM `".$this->config->getTablesTableName()."`
+			WHERE `id`=?";
+
+		$statement = $mysqli->prepare($query);
+		$tableId = $table->getTableId();
+
+		$statement->bind_param('i', $tableId);
+
+		$statement->execute();
+
+		foreach ($table->getGenerators() as $generator) {
+			$this->deleteGenerator($mysqli, $generator);
+		}
+
+		$mysqli->close();
+	}
+
+	private function deleteGenerator(mysqli $mysqli, Generator $generator) {
+		$query = "
+			DELETE FROM `".$this->config->getGeneratorsTableName()."`
+			WHERE `id`=?";
+
+		$statement = $mysqli->prepare($query);
+		$generatorId = $generator->getGeneratorId();
+
+		$statement->bind_param('i', $generatorId);
+
+		$statement->execute();
+	}
 }

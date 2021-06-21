@@ -16,7 +16,7 @@
     use Google_Service_Sheets_ValueRange;
     use Illuminate\Support\Facades\Log;
 
-    class SpreadsheetClientService implements ISpreadsheetClientService {
+    class SpreadsheetClientServiceSecond implements ISpreadsheetClientService {
         private Config $config;
         private Google_Client $client;
         private Google_Service_Drive_Permission $drivePermissions;
@@ -94,7 +94,7 @@
                 
                 $status = (int)$exception->getCode();
                 if (!is_null($status) && $this->isQuota($status)) {
-                    Log::alert('sleep '.$this->secondToSleep);
+                    Log::channel('xml')->alert('sleep '.$this->secondToSleep);
                     sleep($this->secondToSleep);
     
                     $failedAttempts++;
@@ -121,7 +121,7 @@
         private function logTableError(string $tableId, Exception $exception): void
         {
             $message = "Error on '" . $tableId . "' ". $exception->getCode() . PHP_EOL . $exception->getMessage();
-            Log::error($message);
+            Log::channel('xml')->error($message);
         }
         
         /**
@@ -132,10 +132,10 @@
         {
             $this->config = new Config();
             $this->client = new Google_Client();
-            $this->client->setApplicationName('Google Sheets Depeche');
+            $this->client->setApplicationName('Google Sheets Depeche 1');
             $this->client->setScopes([Google_Service_Sheets::SPREADSHEETS]);
             $this->client->setAccessType('offline');
-            $this->client->setAuthConfig(__dir__. '/../Configuration/GoogleAccountConfig.json');
+            $this->client->setAuthConfig(__dir__. '/../Configuration/GoogleAccountSecondConfig.json');
             
             $this->sheetsService = new Google_Service_Sheets($this->client);
             
@@ -194,7 +194,7 @@
             }
             catch (Exception $exception)
             {
-                Log::error("Error on '".$spreadsheetId."' while reading".PHP_EOL.
+                Log::channel('xml')->error("Error on '".$spreadsheetId."' while reading".PHP_EOL.
                     $exception->getMessage());
                 
                 throw $exception;

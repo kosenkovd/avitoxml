@@ -37,7 +37,7 @@ return [
     'channels' => [
         'stack' => [
             'driver' => 'stack',
-            'channels' => ['single'],
+            'channels' => ['daily'],
             'ignore_exceptions' => false,
         ],
 
@@ -52,6 +52,32 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,
+        ],
+        
+        'xml' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/xml/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+        ],
+
+        'api' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/api/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+        ],
+        
+        'fatal' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/fatal/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+        ],
+
+        'test' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/test/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
         ],
 
         'slack' => [

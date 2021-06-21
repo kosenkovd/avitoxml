@@ -2,8 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\DTOs\ErrorResponse;
+use App\Enums\Roles;
 use Closure;
-use App\Http\Models;
 use App\Repositories\Interfaces;
 use \Illuminate\Http\Request;
 
@@ -13,6 +14,11 @@ class Authenticate
      * @var Interfaces\IUserRepository Models\User repository.
      */
     private Interfaces\IUserRepository $userRepository;
+    
+    /**
+     * @var Roles
+     */
+    private Roles $roles;
 
     private static array $anonymousAllowed = [
         "App\Http\Controllers\GeneratorController@show",
@@ -22,6 +28,7 @@ class Authenticate
     public function __construct(Interfaces\IUserRepository $userRepository)
     {
         $this->userRepository = $userRepository;
+        $this->roles = new Roles();
     }
 
     /**
@@ -48,10 +55,18 @@ class Authenticate
         $user = $this->userRepository->getUserByApiKey($hash);
         if(is_null($user))
         {
-            http_response_code(403);
-            return response()->json([
-                "message" => "User with specified hash was not found."
-            ], 403);
+            return response()->json(
+                new ErrorResponse("User with specified hash was not found"),
+                403
+            );
+        }
+    
+        if(($user->getRoleId() !== $this->roles->Admin) && $user->isBlocked())
+        {
+            return response()->json(
+                new ErrorResponse("User is blocked", 'BLOCKED'),
+                403
+            );
         }
 
         $request->request->add([

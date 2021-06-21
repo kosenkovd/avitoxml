@@ -47,10 +47,6 @@
             $driveService->permissions->create($id, $drivePermissions);
             $drivePermissions->setRole('writer');
             $drivePermissions->setType('user');
-            $drivePermissions->setEmailAddress('wdenkosw@gmail.com');
-            $driveService->permissions->create($id, $drivePermissions);
-            $drivePermissions->setRole('writer');
-            $drivePermissions->setType('user');
             $drivePermissions->setEmailAddress('xml.avito@gmail.com');
             $driveService->permissions->create($id, $drivePermissions);
             $drivePermissions->setRole('writer');

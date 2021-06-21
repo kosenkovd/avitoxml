@@ -4,24 +4,42 @@ namespace App\Http\Controllers;
 
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
+use App\Console\Jobs\FillAmountJob;
 use App\Console\Jobs\FillImagesJobYandex;
+use App\Console\Jobs\GenerateXMLJob;
+use App\Console\Jobs\RandomizeTextJob;
+use App\DTOs\ErrorResponse;
+use App\DTOs\TableDTO;
+use App\DTOs\UserDTO;
 use App\Helpers\LinkHelper;
+use App\Mappers\UserDTOMapper;
+use App\Models\Generator;
+use App\Models\Table;
+use App\Models\User;
 use App\Repositories\TableRepository;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\IMailService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IYandexDiskService;
+use App\Services\SpintaxService;
 use App\Services\SpreadsheetClientService;
+use App\Services\XmlGenerationService;
 use App\Services\YandexDiskService;
+use Http\Client\Exception\HttpException;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
 
 use App\Models;
 use App\Mappers\TableDtoMapper;
 use App\Repositories\Interfaces;
 use App\Enums\Roles;
+use Illuminate\Support\Carbon;
+use JsonMapper;
 use Ramsey\Uuid\Guid\Guid;
+use Symfony\Component\HttpFoundation\Exception\JsonException;
+use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
  * Class TableController
@@ -34,6 +52,11 @@ class TableController extends BaseController
      * @var Interfaces\ITableRepository Models\Table repository.
      */
     private Interfaces\ITableRepository $tableRepository;
+    
+    /**
+     * @var Interfaces\IUserRepository Models\User repository.
+     */
+    private Interfaces\IUserRepository $userRepository;
 
     /**
      * @var Interfaces\IGeneratorRepository Models\Generator repository.
@@ -70,27 +93,34 @@ class TableController extends BaseController
      */
     private SheetNames $sheetNamesConfig;
 
-    public function __construct(
+	private JsonMapper $jsonMapper;
+
+	public function __construct(
         Interfaces\ITableRepository $tableRepository,
+        Interfaces\IUserRepository $userRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
         IGoogleDriveClientService $googleDriveClientService,
         ISpreadsheetClientService $spreadsheetClientService,
         IYandexDiskService $yandexDiskService,
         IMailService $mailService,
-        SheetNames $sheetNames)
+        SheetNames $sheetNames,
+		JsonMapper $jsonMapper
+	)
     {
         $this->tableRepository = $tableRepository;
+        $this->userRepository = $userRepository;
         $this->generatorRepository = $generatorRepository;
         $this->googleDriveClientService = $googleDriveClientService;
         $this->spreadsheetClientService = $spreadsheetClientService;
         $this->yandexDiskService = $yandexDiskService;
         $this->mailService = $mailService;
         $this->sheetNamesConfig = $sheetNames;
+        $this->jsonMapper = $jsonMapper;
         $this->roles = new Roles();
     }
 
     /**
-     * GET /
+     * GET /tables
      *
      * Get all table instances.
      * @param Request $request
@@ -98,6 +128,7 @@ class TableController extends BaseController
      */
     public function index(Request $request) : JsonResponse
     {
+        /** @var User $user */
         $user = $request->input("currentUser");
         $tables = [];
 
@@ -111,10 +142,11 @@ class TableController extends BaseController
                 break;
         }
 
+        /** @var TableDTO[] $tableDtos */
         $tableDtos = [];
         foreach ($tables as $table)
         {
-            $tableDtos[] = TableDtoMapper::MapTableDTO($table, $user);
+            $tableDtos[] = TableDtoMapper::mapModelToDTO($table, $user);
         }
         return response()->json($tableDtos, 200);
     }
@@ -146,12 +178,14 @@ class TableController extends BaseController
         {
             foreach ($targetsToAdd as $target)
             {
-                $generator = new Models\Generator(
+                $generator = new Generator(
                     null,
                     $table->getTableId(),
                     Guid::uuid4()->toString(),
                     0,
-                    $target["target"]);
+                    $target["target"],
+                    30
+                );
 
                 $newGeneratorId = $this->generatorRepository->insert($generator);
 
@@ -161,7 +195,7 @@ class TableController extends BaseController
     }
 
     /**
-     * GET /$id
+     * GET /tablex/{$id}
      *
      * Read table.
      * @param $id string table guid.
@@ -169,53 +203,11 @@ class TableController extends BaseController
      */
     public function show(string $id, Request $request)
     {
-        $table = $this->tableRepository->get($id);
-
-        $yaService = new FillImagesJobYandex(
-            new SpreadsheetClientService(),
-            new YandexDiskService(),
-            new TableRepository(),
-            new XmlGeneration());
-        $yaService->start($table);
-
-//        $service = new FillImagesJob(
-//            new SpreadsheetClientService(),
-//            new GoogleDriveClientService()
-//        );
-
-        /*$spintaxService = new RandomizeTextJob(
-            new SpintaxService(),
-            new SpreadsheetClientService(),
-            new XmlGeneration());
-        $spintaxService->start($table);*/
-
-//        $triggerService = new TriggerSpreadsheetJob(
-//            new SpreadsheetClientService(),
-//            new Spreadsheet()
-//        );
-
-//        $triggerService->start();
-
-//        if(is_null($table))
-//        {
-//            echo $id;
-//        }
-//        else
-//        {
-//            //$service->start($table);
-//            $yaService->start($table);
-//            //$spintaxService->start($table);
-//        }
-
-//        $client = new YandexDiskService();
-//        $client->init("AgAAAAAMMp_iAAbO9-TN2FLhf0a7kQr5Ju2mlII");
-//        $resp = $client->listFolderImages("Виджеты");
-//        dd($resp);
-        return response("", 200);
+        return response()->json('',200);
     }
 
     /**
-     * POST /
+     * POST /tables
      *
      * Create new table.
      * @param $request Request create request.
@@ -223,80 +215,164 @@ class TableController extends BaseController
      */
     public function store(Request $request) : JsonResponse
     {
-        $user = $request->input("currentUser");
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
+        
+    	if ($currentUser->getRoleId() !== $this->roles->Admin) {
+    		return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+		}
 
-        $googleTableId = $this->spreadsheetClientService->copyTable();
+    	if (is_null($request->query('userId'))) {
+			$table = $this->createTable($currentUser->getUserId());
 
-        $table = new Models\Table(
-            null,
-            $user->getUserId(),
-            $googleTableId,
-            null,
-            null,
-            null,
-            false,
-            null,
-            null,
-            Guid::uuid4()->toString(),
-            []
-        );
+			return response()->json(TableDtoMapper::mapModelToDTO($table, $currentUser), 201);
+		}
 
-        $newTableId = $this->tableRepository->insert($table);
+		$userId = (int)$request->query('userId');
+    	$user = $this->userRepository->getUserById($userId);
+		if (is_null($user)) {
+			return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+		}
 
-        $targetsToAdd = [
-            [
-                "cell" => "C3",
-                "target" =>$this->sheetNamesConfig->getAvito()
-            ],
-            [
-                "cell" => "C4",
-                "target" =>$this->sheetNamesConfig->getYoula()
-            ],
-            [
-                "cell" => "C5",
-                "target" =>$this->sheetNamesConfig->getYandex()
-            ]
-        ];
+		$table = $this->createTable($user->getUserId());
 
-        $table->setTableId($newTableId);
-
-        foreach ($targetsToAdd as $target)
-        {
-            $generator = new Models\Generator(
-                null,
-                $newTableId,
-                Guid::uuid4()->toString(),
-                0,
-                $target["target"]);
-
-            $newGeneratorId = $this->generatorRepository->insert($generator);
-
-            $table->addGenerator($generator->setGeneratorId($newGeneratorId));
-
-            $this->spreadsheetClientService->updateCellContent(
-                $googleTableId,
-                $this->sheetNamesConfig->getInformation(),
-                $target["cell"],
-                LinkHelper::getXmlGeneratorLink(
-                    $table->getTableGuid(), $generator->getGeneratorGuid()),
-                $table->getTableGuid()."sgen");
-        }
-
-        $this->mailService->sendEmailWithTableData($table);
-
-        return response()->json(TableDtoMapper::MapTableDTO($table, $user), 201);
+        return response()->json(TableDtoMapper::mapModelToDTO($table, $user), 201);
     }
 
     /**
-     * PUT /$id
+     * PUT /tables/{$tableGuid}
      *
      * Update table.
-     * @param string $id table guid.
+     * @param string $tableGuid table guid.
      * @param $request Request update request.
      * @return JsonResponse updated table resource.
      */
-    public function update(string $id, Request $request) : JsonResponse
+    public function update(string $tableGuid, Request $request) : JsonResponse
     {
-        return response()->json($request, 200);
+        /** @var User $currentUser */
+        $currentUser = $request->input("currentUser");
+    
+        if ($currentUser->getRoleId() !== $this->roles->Admin) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+        }
+    
+        $existingTable = $this->tableRepository->get($tableGuid);
+        if (is_null($existingTable)) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+        }
+    
+        /** @var TableDTO $tableDTO */
+        try {
+            $tableDTO = $this->jsonMapper->map($request->json(), new TableDTO());
+        } catch (\Exception $e) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[400]), 400);
+        }
+        
+        $existingTable->setDateExpired($tableDTO->dateExpired);
+        $this->tableRepository->update($existingTable);
+        
+        return response()->json(null, 200);
     }
+    
+    /**
+     * DELETE /tables/{$tableGuid}
+     *
+     * Delete table from google and BD and delete Generators with content
+     * @param string $tableGuid table guid.
+     * @param Request $request delete request.
+     * @return JsonResponse deleted table resource.
+     */
+    public function destroy(string $tableGuid, Request $request): JsonResponse
+	{
+		/** @var User $currentUser */
+		$currentUser = $request->input("currentUser");
+
+		if ($currentUser->getRoleId() !== $this->roles->Admin) {
+			return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+		}
+
+		$existingTable = $this->tableRepository->get($tableGuid);
+		if (is_null($existingTable)) {
+			return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+		}
+
+		$this->tableRepository->delete($existingTable);
+        
+        $this->spreadsheetClientService->markAsDeleted($existingTable->getGoogleSheetId());
+
+		return response()->json(null, 200);
+	}
+    
+    /**
+     * Create table for specified user
+     *
+     * @param int $userId
+     * @return Table
+     */
+    private function createTable(int $userId): Table
+	{
+		$googleTableId = $this->spreadsheetClientService->copyTable();
+        
+        $dateExpired = Carbon::now()->addDays(3)->getTimestamp();
+
+		$table = new Table(
+			null,
+			$userId,
+			$googleTableId,
+			null,
+			null,
+			$dateExpired,
+			false,
+			null,
+			null,
+			Guid::uuid4()->toString(),
+			0,
+			[]
+		);
+
+		$newTableId = $this->tableRepository->insert($table);
+
+		$targetsToAdd = [
+			[
+				"cell" => "C3",
+				"target" => $this->sheetNamesConfig->getAvito()
+			],
+			[
+				"cell" => "C4",
+				"target" => $this->sheetNamesConfig->getYoula()
+			],
+			[
+				"cell" => "C5",
+				"target" => $this->sheetNamesConfig->getYandex()
+			]
+		];
+
+		$table->setTableId($newTableId);
+
+		foreach ($targetsToAdd as $target) {
+			$generator = new Generator(
+				null,
+				$newTableId,
+				Guid::uuid4()->toString(),
+				0,
+				$target["target"],
+                30
+            );
+
+			$newGeneratorId = $this->generatorRepository->insert($generator);
+
+			$table->addGenerator($generator->setGeneratorId($newGeneratorId));
+
+			$this->spreadsheetClientService->updateCellContent(
+				$googleTableId,
+				$this->sheetNamesConfig->getInformation(),
+				$target["cell"],
+				LinkHelper::getXmlGeneratorLink($table->getTableGuid(), $generator->getGeneratorGuid())
+			);
+		}
+
+		$this->mailService->sendEmailWithTableData($table);
+
+		return $table;
+	}
 }

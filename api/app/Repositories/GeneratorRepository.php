@@ -19,26 +19,62 @@ class GeneratorRepository extends RepositoryBase implements IGeneratorRepository
         parent::__construct();
     }
 
-    /**
-     * Persist new generator in database.
-     *
-     * @param Generator $generator generator data to insert.
-     * @return int new table id.
-     * @throws Exception in case of DB connection failure.
-     */
+	/**
+	 * @inheritDoc
+	 */
+    public function get(string $generatorGuid): ?Generator
+    {
+        $mysqli = $this->connect();
+        $generatorGuid = $mysqli->real_escape_string($generatorGuid);
+    
+        $res = $mysqli->query("
+        SELECT
+               `id`,
+               `tableId`,
+               `generatorGuid`,
+               `targetPlatform`,
+               `dateLastGenerated`,
+               `maxAds`
+        FROM ".$this->config->getGeneratorsTableName()."
+        WHERE `generatorGuid`= '".$generatorGuid."'");
+        
+        if(!$res || !$res->data_seek(0))
+        {
+            return null;
+        }
+        $row = $res->fetch_assoc();
+        $mysqli->close();
+    
+        return new Generator(
+            $row["id"],
+            $row["tableId"],
+            $row["generatorGuid"],
+            $row["dateLastGenerated"],
+            $row["targetPlatform"],
+            $row["maxAds"]
+        );
+    }
+
+	/**
+	 * @inheritDoc
+	 */
     public function insert(Generator $generator) : int
     {
         $statement = "
-INSERT INTO `".$this->config->getGeneratorsTableName()."`(
-    `tableId`,
-    `generatorGuid`,
-    `dateLastGenerated`,
-    `targetPlatform`)
-VALUES (
-    ".$generator->getTableId().",
-    '".$generator->getGeneratorGuid()."',
-    ".$generator->getLastGenerated().",
-    '".$generator->getTargetPlatform()."')";
+            INSERT INTO `".$this->config->getGeneratorsTableName()."` (
+                `tableId`,
+                `generatorGuid`,
+                `dateLastGenerated`,
+                `targetPlatform`,
+                `maxAds`
+            )
+            VALUES (
+                ".$generator->getTableId().",
+                '".$generator->getGeneratorGuid()."',
+                ".$generator->getLastGenerated().",
+                '".$generator->getTargetPlatform()."',
+                ".$generator->getMaxAds()."
+                )";
 
         $mysqli = $this->connect();
         $mysqli->query($statement);
@@ -48,13 +84,9 @@ VALUES (
         return $newGeneratorId;
     }
 
-    /**
-     * Retrieve last saved generated XML.
-     *
-     * @param int $generatorId generator id.
-     * @return string generated XML, if it exists.
-     * @throws Exception in case of DB connection failure.
-     */
+	/**
+	 * @inheritDoc
+	 */
     public function getLastGeneration(int $generatorId) : ?string
     {
         $query = "
@@ -85,11 +117,7 @@ WHERE `id`=?";
     }
 
     /**
-     * Save new XML generation.
-     *
-     * @param int $generatorId generator id.
-     * @param string $content new generation content.
-     * @throws Exception in case of DB connection failure.
+     * @inheritDoc
      */
     public function setLastGeneration(int $generatorId, string $content) : void
     {
@@ -122,29 +150,31 @@ WHERE `id`=?";
     }
 
     /**
-     * Update model in database.
-     *
-     * @param Generator $generator generator resource to update.
-     * @throws Exception in case of DB connection failure.
+     * @inheritDoc
      */
     public function update(Generator $generator) : void
     {
-        if(is_null($generator->getGeneratorId()))
-        {
-            return;
-        }
-
-        $statement = "
-UPDATE `".$this->config->getGeneratorsTableName()."`
-SET `id`=".$generator->getGeneratorId().",
-    `tableId`=".$generator->getTableId().",
-    `generatorGuid`='".$generator->getGeneratorGuid()."',
-    `dateLastGenerated`=".$generator->getLastGenerated().",
-    `targetPlatform`='".$generator->getTargetPlatform()."'
-WHERE `id`=".$generator->getGeneratorId();
-
         $mysqli = $this->connect();
-        $mysqli->query($statement);
+
+        $query = "
+            UPDATE `".$this->config->getGeneratorsTableName()."`
+            SET
+                `maxAds`= ?
+            WHERE `id`= ?";
+    
+        $statement = $mysqli->prepare($query);
+        
+        $maxAds = $generator->getMaxAds();
+        $generatorId = $generator->getGeneratorId();
+        
+        $statement->bind_param(
+            'ii',
+            $maxAds,
+            $generatorId
+        );
+    
+        $result = $statement->execute();
+        
         $mysqli->close();
     }
 }

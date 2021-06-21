@@ -3,6 +3,7 @@
 namespace App\Repositories\Interfaces;
 
 use App\Models\Table;
+use Exception;
 
 interface ITableRepository
 {
@@ -36,6 +37,13 @@ interface ITableRepository
      * @return Table|null table, if found, otherwise null.
      */
     public function get(string $tableGuid) : ?Table;
+    
+    /**
+     * Update table.
+     *
+     * @param Table $table
+     */
+    public function update(Table $table) : void;
 
     /**
      * Update yandex token for table.
@@ -45,4 +53,12 @@ interface ITableRepository
      * @throws Exception
      */
     public function updateYandexToken(int $tableId, string $yandexToken) : void;
+
+	/**
+	 * Delete table from database.
+	 *
+	 * @param Table $table
+	 * @return bool
+	 */
+    public function delete(Table $table) : void;
 }

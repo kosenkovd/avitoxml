@@ -10,6 +10,7 @@
     use App\Models\TableHeader;
     use App\Services\Interfaces\IGoogleDriveClientService;
     use App\Services\Interfaces\ISpreadsheetClientService;
+    use Illuminate\Support\Facades\Log;
     use Ramsey\Uuid\Guid\Guid;
 
     class FillImagesJob extends JobBase
@@ -22,7 +23,7 @@
         /**
          * @var bool is logging enabled.
          */
-        protected bool $loggingEnabled = false;
+        protected bool $loggingEnabled = true;
 
         private array $images = [];
 
@@ -85,7 +86,12 @@
          * @return void
          */
         private function updateCellContent(
-            string $content, int $numRow, string $tableID, string $columnName, string $targetSheet): void
+            string $content,
+            int $numRow,
+            string $tableID,
+            string $columnName,
+            string $targetSheet
+        ): void
         {
             $range = $targetSheet.'!' . $columnName . $numRow . ':' . $columnName . $numRow;
 
@@ -99,8 +105,8 @@
                 $tableID,
                 $range,
                 $values,
-                $params,
-                substr($tableID, 0, 20)."FillImagesGoogle".$numRow);
+                $params
+            );
         }
 
         /**
@@ -174,21 +180,26 @@
 
             return $newFolderName;
         }
-
+    
         /**
          * Fills images for specified generator.
          *
          * @param string $tableID Google spreadsheet id.
          * @param string $baseFolderID Google drive base folder id.
          * @param Generator $generator Generator.
+         * @throws \Exception
          */
         private function processSheet(string $tableID, string $baseFolderID, Generator $generator): void
         {
             $sheetName = $generator->getTargetPlatform();
-            $this->log("Processing sheet (sheetName: ".$sheetName.", tableID: ".$tableID.")");
-            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName, substr($tableID, 0, 15));
-
-            if (empty($values))
+    
+            $message = "Table '".$tableID."' processing sheet '".$sheetName."'...";
+            $this->log($message);
+            Log::info($message);
+            
+            [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
+    
+            if ($propertyColumns && empty($values))
             {
                 return;
             }
@@ -199,7 +210,7 @@
 
                 var_dump($numRow);
                 $alreadyFilled = isset($row[$propertyColumns->imagesRaw]) &&
-                    $row[$propertyColumns->imagesRaw] != '';
+                    trim($row[$propertyColumns->imagesRaw]) != '';
 
                 // content starts at line 2
                 $spreadsheetRowNum = $numRow + 2;
@@ -208,7 +219,9 @@
                     continue;
                 }
 
-                $this->log("Filling row ".$spreadsheetRowNum);
+                $message = "Table '".$tableID."' start filling row ".$spreadsheetRowNum;
+                $this->log($message);
+                Log::info($message);
 
                 if(!isset($row[$propertyColumns->subFolderName]) ||
                     $row[$propertyColumns->subFolderName] == '')
@@ -232,20 +245,32 @@
                 }
 
 
-                $this->log("Folder name ".$subFolderName);
+                $message = "Table '".$tableID."' folder name ".$subFolderName;
+                $this->log($message);
+                Log::info($message);
 
                 $images = $this->getImages($baseFolderID, $subFolderName);
-                $this->log("Found ".count($images)." images");
+                
+                $message = "Table '".$tableID."' found ".count($images)." images";
+                $this->log($message);
+                Log::info($message);
 
                 if ($images !== []) {
-                    $links = [];
-                    foreach ($images as $image)
-                    {
-                        $links[] = LinkHelper::getPictureDownloadLink($image->id);
-                    }
+                    $links = array_map(
+                        function (string $image): string  {
+                            $base64 = base64_encode($image);
+                            $urlSafeBase64 = preg_replace(['/\+/', '/\//', '/=/'], ['-', '_', ''], $base64);
+                            $fileInfo = $urlSafeBase64;
+                            return LinkHelper::getPictureDownloadLink($image->id, $fileInfo)." ";
+                        },
+                        $images
+                    );
                     $imagesString = join(PHP_EOL, $links);
 
-                    $this->log("Images string ".$imagesString);
+                    $message = "Table '".$tableID."' filling ".$spreadsheetRowNum."...";
+                    $this->log($message.PHP_EOL.$imagesString);
+                    Log::info($message);
+                    
                     $this->updateCellContent(
                         $imagesString,
                         $spreadsheetRowNum,
@@ -264,30 +289,32 @@
             parent::__construct($spreadsheetClientService);
             $this->googleDriveClientService = $googleDriveClientService;
         }
-
+    
         /**
          * Start job.
          *
          * Fills images for all tables that were not filled before.
          *
          * @param Table $table table to process.
+         * @throws \Exception
          */
         public function start(Table $table): void
         {
-            $this->log("Start fill images job");
-
+            $message = "Table '".$table->getGoogleSheetId()."' processing...";
+            $this->log($message);
+            Log::info($message);
+            
             $this->startTimestamp = time();
-
-            $tableID = $table->getGoogleSheetId();
-            $this->log("Processing table ".$table->getTableId().", spreadsheet id ".$table->getGoogleSheetId());
             $baseFolderID = $table->getGoogleDriveId();
 
             foreach ($table->getGenerators() as $generator)
             {
-                $this->processSheet($tableID, $baseFolderID, $generator);
+                $this->processSheet($table->getGoogleSheetId(), $baseFolderID, $generator);
                 $this->stopIfTimeout();
             }
-
-            $this->log("Finished fill images job.");
+    
+            $message = "Table '".$table->getGoogleSheetId()."' finished.";
+            $this->log($message);
+            Log::info($message);
         }
     }

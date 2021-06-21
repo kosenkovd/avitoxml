@@ -25,16 +25,11 @@ class LinkHelper
      */
     public static function getXmlGeneratorLink(string $tableGuid, string $generatorGuid) : string
     {
-        return "https://avitoxml-t-win-api.azurewebsites.net/api/tables/".$tableGuid."/generators/".$generatorGuid;
+        return "http://xml.agishev-autoz.ru/api/tables/".$tableGuid."/generators/".$generatorGuid;
     }
 
-    public static function getPictureDownloadLink(string $fileID) : string
+    public static function getPictureDownloadLink(string $tableId, string $fileInfo) : string
     {
-        return "http://avitoxml.beget.tech/pictures/pictureWrapper.php?fileID=".$fileID;
-    }
-
-    public static function getYandexPictureDownloadLink(string $tableId, string $fileInfo) : string
-    {
-        return "https://avitoxml-t-win-api.azurewebsites.net/api/tables/".$tableId."/yandexFile?fileInfo=".$fileInfo;
+        return "https://agishev-autoz.ru/tables/".$tableId."/images/".$fileInfo;
     }
 }

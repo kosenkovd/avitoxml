@@ -22,12 +22,14 @@ class Table {
     private ?string $notes;
 
     private string $tableGuid;
+    
+    private int $dateLastModified;
 
     /**
      * @var Generator[] generators for table.
      */
     private array $generators;
-
+    
     /**
      * Table constructor.
      * @param ?int $tableId
@@ -40,6 +42,7 @@ class Table {
      * @param int|null $dateDeleted
      * @param string|null $notes
      * @param string $tableGuid
+     * @param int $dateLastModified
      * @param array $generators
      */
     public function __construct(
@@ -53,6 +56,7 @@ class Table {
         ?int $dateDeleted,
         ?string $notes,
         string $tableGuid,
+        int $dateLastModified,
         array $generators = [])
     {
         $this->tableId = $tableId;
@@ -65,7 +69,18 @@ class Table {
         $this->dateDeleted = $dateDeleted;
         $this->notes = $notes;
         $this->tableGuid = $tableGuid;
+        $this->dateLastModified = $dateLastModified;
         $this->generators = $generators;
+    }
+    
+    /**
+     * @param int|null $dateExpired
+     * @return Table
+     */
+    public function setDateExpired(?int $dateExpired): Table
+    {
+        $this->dateExpired = $dateExpired;
+        return $this;
     }
 
     /**
@@ -156,6 +171,24 @@ class Table {
     public function getTableGuid(): string
     {
         return $this->tableGuid;
+    }
+    
+    /**
+     * @return int
+     */
+    public function getDateLastModified(): int
+    {
+        return $this->dateLastModified;
+    }
+    
+    /**
+     * @param int $dateLastModified
+     * @return Table
+     */
+    public function setDateLastModified(int $dateLastModified): Table
+    {
+        $this->dateLastModified = $dateLastModified;
+        return $this;
     }
 
     /**

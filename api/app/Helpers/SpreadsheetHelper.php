@@ -23,7 +23,7 @@ class SpreadsheetHelper
         $remainder = $numCol % 26;
         $quotient = ($numCol - $remainder) / 26;
         if($quotient > 0) {
-            return getColumnLetterByNumber($quotient - 1).chr($remainder + 65);
+            return self::getColumnLetterByNumber($quotient - 1).chr($remainder + 65);
         } else {
             // 65 - это код символа A
             return chr($remainder + 65);
