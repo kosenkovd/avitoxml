@@ -72,7 +72,7 @@
                 $message = "Error on '".$table->getGoogleSheetId()."' while processSheet".PHP_EOL.
                     $exception->getMessage();
                 $this->log($message);
-                Log::error($message);
+                Log::channel($this->logChannel)->error($message);
                 
                 throw $exception;
             }
@@ -107,7 +107,7 @@
         {
             $message = "Table '".$table->getGoogleSheetId()."' processing...";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
             
             $this->startTimestamp = time();
             
@@ -137,13 +137,13 @@
                     
                     $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."'...";
                     $this->log($message);
-                    Log::info($message);
+                    Log::channel($this->logChannel)->info($message);
                     
                     $this->processSheet($table, $generator);
     
                     $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."' finished.";
                     $this->log($message);
-                    Log::info($message);
+                    Log::channel($this->logChannel)->info($message);
                     
                     $this->stopIfTimeout();
                 }
@@ -151,6 +151,6 @@
             
             $message = "Table '".$table->getGoogleSheetId()."' finished.";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
         }
     }

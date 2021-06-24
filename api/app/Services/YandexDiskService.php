@@ -78,7 +78,7 @@
             
             try
             {
-                $directory = $this->disk->getResource($folderPath, 1000);
+                $directory = $this->disk->getResource($folderPath, 10000);
                 
                 $imageNames = [];
                 foreach ($directory->items as $item)
@@ -90,7 +90,7 @@
             catch (Exception $exc)
             {
                 $message = "Error on folder ".$folderPath.PHP_EOL.$exc->getCode()." ".$exc->getMessage();
-                Log::error($message);
+                Log::channel('Tables')->error($message);
                 echo $message.PHP_EOL;
                 return [];
             }

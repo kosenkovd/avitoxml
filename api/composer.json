@@ -10,6 +10,7 @@
     "require": {
         "php": "^7.4|^8.0",
         "ext-curl": "*",
+        "ext-json": "*",
         "ext-mysqli": "*",
         "arhitector/yandex": "dev-master",
         "fideloper/proxy": "^4.4",
@@ -17,10 +18,10 @@
         "google/apiclient": "^2.7",
         "guzzlehttp/guzzle": "^7.0.1",
         "laravel/framework": "^8.12",
+        "laravel/passport": "^10.1",
         "laravel/tinker": "^2.5",
         "leonied7/yandex-disk-api": "dev-master",
-        "netresearch/jsonmapper": "^4.0",
-      "ext-json": "*"
+        "netresearch/jsonmapper": "^4.0"
     },
     "require-dev": {
         "facade/ignition": "^2.5",

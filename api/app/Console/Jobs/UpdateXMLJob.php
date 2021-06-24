@@ -61,9 +61,11 @@
                         );
                         break;
                     default:
-                        Log::channel('xml')->info("Table '".$table->getGoogleSheetId().
-                            "' skipped '".$generator->getTargetPlatform()."'");
-                        return;
+                        $content = $this->xmlGenerationService->generateAvitoXML(
+                            $table->getGoogleSheetId(),
+                            $generator->getTargetPlatform(),
+							$generator->getMaxAds()
+                        );
                 }
                 $this->generatorRepository->setLastGeneration($generator->getGeneratorId(), $content);
             } catch (Exception $exception) {

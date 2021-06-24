@@ -1,6 +1,5 @@
 <?php
 
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers as C;
 
@@ -17,7 +16,8 @@ use App\Http\Controllers as C;
 
 Route::apiResources([
     'tables' => C\TableController::class,
-    'tables.generators' => C\GeneratorController::class
+    'tables.generators' => C\GeneratorController::class,
+    'marketplaces' => C\TableMarketplaceController::class,
 ]);
 
 Route::get('/users/myAccount', [C\UserController::class, 'myAccount']);
@@ -26,6 +26,6 @@ Route::post('/users/', [C\UserController::class, 'store']);
 Route::put('/users/{id}', [C\UserController::class, 'update']);
 Route::put('/users/{id}/token', [C\UserController::class, 'refreshToken']);
 
-Route::get('/tables/fixGenerators', [C\TableController::class, 'fixGenerators']);
-Route::get('/tables/{tableId}/yandexFile', [C\FileWrapperController::class, 'yandexFile'])
-	->withoutMiddleware([\Illuminate\Routing\Middleware\ThrottleRequests::class]);
+Route::put('/tables/{tableGuid}/tokens', [C\TableController::class, 'updateTokens']);
+
+Route::put('/test', [C\UserController::class, 'test']);

@@ -10,9 +10,17 @@
     use App\Models\TableHeader;
     use App\Services\Interfaces\ISpintaxService;
     use App\Services\Interfaces\ISpreadsheetClientService;
+    use Illuminate\Support\Carbon;
     use Illuminate\Support\Facades\Log;
     
-    class RandomizeTextJob extends JobBase {
+    class RandomizeTextJob extends JobBase
+    {
+        const title = "title";
+        const price = "price";
+        const description = "description";
+        
+        private array $randomizedText = [];
+        
         private ISpintaxService $spintaxService;
         
         /**
@@ -27,17 +35,17 @@
         private bool $needsToUpdate = false;
         
         private XmlGeneration $xmlGeneration;
-        
+    
         /**
          * Randomises text in specified result column based on pattern column and updates spreadsheet.
          *
-         * @param string $tableId spreadsheet id.
-         * @param int $patternCol column to take pattern from.
-         * @param int $resultCol column to fill in randomized result.
-         * @param int $numRow row number, required for spreadsheet update.
-         * @param array $row row data.
+         * @param string $tableId    spreadsheet id.
+         * @param int    $patternCol column to take pattern from.
+         * @param int    $resultCol  column to fill in randomized result.
+         * @param int    $numRow     row number, required for spreadsheet update.
+         * @param array  $row        row data.
+         *
          * @return string
-         * @throws \Exception
          */
         private function randomizeText(
             string $tableId,
@@ -47,8 +55,8 @@
             array $row
         ): string
         {
-            $alreadyFilled = isset($row[$resultCol]) && $row[$resultCol] != '';
-            $noSource = !isset($row[$patternCol]) || $row[$patternCol] == '';
+            $alreadyFilled = isset($row[$resultCol]) && trim($row[$resultCol]) != '';
+            $noSource = !isset($row[$patternCol]) || trim($row[$patternCol]) == '';
             
             if ($alreadyFilled) {
                 return $row[$resultCol];
@@ -59,14 +67,48 @@
             }
             
             // Счет строк начинается с 1, а не с 0 и первая строка - заголовок
-            $numRow += +2;
-            
-            $message = "Table '".$tableId."' randomizing row ".$numRow."...";
+            $message = "Table '".$tableId."' randomizing row ".($numRow + 2)."...";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
             
             $this->needsToUpdate = true;
-            return $this->spintaxService->randomize($row[$patternCol]);
+            
+            $pattern = $row[$patternCol];
+    
+            $pattern = preg_replace_callback(
+                '/#start_no_space#(.*?)#stop_no_space#/s',
+                function (array $matches): string {
+                    return preg_replace('{\s+}s', '', $matches[1]);
+                },
+                $pattern
+            );
+            
+            $title = $this->randomizedText[self::title][$numRow][0] ?? '';
+            $price = $this->randomizedText[self::price][$numRow][0] ?? '';
+    
+            $date = Carbon::now();
+            $format = 'd.m.Y';
+            $pattern = preg_replace(
+                [
+                    '/%title%/',
+                    '/%price%/',
+                    '/%date%/',
+                    '/%yesterday_date%/',
+                    '/%tomorrow_date%/',
+                    '/%next_week%/',
+                ],
+                [
+                    $title,
+                    $price,
+                    $date->format($format),
+                    $date->subDay()->format($format),
+                    $date->addDays(2)->format($format),
+                    $date->addWeek()->format($format),
+                ],
+                $pattern
+            );
+            
+            return $this->spintaxService->randomize($pattern);
         }
         
         
@@ -79,36 +121,39 @@
          */
         private function processSheet(string $tableId, string $sheetName): void
         {
-            $values = $this->getFullDataFromTable($tableId, $sheetName);
-            $propertyColumns = new TableHeader(array_shift($values));
+            [$propertyColumns, $values] = $this->getHeaderAndDataFromTable(
+                $tableId,
+                $sheetName
+            );
             
             if ($propertyColumns && empty($values)) {
                 return;
             }
             
             $randomizers = [
-                [
+                self::title =>[
                     "pattern" => $propertyColumns->titleSpintax,
                     "result" => $propertyColumns->title
                 ],
-                [
-                    "pattern" => $propertyColumns->descriptionSpintax,
-                    "result" => $propertyColumns->description
-                ],
-                [
+                self::price => [
                     "pattern" => $propertyColumns->priceSpintax,
                     "result" => is_null($propertyColumns->price) ? $propertyColumns->salary : $propertyColumns->price
+                ],
+                self::description => [
+                    "pattern" => $propertyColumns->descriptionSpintax,
+                    "result" => $propertyColumns->description
                 ]
             ];
-            
-            foreach ($randomizers as $randomizer) {
+    
+            $this->randomizedText = [];
+            foreach ($randomizers as $name => $randomizer) {
                 if (is_null($randomizer["pattern"]) || is_null($randomizer["result"])) {
                     continue;
                 }
                 
-                $randomizedText = [];
+                $this->randomizedText[$name] = [];
                 foreach ($values as $numRow => $row) {
-                    $randomizedText[$numRow][] = $this->randomizeText(
+                    $this->randomizedText[$name][$numRow][] = $this->randomizeText(
                         $tableId,
                         $randomizer["pattern"],
                         $randomizer["result"],
@@ -127,7 +172,7 @@
                     $this->spreadsheetClientService->updateSpreadsheetCellsRange(
                         $tableId,
                         $range,
-                        $randomizedText,
+                        $this->randomizedText[$name],
                         [
                             'valueInputOption' => 'RAW'
                         ]
@@ -136,7 +181,7 @@
                     $message = "Error on '".$tableId."' while writing to table".PHP_EOL.
                         $exception->getMessage();
                     $this->log($message);
-                    Log::error($message);
+                    Log::channel($this->logChannel)->error($message);
                     
                     throw $exception;
                 }
@@ -167,7 +212,7 @@
         {
             $message = "Table '".$table->getGoogleSheetId()."' processing...";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
             
             $this->startTimestamp = time();
             $tableId = $table->getGoogleSheetId();
@@ -199,7 +244,7 @@
                     
                     $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."'...";
                     $this->log($message);
-                    Log::info($message);
+                    Log::channel($this->logChannel)->info($message);
                     
                     $this->processSheet($tableId, $targetSheet);
                     $this->stopIfTimeout();
@@ -208,6 +253,6 @@
             
             $message = "Table '".$table->getGoogleSheetId()."' finished.";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
         }
     }

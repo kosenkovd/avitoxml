@@ -15,6 +15,13 @@
         public function copyTable(): string;
         
         /**
+         * Creates new GoogleSheet from template.
+         *
+         * @return string new GoogleSheet id.
+         */
+        public function copyTableMarketplace(): string;
+        
+        /**
          * Get last modified time for file.
          *
          * @param string $fileId file id.

@@ -4,9 +4,11 @@ namespace App\Http\Middleware;
 
 use App\DTOs\ErrorResponse;
 use App\Enums\Roles;
+use App\Models\UserLaravel;
 use Closure;
 use App\Repositories\Interfaces;
 use \Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class Authenticate
 {
@@ -22,7 +24,6 @@ class Authenticate
 
     private static array $anonymousAllowed = [
         "App\Http\Controllers\GeneratorController@show",
-        "App\Http\Controllers\FileWrapperController@yandexFile"
     ];
 
     public function __construct(Interfaces\IUserRepository $userRepository)
@@ -49,10 +50,11 @@ class Authenticate
         $hash = $request->query('hash');
         if(is_null($hash))
         {
-            return response(null, 401);
+            return response()->json(new ErrorResponse(Response::$statusTexts[401]), 401);
         }
 
-        $user = $this->userRepository->getUserByApiKey($hash);
+        /** @var UserLaravel $user */
+        $user = UserLaravel::query()->where('apiKey', $hash)->first();
         if(is_null($user))
         {
             return response()->json(
@@ -61,16 +63,22 @@ class Authenticate
             );
         }
     
-        if(($user->getRoleId() !== $this->roles->Admin) && $user->isBlocked())
+        if(
+            ($user->roleId !== $this->roles->Admin) && // self ban fix
+            $user->isBlocked
+        )
         {
             return response()->json(
                 new ErrorResponse("User is blocked", 'BLOCKED'),
                 403
             );
         }
-
+    
+        auth()->login($user);
+        
+        $user = $this->userRepository->getUserByApiKey($hash);
         $request->request->add([
-            'currentUser' => $user
+            'currentUser' => $user,
         ]);
 
         return $next($request);

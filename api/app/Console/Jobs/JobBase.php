@@ -12,6 +12,8 @@ use Ramsey\Uuid\Guid\Guid;
 
 abstract class JobBase
 {
+    protected string $logChannel = 'Tables';
+    
     /**
      * @var ISpreadsheetClientService Google Spreadsheet client.
      */
@@ -82,8 +84,10 @@ abstract class JobBase
     protected function getHeaderAndDataFromTable(string $tableID, string $sheetName) : array
     {
         $values = $this->getFullDataFromTable($tableID, $sheetName);
+        sleep(1);
         
-        $propertyColumns = new TableHeader(array_shift($values));
+        $headers = array_shift($values) ?? [];
+        $propertyColumns = new TableHeader($headers);
         
         return [ $propertyColumns, $values ];
     }

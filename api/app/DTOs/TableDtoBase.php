@@ -4,6 +4,8 @@
 namespace App\DTOs;
 
 
+use App\Http\Resources\GeneratorCollection;
+
 class TableDtoBase
 {
     public int $tableId;
@@ -14,21 +16,14 @@ class TableDtoBase
 
     public ?string $googleDriveUrl;
 
-    public array $generators;
+//    /** @var GeneratorCollection */
+    public $generators; // TODO change to GeneratorCollection
 
-    public ?string $notes;
+    public ?string $tableNotes;
     
     public string $tableGuid;
     
     public string $googleSheetId;
-    
-    /**
-     * @return string
-     */
-    public function getGoogleSheetId(): string
-    {
-        return $this->googleSheetId;
-    }
     
     /**
      * @param string $googleSheetId
@@ -38,14 +33,6 @@ class TableDtoBase
     {
         $this->googleSheetId = $googleSheetId;
         return $this;
-    }
-    
-    /**
-     * @return string
-     */
-    public function getTableGuid(): string
-    {
-        return $this->tableGuid;
     }
     
     /**
@@ -99,22 +86,22 @@ class TableDtoBase
     }
     
     /**
-     * @param array $generators
+     * @param array $generators // |GeneratorCollection
      * @return TableDtoBase
      */
-    public function setGenerators(array $generators): TableDtoBase
+    public function setGenerators($generators): TableDtoBase // TODO change to GeneratorCollection
     {
         $this->generators = $generators;
         return $this;
     }
     
     /**
-     * @param string|null $notes
+     * @param string|null $tableNotes
      * @return TableDtoBase
      */
-    public function setNotes(?string $notes): TableDtoBase
+    public function setTableNotes(?string $tableNotes): TableDtoBase
     {
-        $this->notes = $notes;
+        $this->tableNotes = $tableNotes;
         return $this;
     }
     

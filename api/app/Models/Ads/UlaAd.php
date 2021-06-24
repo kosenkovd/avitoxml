@@ -96,20 +96,25 @@ ULAXML;
             if (is_null($this->datePublication)) {
                 return "";
             }
-    
+            
             $dateRaw = $this->datePublication;
-            $dateRawFixed = $dateRaw;
-            if(!strpos($dateRawFixed, ":")) {
-                $dateRawFixed .= ' 12:00';
-            }
-            $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
     
-            try {
-                $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
-                return $date->format('d-m-Y');
-            } catch (\Exception $exception) {
-                Log::notice("Notice on 'generating date of publication' ".$dateRaw);
-                return "";
+            if ($dateRaw === 'сразу') {
+                return Carbon::now($this->timezone)->format('d-m-Y');
+            } else {
+                $dateRawFixed = $dateRaw;
+                if (!strpos($dateRawFixed, ":")) {
+                    $dateRawFixed .= ' 12:00';
+                }
+                $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
+    
+                try {
+                    $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
+                    return $date->format('d-m-Y');
+                } catch (\Exception $exception) {
+                    Log::channel($this->noticeChannel)->notice("Notice on 'generating date of publication' ".$dateRaw);
+                    return "";
+                }
             }
         }
         
@@ -190,19 +195,22 @@ ULAXML;
                             $id = 165658;
                             return $this->addTagIfPropertySet($id, "zapchast_sostoyanie");
                     }
+                    break;
+                case "женскийгардероб":
+                case "мужскойгардероб":
+                case "детскийгардероб":
+                    switch ($name) {
+                        case "б/у":
+                        case "used":
+                            $id = 166110;
+                            return $this->addTagIfPropertySet($id, "sostojanie_garderob");
+                        case "новое":
+                        case "new":
+                            $id = 166111;
+                            return $this->addTagIfPropertySet($id, "sostojanie_garderob");
+                    }
             }
-
-            switch ($name) {
-                case "б/у":
-                case "used":
-                    $id = 166110;
-                    return $this->addTagIfPropertySet($id, "sostojanie_garderob");
-                case "новое":
-                case "new":
-                    $id = 166111;
-                    return $this->addTagIfPropertySet($id, "sostojanie_garderob");
-            }
-
+            
             return "";
         }
         

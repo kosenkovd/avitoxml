@@ -51,21 +51,77 @@ return [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => 14,
+            'days' => 7,
+        ],
+
+        'Tables' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/Tables/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 7,
         ],
         
         'xml' => [
             'driver' => 'daily',
             'path' => storage_path('logs/xml/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => 14,
+            'days' => 2,
+        ],
+        
+        'OZON' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/OZON/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 2,
         ],
 
         'api' => [
             'driver' => 'daily',
             'path' => storage_path('logs/api/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
-            'days' => 14,
+            'days' => 7,
+        ],
+
+        'avitoReport' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/avitoReport/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 7,
+        ],
+
+        'avitoStatistics' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/avitoStatistics/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 7,
+        ],
+
+        'parser' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/parser/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 7,
+        ],
+
+        'notice' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/notice/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 7,
+        ],
+
+        'project3' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/project3/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 2,
+        ],
+
+        'avitoTokens' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/avitoTokens/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 2,
         ],
         
         'fatal' => [

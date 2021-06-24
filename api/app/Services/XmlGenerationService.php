@@ -6,6 +6,7 @@ namespace App\Services;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Models\Ads;
+use App\Models\GeneratorLaravel;
 use App\Models\TableHeader;
 use App\Repositories\Interfaces\IDictRepository;
 use App\Services\Interfaces\ISpreadsheetClientService;
@@ -41,6 +42,15 @@ class XmlGenerationService implements IXmlGenerationService {
     private IDictRepository $dictRepository;
     
     private bool $adsLimitEnabled = true;
+    
+    private string $noticeChannel = 'notice';
+    
+    private function isExistsInRow(array $row, ?int $column): bool
+    {
+        return !is_null($column) &&
+            isset($row[$column]) &&
+            (trim($row[$column]) != '');
+    }
     
     /**
      * Checks if row contains all required properties.
@@ -87,54 +97,93 @@ class XmlGenerationService implements IXmlGenerationService {
             isset($row[$propertyColumns->autoPart]);
     }
     
+    private function isAdsLimitReached(int $adNumber, int $limit): bool
+    {
+        return $this->adsLimitEnabled && ($adNumber > $limit);
+    }
+    
     /**
      * Defines if row should not be processed.
      *
      * @param array $row
      * @param TableHeader $propertyColumns
-     * @param string $sheetName
      * @return bool
      */
-    private function shouldSkipRow(
-        array $row, TableHeader $propertyColumns, string $sheetName): bool
+    private function shouldSkipRow(array $row, TableHeader $propertyColumns): bool
     {
-        return !$this->validateRequiredColumnsPresent($row, $propertyColumns) ||
-            (strpos($sheetName, $this->sheetNamesConfig->getYandex()) !== false &&
-                $this->shouldSkipYandexRow($row, $propertyColumns));
+        return !$this->validateRequiredColumnsPresent($row, $propertyColumns);
     }
     
-    /**
-     * Should row from Yandex sheet be skipped.
-     *
-     * @param array $row
-     * @param TableHeader $propertyColumns
-     * @return bool
-     */
+    private function shouldSkipAvitoRow(array $row, TableHeader $propertyColumns): bool
+    {
+//        if (!$this->isExistsInRow($row, $propertyColumns->dateCreated)) {
+//            return false;
+//        }
+        
+        return false;
+    }
+    
     private function shouldSkipYandexRow(array $row, TableHeader $propertyColumns): bool
     {
-        $idFieldPresent = @$row[@$propertyColumns->ID] != '';
-//        return !$idFieldPresent;
-        
-        $dateCreated = @$row[@$propertyColumns->dateCreated];
-        if (is_null($dateCreated) || $dateCreated == '') {
-            return !$idFieldPresent;
-        } else {
-            $dateRaw = $row[$propertyColumns->dateCreated];
-            $dateRawFixed = $dateRaw;
-            if (!strpos($dateRawFixed, ":")) {
-                $dateRawFixed .= ' 00:00';
-            }
-            $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
-            
-            try {
-                $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
-                return !$idFieldPresent || $date->getTimestamp() > time();
-            } catch (\Exception $exception) {
-                Log::notice("Notice on 'yandex' ".$dateRaw);
-                
-                return !$idFieldPresent;
-            }
+        if (!$this->isExistsInRow($row, $propertyColumns->dateCreated)) {
+            return true;
         }
+        
+        $dateCreated = $row[$propertyColumns->dateCreated];
+    
+        if (mb_strtolower(trim($dateCreated)) === 'сразу') {
+            return false;
+        }
+        
+        $dateRawFixed = $dateCreated;
+        if (!strpos($dateRawFixed, ":")) {
+            $dateRawFixed .= ' 00:00';
+        }
+        $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
+        
+        try {
+            $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
+            // Skip(true) if Date from the table has not come
+            return $date->getTimestamp() > time();
+        } catch (\Exception $exception) {
+            Log::channel($this->noticeChannel)->notice("Notice on 'yandex' ".$dateCreated);
+            
+            return true;
+        }
+    }
+    
+    private function shouldSkipUlaRow(array $row, TableHeader $propertyColumns): bool
+    {
+        if (!$this->isExistsInRow($row, $propertyColumns->dateCreated)) {
+            return true;
+        }
+        
+        $dateCreated = $row[$propertyColumns->dateCreated];
+    
+        if (mb_strtolower(trim($dateCreated)) === 'сразу') {
+            return false;
+        }
+    
+        $dateRawFixed = $dateCreated;
+        if (!strpos($dateRawFixed, ":")) {
+            $dateRawFixed .= ' 00:00';
+        }
+        $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
+        
+        try {
+            $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
+            // Skip(true) if Date from the table has not come
+            return $date->getTimestamp() > time();
+        } catch (\Exception $exception) {
+            Log::channel($this->noticeChannel)->notice("Notice on 'ula' ".$dateCreated);
+            
+            return true;
+        }
+    }
+    
+    private function shouldSkipOzonRow(array $row, TableHeader $propertyColumns): bool
+    {
+        return false;
     }
     
     /**
@@ -155,8 +204,12 @@ class XmlGenerationService implements IXmlGenerationService {
     {
         $xml = "";
         $ads = 0;
-        foreach ($values as $row) {
-            if ($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
+        foreach ($values as $numRow => $row) {
+            if ($this->shouldSkipRow($row, $propertyColumns)) {
+                continue;
+            }
+    
+            if ($this->shouldSkipAvitoRow($row, $propertyColumns)) {
                 continue;
             }
             
@@ -171,11 +224,6 @@ class XmlGenerationService implements IXmlGenerationService {
         }
         
         return $xml;
-    }
-    
-    private function isAdsLimitReached(int $adNumber, int $limit): bool
-    {
-        return $this->adsLimitEnabled && ($adNumber > $limit);
     }
     
     private function getAvitoAd(array $row, TableHeader $propertyColumns): Ads\AdBase
@@ -262,7 +310,11 @@ class XmlGenerationService implements IXmlGenerationService {
         $xml = "";
         $ads = 0;
         foreach ($values as $numRow => $row) {
-            if ($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
+            if ($this->shouldSkipRow($row, $propertyColumns)) {
+                continue;
+            }
+            
+            if (($numRow !== 0) && $this->shouldSkipYandexRow($row, $propertyColumns)) {
                 continue;
             }
             
@@ -300,11 +352,11 @@ class XmlGenerationService implements IXmlGenerationService {
         $xml = "";
         $ads = 0;
         foreach ($values as $numRow => $row) {
-            if ($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
+            if ($this->shouldSkipRow($row, $propertyColumns)) {
                 continue;
             }
             
-            if ($this->shouldSkipUlaRow($row, $propertyColumns)) {
+            if (($numRow !== 0) && $this->shouldSkipUlaRow($row, $propertyColumns)) {
                 continue;
             }
             
@@ -321,34 +373,44 @@ class XmlGenerationService implements IXmlGenerationService {
         return $xml;
     }
     
-    private function shouldSkipUlaRow(array $row, TableHeader $propertyColumns): bool
+    /**
+     * Create ads from sheet rows for OZON.
+     *
+     * @param array $values rows from sheet.
+     * @param TableHeader $propertyColumns
+     * @param string $targetSheet
+     * @param int $adsLimit
+     * @return string generated ads.
+     */
+    private function createAdsForOzonSheet(
+        array $values,
+        TableHeader $propertyColumns,
+        string $targetSheet,
+        int $adsLimit
+    ): string
     {
-        if (!$this->isExistsInRow($row, $propertyColumns->dateCreated)) {
-            return false;
-        }
-        
-        $dateRaw = $row[$propertyColumns->dateCreated];
-        $dateRawFixed = $dateRaw;
-        if (!strpos($dateRawFixed, ":")) {
-            $dateRawFixed .= ' 00:00';
-        }
-        $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
-        
-        try {
-            $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
-            return $date->getTimestamp() > time();
-        } catch (\Exception $exception) {
-            Log::notice("Notice on 'ula' ".$dateRaw);
+        $xml = "";
+        $ads = 0;
+        foreach ($values as $row) {
+//            if ($this->shouldSkipRow($row, $propertyColumns, $targetSheet)) {
+//                continue;
+//            }
             
-            return true;
+            if ($this->shouldSkipOzonRow($row, $propertyColumns)) {
+                continue;
+            }
+            
+            $ads++;
+            if ($this->isAdsLimitReached($ads, $adsLimit)) {
+                break;
+            }
+            
+            $ad = new Ads\OzonAd($row, $propertyColumns);
+            
+            $xml .= $ad->toOzonXml().PHP_EOL;
         }
-    }
-    
-    private function isExistsInRow(array $row, ?int $column): bool
-    {
-        return !is_null($column) &&
-            isset($row[$column]) &&
-            (trim($row[$column]) != '');
+        
+        return $xml;
     }
     
     public function __construct(
@@ -472,6 +534,9 @@ class XmlGenerationService implements IXmlGenerationService {
             '</feed>';
     }
     
+    /**
+     * @inheritDoc
+     */
     public function generateUlaXML(string $spreadsheetId, string $targetSheet, int $adsLimit): string
     {
         $defaultTime = Carbon::now(new DateTimeZone("Europe/Moscow"))
@@ -482,7 +547,7 @@ class XmlGenerationService implements IXmlGenerationService {
                 $targetSheets = $this->xmlGeneration->getYoulaTabs();
                 break;
             default:
-                $xml = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
+                return '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
                     '<yml_catalog date="'.$defaultTime.'">'.PHP_EOL.
                     '<shop>'.PHP_EOL.
                     '<offers>'.PHP_EOL.
@@ -496,7 +561,8 @@ class XmlGenerationService implements IXmlGenerationService {
         $existingSheets = $this->spreadsheetClientService->getSheets(
             $spreadsheetId
         );
-        
+    
+        $xml = '';
         foreach ($splitTargetSheets as $targetSheet) {
             $targetSheet = trim($targetSheet);
             if (!in_array($targetSheet, $existingSheets)) {
@@ -527,11 +593,94 @@ class XmlGenerationService implements IXmlGenerationService {
                 '<offers>'.PHP_EOL;
             
             $xml .= $this->createAdsForUlaSheet($values, $propertyColumns, $targetSheet, $adsLimit);
-            return $xml.'</offers>'.PHP_EOL.
+            return $xml.
+                '</offers>'.PHP_EOL.
                 '</shop>'.PHP_EOL.
                 '</yml_catalog>';
         }
         
         return $xml;
+    }
+    
+    /**
+     * @inheritDoc
+     */
+    public function generateOzonXML(string $spreadsheetId, string $targetSheet, int $adsLimit): string
+    {
+        switch ($targetSheet) {
+            case "OZON":
+                $targetSheets = $this->xmlGeneration->getOzonTabs();
+                break;
+            default:
+                return '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
+                    '<yml_catalog>'.PHP_EOL.
+                    '<shop>'.PHP_EOL.
+                    '<offers>'.PHP_EOL.
+                    '</offers>'.PHP_EOL.
+                    '</shop>'.PHP_EOL.
+                    '</yml_catalog>';
+        }
+    
+        $splitTargetSheets = explode(",", $targetSheets);
+    
+        $existingSheets = $this->spreadsheetClientService->getSheets(
+            $spreadsheetId
+        );
+    
+        $xml = '';
+        foreach ($splitTargetSheets as $targetSheet) {
+            $targetSheet = trim($targetSheet);
+            if (!in_array($targetSheet, $existingSheets)) {
+                continue;
+            }
+        
+            try {
+                $range = $targetSheet.'!A1:FZ5001';
+                $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                    $spreadsheetId,
+                    $range
+                );
+                $propertyColumns = new TableHeader(array_shift($values));
+            } catch (\Exception $exception) {
+                $message = "Error on '".$spreadsheetId."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
+//                Log::error($message);
+            
+                throw $exception;
+            }
+        
+            sleep(1);
+        
+            $xml = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
+                '<yml_catalog>'.PHP_EOL.
+                '<shop>'.PHP_EOL.
+                '<offers>'.PHP_EOL.
+        
+            $xml .= $this->createAdsForOzonSheet($values, $propertyColumns, $targetSheet, $adsLimit);
+            return $xml.
+                '</offers>'.PHP_EOL.
+                '</shop>'.PHP_EOL.
+                '</yml_catalog>';
+        }
+    
+        return $xml;
+    }
+    
+    /**
+     * @inheritDoc
+     */
+    public function getEmptyGeneratedXML(string $targetPlatform): string
+    {
+        switch ($targetPlatform) {
+            case $this->sheetNamesConfig->getAvito():
+                return $this->generateAvitoXML('', '', 0);
+            case $this->sheetNamesConfig->getYandex():
+                return $this->generateYandexXML('', '', 0);
+            case $this->sheetNamesConfig->getYoula():
+                return $this->generateUlaXML('', '', 0);
+            case "OZON":
+                return $this->generateOzonXML('', '', 0);
+            default:
+                return '';
+        }
     }
 }

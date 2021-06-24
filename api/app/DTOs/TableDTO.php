@@ -12,6 +12,8 @@ class TableDTO extends TableDtoBase
 
     public bool $isYandexTokenPresent;
     
+    public string $type;
+    
     /**
      * @param int|null $dateExpired
      * @return TableDTO
@@ -39,6 +41,17 @@ class TableDTO extends TableDtoBase
     public function setIsYandexTokenPresent(bool $isYandexTokenPresent): TableDTO
     {
         $this->isYandexTokenPresent = $isYandexTokenPresent;
+        return $this;
+    }
+    
+    /**
+     * @param string $type
+     *
+     * @return TableDTO
+     */
+    public function setType(string $type): TableDTO
+    {
+        $this->type = $type;
         return $this;
     }
 }

@@ -42,6 +42,22 @@
         }
         
         /**
+         * Creates new GoogleSheet from template.
+         *
+         * @return string new GoogleSheet id.
+         */
+        public function copyTableMarketplace(): string
+        {
+            $this->client->addScope(Google_Service_Drive::DRIVE);
+            $driveService = new Google_Service_Drive($this->client);
+            $driveFile = new Google_Service_Drive_DriveFile();
+            $result = $driveService->files->copy($this->config->getCopyMarketplaceSpreadsheetId(), $driveFile);
+            $tableId = $result->id;
+            $this->setPermissions($tableId);
+            return $tableId;
+        }
+        
+        /**
          * Sets default permissions to Google object.
          *
          * @param $id string Google resource id.
@@ -94,7 +110,7 @@
                 
                 $status = (int)$exception->getCode();
                 if (!is_null($status) && $this->isQuota($status)) {
-                    Log::alert('sleep '.$this->secondToSleep);
+                    Log::channel('Tables')->alert('sleep '.$this->secondToSleep);
                     sleep($this->secondToSleep);
     
                     $failedAttempts++;
@@ -121,7 +137,7 @@
         private function logTableError(string $tableId, Exception $exception): void
         {
             $message = "Error on '" . $tableId . "' ". $exception->getCode() . PHP_EOL . $exception->getMessage();
-            Log::error($message);
+            Log::channel('Tables')->error($message);
         }
         
         /**
@@ -194,7 +210,7 @@
             }
             catch (Exception $exception)
             {
-                Log::error("Error on '".$spreadsheetId."' while reading".PHP_EOL.
+                Log::channel('Tables')->error("Error on '".$spreadsheetId."' while reading".PHP_EOL.
                     $exception->getMessage());
                 
                 throw $exception;
@@ -209,7 +225,6 @@
         
         /**
          * @inheritDoc
-         * @throws Exception
          */
         public function updateSpreadsheetCellsRange(
             string $spreadsheetId,

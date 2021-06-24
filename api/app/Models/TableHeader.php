@@ -129,10 +129,64 @@ class TableHeader {
 
     public ?int $placementType = null;
     public ?int $messages = null;
+    
+    public ?int $unloadingStatus = null;
+    public ?int $unloadingAvitoStatus = null;
+    public ?int $unloadingMessages = null;
+    public ?int $unloadingDateStart = null;
+    public ?int $unloadingDateEnd = null;
+    public ?int $unloadingAvitoId = null;
+    public ?int $unloadingUrl = null;
+    public ?int $unloadingDateInfo = null;
 
+    public ?int $statisticViews = null;
+    public ?int $statisticMessage = null;
+    public ?int $statisticInfo = null;
+    public ?int $statisticFav = null;
+    public ?int $statisticViewsDay = null;
+    public ?int $statisticMessageDay = null;
+    public ?int $statisticInfoDay = null;
+    public ?int $statisticFavDay = null;
+    public ?int $statisticViewsWeek = null;
+    public ?int $statisticMessageWeek = null;
+    public ?int $statisticInfoWeek = null;
+    public ?int $statisticFavWeek = null;
+    public ?int $statisticViewsMonth = null;
+    public ?int $statisticMessageMonth = null;
+    public ?int $statisticInfoMonth = null;
+    public ?int $statisticFavMonth = null;
+    
+    public ?int $ozonOfferId = null;
+    public ?int $ozonPrice = null;
+    public ?int $ozonOldPrice = null;
+    public ?int $ozonPremiumPrice = null;
+    public ?int $ozonWarehouseName = null;
+    public ?int $ozonInstock = null;
+    public ?int $ozonWarehouseName2 = null;
+    public ?int $ozonInstock2 = null;
+    public ?int $ozonWarehouseName3 = null;
+    public ?int $ozonInstock3 = null;
+    public ?int $ozonWarehouseName4 = null;
+    public ?int $ozonInstock4 = null;
+    public ?int $ozonWarehouseName5 = null;
+    public ?int $ozonInstock5 = null;
+    public ?int $ozonWarehouseName6 = null;
+    public ?int $ozonInstock6 = null;
+    public ?int $ozonWarehouseName7 = null;
+    public ?int $ozonInstock7 = null;
+    public ?int $ozonWarehouseName8 = null;
+    public ?int $ozonInstock8 = null;
+    public ?int $ozonWarehouseName9 = null;
+    public ?int $ozonInstock9 = null;
+    public ?int $ozonWarehouseName10 = null;
+    public ?int $ozonInstock10 = null;
 
     public function __construct(array $headers)
     {
+        /**
+         * @var int $colNum
+         * @var string $header
+         */
         foreach($headers as $colNum => $header)
         {
             // Lowering case and removing space characters to avoid errors in case of line break, etc.
@@ -206,6 +260,7 @@ class TableHeader {
                     $this->area = $colNum;
                     break;
                 case "улица":
+                case "улицарайонметро":
                 case "улицаилиметро":
                     $this->street = $colNum;
                     break;
@@ -225,6 +280,7 @@ class TableHeader {
                     $this->area2 = $colNum;
                     break;
                 case "улица2":
+                case "улицарайонметро2":
                 case "улицаилиметро2":
                     $this->street2 = $colNum;
                     break;
@@ -244,6 +300,7 @@ class TableHeader {
                     $this->area3 = $colNum;
                     break;
                 case "улица3":
+                case "улицарайонметро3":
                 case "улицаилиметро3":
                     $this->street3 = $colNum;
                     break;
@@ -263,6 +320,7 @@ class TableHeader {
                     $this->area4 = $colNum;
                     break;
                 case "улица4":
+                case "улицарайонметро4":
                 case "улицаилиметро4":
                     $this->street4 = $colNum;
                     break;
@@ -282,6 +340,7 @@ class TableHeader {
                     $this->area5 = $colNum;
                     break;
                 case "улица5":
+                case "улицарайонметро5":
                 case "улицаилиметро5":
                     $this->street5 = $colNum;
                     break;
@@ -301,6 +360,7 @@ class TableHeader {
                     $this->area6 = $colNum;
                     break;
                 case "улица6":
+                case "улицарайонметро6":
                 case "улицаилиметро6":
                     $this->street6 = $colNum;
                     break;
@@ -320,6 +380,7 @@ class TableHeader {
                     $this->area7 = $colNum;
                     break;
                 case "улица7":
+                case "улицарайонметро7":
                 case "улицаилиметро7":
                     $this->street7 = $colNum;
                     break;
@@ -339,6 +400,7 @@ class TableHeader {
                     $this->area8 = $colNum;
                     break;
                 case "улица8":
+                case "улицарайонметро8":
                 case "улицаилиметро8":
                     $this->street8 = $colNum;
                     break;
@@ -358,6 +420,7 @@ class TableHeader {
                     $this->area9 = $colNum;
                     break;
                 case "улица9":
+                case "улицарайонметро9":
                 case "улицаилиметро9":
                     $this->street9 = $colNum;
                     break;
@@ -377,6 +440,7 @@ class TableHeader {
                     $this->area10 = $colNum;
                     break;
                 case "улица10":
+                case "улицарайонметро10":
                 case "улицаилиметро10":
                     $this->street10 = $colNum;
                     break;
@@ -425,7 +489,11 @@ class TableHeader {
                     break;
                 case "avitoid(дляобъявлений,размещенныхвручную)[?]":
                 case "avitoid":
+                case "№объявлениядлясвязки":
                     $this->avitoManualID = $colNum;
+                    break;
+                case "номеробъявления":
+                    $this->unloadingAvitoId = $colNum;
                     break;
                 case "управлениеплатнымиуслугами[?]":
                 case "управлениеплатнымиуслугами":
@@ -481,6 +549,147 @@ class TableHeader {
                     break;
                 case "зоныпоказа(встолбик)":
                     $this->displayAreas = $colNum;
+                    break;
+                case "статусвыгрузки":
+                    $this->unloadingStatus = $colNum;
+                    break;
+                case "статуснаavito":
+                    $this->unloadingAvitoStatus = $colNum;
+                    break;
+                case "сообщенияособытиях":
+                    $this->unloadingMessages = $colNum;
+                    break;
+                case "точнаядатаивремяподачи":
+                    $this->unloadingDateStart = $colNum;
+                    break;
+                case "точнаядатаивремяокончания":
+                    $this->unloadingDateEnd = $colNum;
+                    break;
+                case "ссылканаобьявление":
+                    $this->unloadingUrl = $colNum;
+                    break;
+                case "информацияоботчете":
+                    $this->unloadingDateInfo = $colNum;
+                    break;
+                case "👁":
+                    $this->statisticViews = $colNum;
+                    break;
+                case "💬":
+                    $this->statisticMessage = $colNum;
+                    break;
+                case "📊":
+                    $this->statisticInfo = $colNum;
+                    break;
+                case "💚":
+                    $this->statisticFav = $colNum;
+                    break;
+                case "👁м":
+                    $this->statisticViewsMonth = $colNum;
+                    break;
+                case "💬м":
+                    $this->statisticMessageMonth = $colNum;
+                    break;
+                case "📊м":
+                    $this->statisticInfoMonth = $colNum;
+                    break;
+                case "💚м":
+                    $this->statisticFavMonth = $colNum;
+                    break;
+                case "👁н":
+                    $this->statisticViewsWeek = $colNum;
+                    break;
+                case "💬н":
+                    $this->statisticMessageWeek = $colNum;
+                    break;
+                case "📊н":
+                    $this->statisticInfoWeek = $colNum;
+                    break;
+                case "💚н":
+                    $this->statisticFavWeek = $colNum;
+                    break;
+                case "👁д":
+                    $this->statisticViewsDay = $colNum;
+                    break;
+                case "💬д":
+                    $this->statisticMessageDay = $colNum;
+                    break;
+                case "📊д":
+                    $this->statisticInfoDay = $colNum;
+                    break;
+                case "💚д":
+                    $this->statisticFavDay = $colNum;
+                    break;
+                case "артикулozon":
+                    $this->ozonOfferId = $colNum;
+                    break;
+                case "ценасоскидкой":
+                    $this->ozonPrice = $colNum;
+                    break;
+                case "ценабезскидки":
+                    $this->ozonOldPrice = $colNum;
+                    break;
+                case "ценаozonpremium":
+                    $this->ozonPremiumPrice = $colNum;
+                    break;
+                case "названиесклада1":
+                    $this->ozonWarehouseName = $colNum;
+                    break;
+                case "остатокнаскладе1":
+                    $this->ozonInstock = $colNum;
+                    break;
+                case "названиесклада2":
+                    $this->ozonWarehouseName2 = $colNum;
+                    break;
+                case "остатокнаскладе2":
+                    $this->ozonInstock2 = $colNum;
+                    break;
+                case "названиесклада3":
+                    $this->ozonWarehouseName3 = $colNum;
+                    break;
+                case "остатокнаскладе3":
+                    $this->ozonInstock3 = $colNum;
+                    break;
+                case "названиесклада4":
+                    $this->ozonWarehouseName4 = $colNum;
+                    break;
+                case "остатокнаскладе4":
+                    $this->ozonInstock4 = $colNum;
+                    break;
+                case "названиесклада5":
+                    $this->ozonWarehouseName5 = $colNum;
+                    break;
+                case "остатокнаскладе5":
+                    $this->ozonInstock5 = $colNum;
+                    break;
+                case "названиесклада6":
+                    $this->ozonWarehouseName6 = $colNum;
+                    break;
+                case "остатокнаскладе6":
+                    $this->ozonInstock6 = $colNum;
+                    break;
+                case "названиесклада7":
+                    $this->ozonWarehouseName7 = $colNum;
+                    break;
+                case "остатокнаскладе7":
+                    $this->ozonInstock7 = $colNum;
+                    break;
+                case "названиесклада8":
+                    $this->ozonWarehouseName8 = $colNum;
+                    break;
+                case "остатокнаскладе8":
+                    $this->ozonInstock8 = $colNum;
+                    break;
+                case "названиесклада9":
+                    $this->ozonWarehouseName9 = $colNum;
+                    break;
+                case "остатокнаскладе9":
+                    $this->ozonInstock9 = $colNum;
+                    break;
+                case "названиесклада10":
+                    $this->ozonWarehouseName10 = $colNum;
+                    break;
+                case "остатокнаскладе10":
+                    $this->ozonInstock10 = $colNum;
                     break;
             }
         }

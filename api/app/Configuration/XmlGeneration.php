@@ -23,6 +23,8 @@ class XmlGeneration
     private ?string $yandexFirstLimit = null;
 
     private ?string $yandexDefaultLimit = null;
+    
+    private ?string $ozonTabs = null;
 
     public function __construct()
     {
@@ -106,5 +108,13 @@ class XmlGeneration
     public function getYandexDefaultLimit(): ?string
     {
         return $this->yandexDefaultLimit;
+    }
+    
+    /**
+     * @return string|null
+     */
+    public function getOzonTabs(): ?string
+    {
+        return $this->ozonTabs;
     }
 }

@@ -9,6 +9,8 @@
     use Illuminate\Support\Facades\Log;
     
     abstract class AdBase {
+        protected string $noticeChannel = 'notice';
+        
         protected ?string $id = null;
         protected ?string $dateBegin = null;
         protected ?string $dateEnd = null;
@@ -32,23 +34,30 @@
         
         public function __construct(array $row, TableHeader $propertyColumns)
         {
-            $this->id = htmlspecialchars($row[$propertyColumns->ID]);
+            $this->id = isset($row[$propertyColumns->ID])
+                ? htmlspecialchars($row[$propertyColumns->ID])
+                : null;
             
             $this->setTimezone($row, $propertyColumns);
             
-            if (isset($row[$propertyColumns->dateCreated]) && $row[$propertyColumns->dateCreated] != '') {
+            if (isset($row[$propertyColumns->dateCreated]) && trim($row[$propertyColumns->dateCreated]) != '') {
                 $dateRaw = $row[$propertyColumns->dateCreated];
-                $dateRawFixed = $dateRaw;
-                if(!strpos($dateRawFixed, ":")) {
-                    $dateRawFixed .= ' 12:00';
-                }
-                $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
                 
-                try {
-                    $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
-                    $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
-                } catch (\Exception $exception) {
-                    Log::notice("Notice on 'dateBegin' ".$dateRaw);
+                if ($dateRaw === 'сразу') {
+                    $this->dateBegin = Carbon::now($this->timezone)->format('Y-m-d\TH:i:sP');
+                } else {
+                    $dateRawFixed = $dateRaw;
+                    if(!strpos($dateRawFixed, ":")) {
+                        $dateRawFixed .= ' 12:00';
+                    }
+                    $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
+    
+                    try {
+                        $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
+                        $this->dateBegin = $date->format('Y-m-d\TH:i:sP');
+                    } catch (\Exception $exception) {
+                        Log::channel($this->noticeChannel)->notice("Notice on 'dateBegin' ".$dateRaw);
+                    }
                 }
             } else {
                 $this->dateBegin = null;
@@ -66,7 +75,7 @@
                     $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
                     $this->dateEnd = $date->format('Y-m-d\TH:i:sP');
                 } catch (\Exception $exception) {
-                    Log::notice("Notice on 'dateEnd' ".$dateRaw);
+                    Log::channel($this->noticeChannel)->notice("Notice on 'dateEnd' ".$dateRaw);
                 }
             } else {
                 $this->dateEnd = null;
@@ -81,7 +90,9 @@
             $this->contactsType = isset($row[$propertyColumns->contactsType])
                 ? htmlspecialchars($row[$propertyColumns->contactsType])
                 : null;
-            $this->category = htmlspecialchars($row[$propertyColumns->category]);
+            $this->category = isset($row[$propertyColumns->category])
+                ? htmlspecialchars($row[$propertyColumns->category])
+                : null;
             $this->adType = isset($row[$propertyColumns->adType])
                 ? htmlspecialchars($row[$propertyColumns->adType])
                 : null;
@@ -176,12 +187,13 @@
                 isset($row[$column]) &&
                 (trim($row[$column]) != '');
         }
-        
+    
         /**
          * Create tag if property is not null or empty.
          *
-         * @param $property
-         * @param string $tagName
+         * @param string|null $property
+         * @param string      $tagName
+         *
          * @return string
          */
         protected function addTagIfPropertySet(?string $property, string $tagName): string
@@ -268,6 +280,14 @@
             
             if (strcmp(strtolower($this->condition), "неприменимо") === 0) {
                 $this->condition = "inapplicable";
+            }
+            
+            if ($this->condition === 'Новое') {
+                switch ($this->category) {
+                    case 'Детская одежда и обувь':
+                    case 'Товары для детей и игрушки':
+                        $this->condition = 'Новый';
+                }
             }
             
             $resultXml = $this->addTagIfPropertySet($this->id, "Id");

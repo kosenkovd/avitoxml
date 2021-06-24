@@ -67,14 +67,14 @@
         {
             $message = "Table '".$table->getGoogleSheetId()."' processing...";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
             
             $this->startTimestamp = time();
             
             if (!$this->init($table)) {
                 $message = "Table '".$table->getGoogleSheetId()."' no yandex token found, finished.";
                 $this->log($message);
-                Log::info($message);
+                Log::channel($this->logChannel)->info($message);
                 return;
             }
             
@@ -107,7 +107,7 @@
                     
                     $message = "Table '".$table->getGoogleSheetId()."' processing sheet '".$targetSheet."'...";
                     $this->log($message);
-                    Log::info($message);
+                    Log::channel($this->logChannel)->info($message);
                     
                     $this->processSheet(
                         $table,
@@ -115,7 +115,7 @@
                     );
                     
                     if ($this->checkIsTimeout()) {
-                        Log::alert("Table '".$table->getGoogleSheetId()."' finished by timeout.");
+                        Log::channel($this->logChannel)->alert("Table '".$table->getGoogleSheetId()."' finished by timeout.");
                         $table->setDateLastModified($this->needsToUpdateTimeStamp);
                         $this->tableRepository->update($table);
                         break;
@@ -125,7 +125,7 @@
             
             $message = "Table '".$table->getGoogleSheetId()."' finished.";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
         }
         
         /**
@@ -150,7 +150,7 @@
                 $message = "Error on '".$table->getGoogleDriveId()."' while getting yandex token ".PHP_EOL.
                     $exception->getMessage();
                 $this->log($message);
-                Log::error($message);
+                Log::channel($this->logChannel)->error($message);
                 
                 throw $exception;
             }
@@ -193,22 +193,24 @@
             $tableGuid = $table->getTableGuid();
             $tableId = $table->getGoogleSheetId();
             
-            $values = $this->getFullDataFromTable($tableId, $sheetName);
-            $propertyColumns = new TableHeader(array_shift($values));
-            
-            $this->newValues = [];
+            [$propertyColumns, $values] = $this->getHeaderAndDataFromTable(
+                $tableId,
+                $sheetName
+            );
             
             if ($propertyColumns && empty($values)) {
                 return;
             }
             
-             if (is_null($propertyColumns->imagesRaw)) {
-                Log::error("no images column");
+            $this->newValues = [];
+    
+            if (is_null($propertyColumns->imagesRaw)) {
+                Log::channel($this->logChannel)->error("no images column");
                 return;
             }
             
              if (is_null($propertyColumns->subFolderName)) {
-                Log::error("no sub folder column");
+                Log::channel($this->logChannel)->error("no sub folder column");
                 return;
             }
             
@@ -216,7 +218,8 @@
                 if ($this->checkIsTimeout()) {
                     $table->setDateLastModified($this->needsToUpdateTimeStamp);
                     $this->tableRepository->update($table);
-                    Log::alert("Table '".$tableId."' finished by timeout.");
+                    Log::channel($this->logChannel)->alert("Table '".$tableId."' finished by timeout.");
+                    
                     break;
                 }
                 
@@ -249,7 +252,7 @@
                 
                 $message = "Table '".$tableId."' start filling row ".$spreadsheetRowNum;
                 $this->log($message);
-                Log::info($message);
+                Log::channel($this->logChannel)->info($message);
                 
                 $this->needsToUpdate = true;
                 
@@ -275,43 +278,64 @@
                     
                     $message = "Table '".$tableId."' folder name - ".$subFolderName;
                     $this->log($message);
-                    Log::info($message);
+                    Log::channel($this->logChannel)->info($message);
                 } else {
-                    $subFolderName = trim($row[$propertyColumns->subFolderName]);
+                    $subFoldersRawString = $row[$propertyColumns->subFolderName];
+                    $subFolders = explode(PHP_EOL, $subFoldersRawString);
                     $this->fillNewValueWithContent(
                         $numRow,
                         $this->subFolderColumn,
-                        $subFolderName
+                        $subFoldersRawString
                     );
-                    
-                    $message = "Table '".$tableId."' folder '".$subFolderName."' already in row";
-                    $this->log($message);
-                    Log::info($message);
-                    
-                    $subFolderPath = $this->checkAndGetFolder($subFolderName, self::$folderWithImages);
-                    // check errors if folder does not exist
-                    if (is_null($subFolderPath)) {
-                        if (!$this->hasErrors()) {
-                            $this->errors[] = 'Неизвестная ошибка';
+    
+                    $subFolderPathArray = [];
+                    foreach ($subFolders as $subFolder) {
+                        $subFolderName = trim($subFolder);
+                        if ($subFolderName === '') {
+                            continue;
                         }
-                        $this->fillNewValueWithErrors($numRow);
-                        
+    
+                        $message = "Table '".$tableId."' folder '".$subFolderName."' already in row";
+                        $this->log($message);
+                        Log::channel($this->logChannel)->info($message);
+    
+                        $subFolderPath = $this->checkAndGetFolder($subFolderName, self::$folderWithImages);
+                        // check errors if folder does not exist
+                        if (is_null($subFolderPath)) {
+                            if (!$this->hasErrors()) {
+                                $this->errors[] = 'Неизвестная ошибка';
+                            }
+                            $this->fillNewValueWithErrors($numRow);
+                            
+                            break;
+                        }
+                        $subFolderPathArray[] = $subFolderPath;
+                    }
+    
+                    if ($this->hasErrors()) {
                         continue;
                     }
                 }
                 
-                $images = $this->getImages($subFolderPath);
+                if (isset($subFolderPathArray) && count($subFolderPathArray) > 0) {
+                    $images = [];
+                    foreach ($subFolderPathArray as $sub) {
+                        $images = [...$images, ...$this->getImages($sub)];
+                    }
+                } else {
+                    $images = $this->getImages($subFolderPath);
+                }
                 
                 $message = "Table '".$tableId."' found ".count($images)." images";
                 $this->log($message);
-                Log::info($message);
+                Log::channel($this->logChannel)->info($message);
                 
                 if ($images !== []) {
                     $imagesString = $this->getEncodedImageString($images, $tableGuid);
                     
                     $message = "Table '".$tableId."' filling ".$spreadsheetRowNum."...";
                     $this->log($message.PHP_EOL.$imagesString);
-                    Log::info($message);
+                    Log::channel($this->logChannel)->info($message);
                     
                     $this->fillNewValueWithContent(
                         $numRow,
@@ -342,13 +366,13 @@
             $this->newValues[$numRow][0] = '';
             $this->newValues[$numRow][1] = '';
         }
-        
+    
         /**
          * Fill sheet cell with Content or Errors if any
          *
-         * @param int $numRow
-         * @param int $numColumn
-         * @param string|null $content
+         * @param int    $numRow
+         * @param int    $numColumn
+         * @param string $content
          */
         private function fillNewValueWithContent(
             int $numRow,
@@ -446,7 +470,7 @@
                             $imageCopyDatum["newName"]
                         );
                     } catch (\Exception $exception) {
-                        Log::error("Error on moving images from ".
+                        Log::channel($this->logChannel)->error("Error on moving images from ".
                             self::$folderWithFolders.". code: ".$exception->getCode().PHP_EOL.$exception->getMessage());
                     }
                 }
@@ -475,7 +499,7 @@
                 $sourceFolder = trim($sourceFolder);
                 
                 if ($sourceFolder === "") {
-                    Log::error("Empty source folder given after filtering");
+                    Log::channel($this->logChannel)->error("Empty source folder given after filtering");
                     continue;
                 }
                 
@@ -550,7 +574,7 @@
         private function checkAndGetNextImage(string $sourceFolder, array $alreadyUsedImages, $i = 0): ?string
         {
             if ($i === count($this->images[$sourceFolder])) {
-                Log::error('not enough images in '.$sourceFolder);
+                Log::channel($this->logChannel)->error('not enough images in '.$sourceFolder);
                 $this->errors[] = "❗ в папке '".$sourceFolder."' недостаточно фото";
                 return null;
             }
@@ -626,7 +650,7 @@
         {
             if (!$this->needsToUpdate) {
                 $message = "Table '".$tableId."' is already filled.";
-                Log::info($message);
+                Log::channel($this->logChannel)->info($message);
                 return;
             }
             
@@ -635,7 +659,7 @@
             $range = $sheetName.'!'.$columnLetterImages.'2:'.$columnLetterSubFolder.'5001';
             
             $message = "Table '".$tableId."' writing values to table...";
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
             
             try {
                 $this->spreadsheetClientService->updateSpreadsheetCellsRange(
@@ -650,7 +674,7 @@
                 $message = "Error on '".$tableId."' while writing to table".PHP_EOL.
                     $exception->getMessage();
                 $this->log($message);
-                Log::error($message);
+                Log::channel($this->logChannel)->error($message);
                 
                 throw $exception;
             }

@@ -195,7 +195,7 @@
     
             $message = "Table '".$tableID."' processing sheet '".$sheetName."'...";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
             
             [ $propertyColumns, $values ] = $this->getHeaderAndDataFromTable($tableID, $sheetName);
     
@@ -221,7 +221,7 @@
 
                 $message = "Table '".$tableID."' start filling row ".$spreadsheetRowNum;
                 $this->log($message);
-                Log::info($message);
+                Log::channel($this->logChannel)->info($message);
 
                 if(!isset($row[$propertyColumns->subFolderName]) ||
                     $row[$propertyColumns->subFolderName] == '')
@@ -247,13 +247,13 @@
 
                 $message = "Table '".$tableID."' folder name ".$subFolderName;
                 $this->log($message);
-                Log::info($message);
+                Log::channel($this->logChannel)->info($message);
 
                 $images = $this->getImages($baseFolderID, $subFolderName);
                 
                 $message = "Table '".$tableID."' found ".count($images)." images";
                 $this->log($message);
-                Log::info($message);
+                Log::channel($this->logChannel)->info($message);
 
                 if ($images !== []) {
                     $links = array_map(
@@ -269,7 +269,7 @@
 
                     $message = "Table '".$tableID."' filling ".$spreadsheetRowNum."...";
                     $this->log($message.PHP_EOL.$imagesString);
-                    Log::info($message);
+                    Log::channel($this->logChannel)->info($message);
                     
                     $this->updateCellContent(
                         $imagesString,
@@ -302,7 +302,7 @@
         {
             $message = "Table '".$table->getGoogleSheetId()."' processing...";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
             
             $this->startTimestamp = time();
             $baseFolderID = $table->getGoogleDriveId();
@@ -315,6 +315,6 @@
     
             $message = "Table '".$table->getGoogleSheetId()."' finished.";
             $this->log($message);
-            Log::info($message);
+            Log::channel($this->logChannel)->info($message);
         }
     }

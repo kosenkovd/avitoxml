@@ -48,7 +48,7 @@ class TableDtoMapper
             ->setGoogleSheetUrl(LinkHelper::getGoogleSpreadsheetLink($table->getGoogleSheetId()))
             ->setGoogleDriveUrl($googleDriveUrl)
             ->setGenerators(self::GetGenerators($table->getTableGuid(), $table->getGenerators()))
-            ->setNotes($table->getNotes())
+            ->setTableNotes($table->getNotes())
             ->setDateExpired($table->getDateExpired())
             ->setIsActive($isActive)
             ->setIsYandexTokenPresent($table->getYandexToken() != null);

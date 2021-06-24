@@ -33,7 +33,7 @@ class UserDTOMapper
     
     public static function mapDTOToModel(UserDTO $userDTO) : User
     {
-        $dateCreated = Carbon::createFromTimeString($userDTO->dateCreated)->timestamp;
+        $dateCreated = $userDTO->dateCreated;
         
         return new User(
             $userDTO->userId,

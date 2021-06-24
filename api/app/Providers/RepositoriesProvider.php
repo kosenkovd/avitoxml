@@ -25,8 +25,8 @@ class RepositoriesProvider extends ServiceProvider
         $this->app->bind(Interfaces\IGeneratorRepository::class, function () {
             return new Repositories\GeneratorRepository();
         });
-        $this->app->bind(Interfaces\ITableUpdateLockRepository::class, function () {
-            return new Repositories\TableUpdateLockRepository();
+        $this->app->bind(Interfaces\IDictRepository::class, function () {
+            return new Repositories\DictRepository();
         });
     }
 }

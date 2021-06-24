@@ -43,7 +43,7 @@ class Table {
      * @param string|null $notes
      * @param string $tableGuid
      * @param int $dateLastModified
-     * @param array $generators
+     * @param Generator[] $generators
      */
     public function __construct(
         ?int $tableId,

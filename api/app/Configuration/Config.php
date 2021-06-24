@@ -18,6 +18,7 @@ class Config {
     private string $dbCertificateName;
     private bool $isLoggingEnabled;
     private int $needsToUpdateTimeStamp;
+    private string $copyMarketplaceSpreadsheetId;
 
     public function __construct()
     {
@@ -149,5 +150,13 @@ class Config {
     public function getDbCertificateName(): string
     {
         return $this->dbCertificateName;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getCopyMarketplaceSpreadsheetId(): string
+    {
+        return $this->copyMarketplaceSpreadsheetId;
     }
 }

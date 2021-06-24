@@ -298,4 +298,12 @@
         {
             // stub
         }
+    
+        /**
+         * @inheritDoc
+         */
+        public function copyTableMarketplace(): string
+        {
+            // TODO: Implement copyTableMarketplace() method.
+        }
     }

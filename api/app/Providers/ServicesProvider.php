@@ -6,7 +6,10 @@ namespace App\Providers;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Repositories\DictRepository;
+use App\Services\AvitoService;
+use App\Services\CronLockService;
 use App\Services\GoogleDriveClientService;
+use App\Services\Interfaces\IAvitoService;
 use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IYandexDiskService;
@@ -60,6 +63,12 @@ class ServicesProvider extends ServiceProvider
         });
         $this->app->bind(JsonMapper::class, function () {
             return new JsonMapper();
+        });
+        $this->app->bind(IAvitoService::class, function () {
+            return new AvitoService();
+        });
+        $this->app->singleton(CronLockService::class, function () {
+            return new CronLockService();
         });
     }
 }
