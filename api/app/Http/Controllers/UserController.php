@@ -29,12 +29,14 @@ use App\Services\Interfaces\IXmlGenerationService;
 use App\Services\MailService;
 use App\Services\SpreadsheetClientService;
 use Exception;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use JsonMapper;
 use Ramsey\Uuid\Guid\Guid;
@@ -46,7 +48,8 @@ use Ramsey\Uuid\Guid\Guid;
  *
  * @package App\Http\Controllers
  */
-class UserController extends BaseController {
+class UserController extends BaseController
+{
     private Roles $roles;
     
     private IUserRepository $userRepository;
@@ -162,7 +165,7 @@ class UserController extends BaseController {
         }
         
         $userLinks = $users->map(function (UserLaravel $user) {
-            return "http://lk.agishev-autoz.ru/tables?hash=".$user->apiKey;
+            return "https://lk.agishev-autoz.ru/tables?hash=".$user->apiKey;
         })->implode(PHP_EOL);
         mail('maksimagishev@mail.ru', 'Новые пользователи', $userLinks);
         
@@ -203,16 +206,29 @@ class UserController extends BaseController {
             'name' => 'string|nullable',
         ]);
         
-        $user->update($request->only([
-            'phoneNumber',
-            'socialNetworkUrl',
-            'isBlocked',
-            'apiKey',
-            'notes',
-            'name'
-        ]));
+        if ($currentUser->roleId !== $this->roles->Admin) {
+            $attributes = $request->only([
+                'phoneNumber',
+                'socialNetworkUrl',
+                'name'
+            ]);
+        } else {
+            $attributes = $request->only([
+                'phoneNumber',
+                'socialNetworkUrl',
+                'isBlocked',
+                'apiKey',
+                'notes',
+                'name'
+            ]);
+        }
         
-        if ((bool)$request->input('isBlocked') === true) {
+        $user->update($attributes);
+        
+        if (
+            ($currentUser->roleId === $this->roles->Admin) &&
+            ((bool)$request->input('isBlocked') === true)
+        ) {
             $user->tables->each(function (TableLaravel $table) {
                 $table->generators->each(function (GeneratorLaravel $generator) {
                     $generator->lastGeneration = $this->xmlGenerationService
@@ -221,13 +237,6 @@ class UserController extends BaseController {
                 });
             });
         }
-        
-//        if ((int)$request->input('recentlyCreated') === 1) {
-//            $userTables = $user->tables;
-//            if ($userTables->isEmpty()) {
-//                $table = $this->createTable($user->id);
-//            }
-//        }
         
         return response()->json(null, 200);
     }
@@ -268,98 +277,62 @@ class UserController extends BaseController {
     }
     
     /**
-     * Create table for specified user
+     * Put /users/update
+     * Update user to Login Pass
      *
-     * @param int $userId
+     * @param Request $request
+     * @param int     $id
      *
-     * @return Table
+     * @return JsonResponse
      */
-    private function createTable(int $userId): Table
+    public function updateToLoginPass(Request $request, int $id): JsonResponse
     {
-        // TODO make service for that
+        /** @var UserLaravel $currentUser */
+        $currentUser = auth()->user();
         
-        $this->spreadsheetClientService = new SpreadsheetClientService();
-        $this->sheetNamesConfig = new SheetNames();
-        $this->generatorRepository = new GeneratorRepository();
-        $this->mailService = new MailService();
+        $request->validate([
+            'email' => ['required', 'string', 'email', 'max:100', 'unique:avitoxml_users'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
         
-        $googleTableId = $this->spreadsheetClientService->copyTable();
-        
-        $dateExpired = Carbon::now()->addDays(3)->getTimestamp();
-        
-        $table = new Table(
-            null,
-            $userId,
-            $googleTableId,
-            null,
-            null,
-            $dateExpired,
-            false,
-            null,
-            null,
-            Guid::uuid4()->toString(),
-            0,
-            []
-        );
-        
-        $newTableId = $this->tableRepository->insert($table);
-        
-        $targetsToAdd = [
-            [
-                "cell" => "C3",
-                "target" => $this->sheetNamesConfig->getAvito()
-            ],
-            [
-                "cell" => "C4",
-                "target" => $this->sheetNamesConfig->getYoula()
-            ],
-            [
-                "cell" => "C5",
-                "target" => $this->sheetNamesConfig->getYandex()
-            ]
-        ];
-        
-        $table->setTableId($newTableId);
-        
-        foreach ($targetsToAdd as $target) {
-            $generator = new Generator(
-                null,
-                $newTableId,
-                Guid::uuid4()->toString(),
-                0,
-                $target["target"],
-                30
-            );
-            
-            $newGeneratorId = $this->generatorRepository->insert($generator);
-            
-            $table->addGenerator($generator->setGeneratorId($newGeneratorId));
-            
-            $this->spreadsheetClientService->updateCellContent(
-                $googleTableId,
-                $this->sheetNamesConfig->getInformation(),
-                $target["cell"],
-                LinkHelper::getXmlGeneratorLink($table->getTableGuid(), $generator->getGeneratorGuid())
+        if (
+            ($currentUser->roleId !== $this->roles->Admin) &&
+            ($currentUser->id !== $id)
+        ) {
+            return response()->json(
+                new ErrorResponse(Response::$statusTexts[403], 'Not Admin'),
+                403
             );
         }
+    
+        /** @var UserLaravel|null $user */
+        $user = UserLaravel::query()->find($id);
+        if (is_null($user)) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+        }
         
-        $this->mailService->sendEmailWithTableData($table);
+        if ($user->password && $user->email) {
+            return response()->json(
+                new ErrorResponse(Response::$statusTexts[403], 'Already updated to Login Pass'),
+                403
+            );
+        }
+    
+        $user->email = $request->input('email');
+        $user->password = Hash::make($request->input('password'));
         
-        return $table;
+        $user->save();
+    
+        event(new Registered($user));
+        
+        return response()->json(null, 200);
     }
     
     public function test()
     {
-        return response('it works');
-//        /** @var TableLaravel $table */
-//        $table = TableLaravel::query()
-//            ->where('googleSheetId', '1GoQCTGscJOYvsnllJwGFfxwytEQYxvC3kKGjYWKaQJ8')
-//            ->first();
-//
-//        (new FillAvitoReportJob(
-//            new SpreadsheetClientService(),
-//            new AvitoService(),
-//            new SheetNames()
-//        ))->start($table);
+//        $email = request()->get('email');
+//        mail($email, 'Новые пользователи','$userLinks');
+//        dump($email);
+//        dump('$userLinks');
     }
 }

@@ -29,6 +29,13 @@ use Ramsey\Uuid\Guid\Guid;
 Artisan::command('inspire', function () {
     /** @var $this ClosureCommand */
     
-    $locks = DB::table('cron_lock')->first();
-    $this->comment($locks->name);
+    /** @var UserLaravel $user */
+    $user = UserLaravel::query()->make();
+    $user->roleId = 1;
+    $user->email = 'test@test.com';
+    $user->password = 'test@test.com';
+    $user->apiKey = md5(Guid::uuid4()->toString());
+    $user->isBlocked = false;
+    
+    $user->save();
 });

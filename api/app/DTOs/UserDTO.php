@@ -24,6 +24,10 @@ class UserDTO
     
     public ?string $token;
     
+    public ?string $email;
+    
+    public ?bool $hasVerifyEmail;
+    
     /**
      * @param int $userId
      * @return UserDTO
@@ -115,12 +119,33 @@ class UserDTO
     }
     
     /**
+     * @param string|null $email
+     *
+     * @return UserDTO
+     */
+    public function setEmail(?string $email): UserDTO
+    {
+        $this->email = $email;
+        return $this;
+    }
+    
+    /**
+     * @param bool|null $hasVerifyEmail
+     *
+     * @return UserDTO
+     */
+    public function setHasVerifyEmail(?bool $hasVerifyEmail): UserDTO
+    {
+        $this->hasVerifyEmail = $hasVerifyEmail;
+        return $this;
+    }
+    
+    /**
      * UserDTO constructor.
      */
     public function __construct(
     )
     {
     }
-
-
+    
 }
