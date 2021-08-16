@@ -40,6 +40,8 @@ abstract class JobBase
      * @var int max time to execute job.
      */
     protected int $maxJobTime;
+    
+    protected int $adsLimit = 10001;
 
     protected function log(string $message) : void
     {
@@ -78,7 +80,7 @@ abstract class JobBase
      *
      * @param string $tableID
      * @param string $sheetName
-     * @return array [ TableHeader, values ]
+     * @return array{ propertyColumns: TableHeader, values: array }
      * @throws \Exception
      */
     protected function getHeaderAndDataFromTable(string $tableID, string $sheetName) : array
@@ -103,7 +105,7 @@ abstract class JobBase
     protected function getFullDataFromTable(string $tableID, string $sheetName) : array
     {
         try {
-            $range = $sheetName.'!A1:FZ5001';
+            $range = $sheetName.'!A1:FZ'.$this->adsLimit;
             $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                 $tableID,
                 $range
@@ -121,5 +123,6 @@ abstract class JobBase
     {
         $this->jobId = Guid::uuid4()->toString();
         $this->spreadsheetClientService = $spreadsheetClientService;
+        
     }
 }

@@ -324,7 +324,7 @@ class FillAvitoStatisticsJob extends JobBase {
     {
         $columnLetterStart = SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->statisticViews);
         $columnLetterEnd = SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->statisticFavDay);
-        $range = $sheetName.'!'.$columnLetterStart.'2:'.$columnLetterEnd.'5001';
+        $range = $sheetName.'!'.$columnLetterStart.'2:'.$columnLetterEnd.$this->adsLimit;
         
         $message = "Table '".$googleSheetId."' writing values to table...";
         Log::channel($this->logChannel)->info($message);

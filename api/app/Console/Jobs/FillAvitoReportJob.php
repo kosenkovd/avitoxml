@@ -296,7 +296,7 @@ class FillAvitoReportJob extends JobBase {
     {
         $columnLetterStart = SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->unloadingStatus);
         $columnLetterEnd = SpreadsheetHelper::getColumnLetterByNumber($propertyColumns->unloadingDateInfo);
-        $range = $sheetName.'!'.$columnLetterStart.'2:'.$columnLetterEnd.'5001';
+        $range = $sheetName.'!'.$columnLetterStart.'2:'.$columnLetterEnd.$this->adsLimit;
         
         $message = "Table '".$googleSheetId."' writing values to table...";
         Log::channel($this->logChannel)->info($message);

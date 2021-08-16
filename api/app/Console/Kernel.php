@@ -5,7 +5,9 @@ namespace App\Console;
 use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
+use App\Console\Jobs\FillImagesJobYandexLaravel;
 use App\Console\Jobs\GenerateOzonXMLJob;
+use App\Console\Jobs\GenerateXMLJobLaravel;
 use App\Console\Jobs\ParserAmountJob;
 use App\Console\Jobs\FillAvitoReportJob;
 use App\Console\Jobs\FillAvitoStatisticsJob;
@@ -15,7 +17,9 @@ use App\Console\Jobs\GenerateXMLJob;
 use App\Console\Jobs\GetAvitoTokensJob;
 use App\Console\Jobs\JobBase;
 use App\Console\Jobs\RandomizeTextJob;
+use App\Console\Jobs\RandomizeTextJobLaravel;
 use App\Console\Jobs\UpdateXMLJob;
+use App\Console\Jobs\UpdateXMLJobLaravel;
 use App\Models\Table;
 use App\Models\TableLaravel;
 use App\Models\TableMarketplace;
@@ -27,6 +31,7 @@ use App\Repositories\Interfaces\IUserRepository;
 use App\Repositories\TableRepository;
 use App\Repositories\UserRepository;
 use App\Services\AvitoService;
+use App\Services\CronLockService;
 use App\Services\GoogleDriveClientService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\SpintaxService;
@@ -35,6 +40,7 @@ use App\Services\SpreadsheetClientServiceSecond;
 use App\Services\SpreadsheetClientServiceThird;
 use App\Services\XmlGenerationService;
 use App\Services\YandexDiskService;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Builder;
@@ -65,119 +71,126 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->call(function () {
+//            return;
+            /** @var CronLockService $cronLockService */
+            $cronLockService = resolve(CronLockService::class);
             $scriptName = "Tables";
-            $lock = DB::table('cron_lock')->where('name', $scriptName)->first();
-            if (!is_null($lock)) {
-                if (($lock->created_at + 60 * 15) > time()) {
-                    Log::channel('Tables')->alert("Script '".$scriptName."' already running");
-                    
-                    return;
-                }
-    
-                DB::table('cron_lock')->where('name', $scriptName)->delete();
-            }
-            try {
-                DB::table('cron_lock')->insert([
-                    'name' => $scriptName,
-                    'created_at' => time()
-                ]);
-            } catch (Exception $exception) {
-                Log::channel('fatal')->error("Script '".$scriptName."' already running.".PHP_EOL.
-                    $exception->getMessage());
-            }
-            
+            $logChannel = "Tables";
             $scriptId = Guid::uuid4();
-            Log::channel('Tables')->alert("Starting Schedule ".$scriptId);
+            $lockMinutes = 15;
             
-            $tableRepository = new TableRepository();
+            if ($cronLockService->checkAndCreate($scriptName, $lockMinutes, $scriptId)) {
+                return;
+            }
+            
+            Log::channel($logChannel)->alert("Starting Schedule ".$scriptId);
+            
             $spreadsheetClientService = new SpreadsheetClientService();
-            $tables = $tableRepository->getTables();
             $needsToUpdateTimeStamp = (new Config())->getNeedsToUpdateTimeStamp();
+            $noLock = false;
+    
+            $tables = TableLaravel::query()
+                ->whereHas('user', function (Builder $query) {
+                    $query->where('isBlocked', false);
+                })
+                ->where('dateExpired', '>=', Carbon::now()->startOfDay()->timestamp)
+                ->with('user')
+                ->with('generators:id,tableId,targetPlatform,maxAds')
+                ->get();
             
-            foreach ($tables as $table) {
-                $lock = DB::table('cron_lock')->where('name', $scriptName)->first();
-                if (is_null($lock)) {
-                    Log::channel('fatal')->error("Script '".$scriptName."' have no lock.");
-                    
-                    break;
-                }
-                if (time() > ($lock->created_at + 60 * 15)) {
-                    Log::channel('Tables')->info("Table '".$table->getGoogleSheetId()."' stopped due timeout.");
-                    DB::table('cron_lock')->where('name', $scriptName)->delete();
-        
+            /**
+             * @var int          $key
+             * @var TableLaravel $table
+             */
+            foreach ($tables as $key => $table) {
+                $noLock = !$cronLockService->checkWhileProcessing($scriptName, $lockMinutes, $scriptId);
+                if ($noLock) {
                     break;
                 }
                 
                 $this->processTable(
                     $table,
-                    $tableRepository,
                     $spreadsheetClientService,
-                    $needsToUpdateTimeStamp
+                    $needsToUpdateTimeStamp,
+                    $key
                 );
             }
-    
-            DB::table('cron_lock')->where('name', $scriptName)->delete();
-            Log::channel('Tables')->alert("Ending Schedule ".$scriptId);
+            
+            if (!$noLock) {
+                $cronLockService->clear($scriptName);
+            }
+            Log::channel($logChannel)->alert("Ending Schedule ".$scriptId);
         })
             ->name("Tables2") // имя процесса сбрасывается withoutOverlapping через 24 часа
             ->withoutOverlapping();
         
         $schedule->call(function () {
+//            return;
+            /** @var CronLockService $cronLockService */
+            $cronLockService = resolve(CronLockService::class);
             $scriptName = "Xml";
-            $lock = DB::table('cron_lock')->where('name', $scriptName)->first();
-            if (!is_null($lock)) {
-                if (($lock->created_at + 180 * 60) > time()) {
-                    Log::channel('xml')->alert("Script '".$scriptName."' already running");
+            $logChannel = 'xml';
+            $scriptId = Guid::uuid4();
+            $lockMinutes = 180;
             
-                    return;
-                }
-        
-                DB::table('cron_lock')->where('name', $scriptName)->delete();
-            }
-            try {
-                DB::table('cron_lock')->insert([
-                    'name' => $scriptName,
-                    'created_at' => time()
-                ]);
-            } catch (Exception $exception) {
-                Log::channel('fatal')->error("Script '".$scriptName."' already running.".PHP_EOL.
-                    $exception->getMessage());
+            if ($cronLockService->checkAndCreate($scriptName, $lockMinutes, $scriptId)) {
+                return;
             }
             
-            Log::channel('xml')->alert("Starting Schedule");
-            $tableRepository = new TableRepository();
-            $tables = $tableRepository->getTables();
+            Log::channel($logChannel)->alert("Starting Schedule");
+            $spreadsheetClientService = new SpreadsheetClientServiceSecond();
+            $noLock = false;
+            $tables = TableLaravel::query()
+                ->whereHas('user', function (Builder $query) {
+                    $query->where('isBlocked', false);
+                })
+                ->where('dateExpired', '>=', Carbon::now()->startOfDay()->timestamp)
+                ->with('user')
+                ->with('generators:id,tableId,targetPlatform,maxAds')
+                ->get();
             
-            foreach ($tables as $table) {
-                $lock = DB::table('cron_lock')->where('name', $scriptName)->first();
-                if (is_null($lock)) {
-                    Log::channel('fatal')->error("Script '".$scriptName."' have no lock.");
-        
-                    break;
-                }
-                if (time() > ($lock->created_at + 180 * 60)) {
-                    Log::channel('xml')->info("Table '".$table->getGoogleSheetId()."' stopped due timeout.");
-                    DB::table('cron_lock')->where('name', $scriptName)->delete();
-        
+            /**
+             * @var int          $key
+             * @var TableLaravel $table
+             */
+            foreach ($tables as $key => $table) {
+                $noLock = !$cronLockService->checkWhileProcessing($scriptName, $lockMinutes, $scriptId);
+                if ($noLock) {
                     break;
                 }
                 
-                $this->processUpdateXml($table);
+                $this->processUpdateXml(
+                    $table,
+                    $spreadsheetClientService,
+                    $key
+                );
             }
             
-            DB::table('cron_lock')->where('name', $scriptName)->delete();
-            Log::channel('xml')->alert("Ending Schedule");
+            if (!$noLock) {
+                $cronLockService->clear($scriptName);
+            }
+            Log::channel($logChannel)->alert("Ending Schedule");
         })
             ->name("UpdateXML1")
             ->withoutOverlapping();
-
+        
         $schedule->call(function () {
-            $scriptId = Guid::uuid4();
             $logChannel = 'parser';
+            
+            /** @var CronLockService $cronLockService */
+            $cronLockService = resolve(CronLockService::class);
+            $scriptName = "AmountParser";
+            $lockMinutes = 6;
+            
+            if ($cronLockService->checkAndCreate($scriptName, $lockMinutes)) {
+                return;
+            }
+            
+            $scriptId = Guid::uuid4();
             Log::channel($logChannel)->alert("Starting AmountParser ".$scriptId);
             try {
                 $googleSheetId = '1VJdo7mkIHk2I8D_fCol21sOSrVi6wuVmRz3NEvvLQe0';
-
+                
                 (new ParserAmountJob(
                     new SpreadsheetClientServiceThird(),
                     new TableRepository(),
@@ -186,6 +199,8 @@ class Kernel extends ConsoleKernel
             } catch (Exception $exception) {
                 $this->logTableError($googleSheetId, $exception, $logChannel);
             }
+            
+            $cronLockService->clear($scriptName);
             Log::channel($logChannel)->alert("Finished AmountParser ".$scriptId);
         })
             ->name("AmountParser1") // имя процесса сбрасывается withoutOverlapping через 24 часа
@@ -195,7 +210,7 @@ class Kernel extends ConsoleKernel
             $scriptId = Guid::uuid4();
             $logChannel = 'avitoTokens';
             Log::channel($logChannel)->alert("Starting Schedule ".$scriptId);
-    
+            
             $spreadsheetClientService = new SpreadsheetClientServiceThird();
             
             $tables = TableLaravel::query()
@@ -204,20 +219,20 @@ class Kernel extends ConsoleKernel
                     $query->where('isBlocked', false);
                 })
                 ->get();
-    
+            
             /** @var TableLaravel $table */
             foreach ($tables as $table) {
-                if (
-                    !$this->isTableLaravelModified(
-                        $table,
-                        $spreadsheetClientService,
-                        $logChannel
-                    )
-                ) {
-                    continue;
-                }
-        
                 try {
+                    if (
+                        !$this->isTableLaravelModified(
+                            $table,
+                            $spreadsheetClientService,
+                            $logChannel
+                        )
+                    ) {
+                        continue;
+                    }
+                    
                     (new GetAvitoTokensJob(
                         $spreadsheetClientService,
                         new SheetNames()
@@ -226,7 +241,7 @@ class Kernel extends ConsoleKernel
                     $this->logTableError($table->googleSheetId, $exception, $logChannel);
                 }
             }
-    
+            
             Log::channel($logChannel)->alert("Ending Schedule ".$scriptId);
         })
             ->name("AvitoTokens1") // имя процесса сбрасывается withoutOverlapping через 24 часа
@@ -248,18 +263,17 @@ class Kernel extends ConsoleKernel
             
             /** @var TableLaravel $table */
             foreach ($tables as $table) {
-                if (
-                    $this->isTableLaravelBlocked($table, $logChannel) ||
-                    !$this->isTableLaravelModified(
-                        $table,
-                        $spreadsheetClientService,
-                        $logChannel
-                    )
-                ) {
-                    continue;
-                }
-                
                 try {
+                    if (
+                        !$this->isTableLaravelModified(
+                            $table,
+                            $spreadsheetClientService,
+                            $logChannel
+                        )
+                    ) {
+                        continue;
+                    }
+                    
                     (new FillAvitoReportJob(
                         $spreadsheetClientService,
                         new AvitoService(),
@@ -291,18 +305,17 @@ class Kernel extends ConsoleKernel
             
             /** @var TableLaravel $table */
             foreach ($tables as $table) {
-                if (
-                    $this->isTableLaravelBlocked($table, $logChannel) ||
-                    !$this->isTableLaravelModified(
-                        $table,
-                        $spreadsheetClientService,
-                        $logChannel
-                    )
-                ) {
-                    continue;
-                }
-                
                 try {
+                    if (
+                        !$this->isTableLaravelModified(
+                            $table,
+                            $spreadsheetClientService,
+                            $logChannel
+                        )
+                    ) {
+                        continue;
+                    }
+                    
                     (new FillAvitoStatisticsJob(
                         $spreadsheetClientService,
                         new AvitoService(),
@@ -328,10 +341,10 @@ class Kernel extends ConsoleKernel
             if (!is_null($lock)) {
                 if (($lock->created_at + 60 * 15) > time()) {
                     Log::channel($logChannel)->alert("Script '".$scriptName."' already running");
-            
+                    
                     return;
                 }
-        
+                
                 DB::table('cron_lock')->where('name', $scriptName)->delete();
             }
             try {
@@ -345,7 +358,7 @@ class Kernel extends ConsoleKernel
             }
             
             Log::channel($logChannel)->alert("Starting Schedule ".$scriptId);
-    
+            
             $spreadsheetClientService = new SpreadsheetClientServiceThird();
             $xmlGenerationService = new XmlGenerationService(
                 $spreadsheetClientService,
@@ -360,22 +373,25 @@ class Kernel extends ConsoleKernel
                     $query->where('isBlocked', false);
                 })
                 ->get();
-    
+            
+            $noLock = false;
+            
             /** @var TableMarketplace $table */
             foreach ($tables as $table) {
                 $lock = DB::table('cron_lock')->where('name', $scriptName)->first();
                 if (is_null($lock)) {
-                    Log::channel('fatal')->error("Script '".$scriptName."' have no lock.");
-            
+//                    Log::channel('fatal')->error("Script '".$scriptName."' have no lock.");
+                    $noLock = true;
+                    
                     break;
                 }
                 if (time() > ($lock->created_at + 60 * 15)) {
-                    Log::channel($logChannel)->info("Table '".$table->getGoogleSheetId()."' stopped due timeout.");
+                    Log::channel($logChannel)->info("Table '".$table->googleSheetId."' stopped due timeout.");
                     DB::table('cron_lock')->where('name', $scriptName)->delete();
-            
+                    
                     break;
                 }
-    
+                
                 try {
                     (new GenerateOzonXMLJob(
                         $spreadsheetClientService,
@@ -387,8 +403,10 @@ class Kernel extends ConsoleKernel
                     $this->logTableError($table->googleSheetId, $exception, $logChannel);
                 }
             }
-    
-            DB::table('cron_lock')->where('name', $scriptName)->delete();
+            
+            if (!$noLock) {
+                DB::table('cron_lock')->where('name', $scriptName)->delete();
+            }
             Log::channel($logChannel)->alert("Ending Schedule ".$scriptId);
         })
             ->name("OZON") // имя процесса сбрасывается withoutOverlapping через 24 часа
@@ -396,115 +414,27 @@ class Kernel extends ConsoleKernel
     }
     
     private function processTable(
-        Table $table,
-        ITableRepository $tableRepository,
+        TableLaravel              $table,
         ISpreadsheetClientService $spreadsheetClientService,
-        int $needsToUpdateTimeStamp
+        int                       $needsToUpdateTimeStamp,
+        int                       $key
     ): void
     {
-        Log::channel('Tables')->info("Table '".$table->getGoogleSheetId()."' started.");
+        Log::channel('Tables')->info("Table '".$table->googleSheetId."' started ".$key.".");
         try {
-            if (
-                !$this->isTableBlocked($table) &&
-                $this->isModified($table, $spreadsheetClientService)
-            ) {
-                Log::channel('Tables')->info("Table '".$table->getGoogleSheetId()."' updating...");
-                $this->startRandomizeTextJob($table);
-                $this->startFillImagesJob($table, $needsToUpdateTimeStamp);
-                $this->startXMLGenerationJob($table);
-                $this->updateLastModified($table, $tableRepository, $needsToUpdateTimeStamp);
-                Log::channel('Tables')->info("Table '".$table->getGoogleSheetId()."' finished.");
+            if (!$this->isTableLaravelModified($table, $spreadsheetClientService)) {
+                return;
             }
+            
+            Log::channel('Tables')->info("Table '".$table->googleSheetId."' updating...");
+            $this->startRandomizeTextJob($table, $spreadsheetClientService);
+            $this->startFillImagesJob($table, $spreadsheetClientService, $needsToUpdateTimeStamp);
+            $this->startXMLGenerationJob($table, $spreadsheetClientService);
+            $this->updateLastModified($table, $needsToUpdateTimeStamp);
+            Log::channel('Tables')->info("Table '".$table->googleSheetId."' finished.");
         } catch (Exception $exception) {
-            $this->logTableError($table->getGoogleSheetId(), $exception);
+            $this->logTableError($table->googleSheetId, $exception);
         }
-    }
-    
-    /**
-     * @param Table       $table
-     * @param string|null $logChannel
-     *
-     * @return bool
-     * @throws Exception
-     */
-    private function isTableBlocked(Table $table, ?string $logChannel = 'Tables'): bool
-    {
-        /** @var UserLaravel|null $user */
-        $user = UserLaravel::query()->find($table->getUserId());
-        
-        if (is_null($user)) {
-            $message = "Error on '".$table->getGoogleSheetId()."' table have no user!";
-            Log::channel('fatal')->error($message);
-            throw new Exception($message);
-        }
-        
-        if ($user->isBlocked) {
-            Log::channel($logChannel)->info("Table '".$table->getGoogleSheetId()."' user is blocked, do nothing.");
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /**
-     * @param TableLaravel $table
-     * @param string|null  $logChannel
-     *
-     * @return bool
-     * @throws Exception
-     */
-    private function isTableLaravelBlocked(TableLaravel $table, ?string $logChannel = 'Tables'): bool
-    {
-        $user = $table->user;
-        
-        if (is_null($user)) {
-            $message = "Error on '".$table->googleSheetId."' table have no user!";
-            Log::channel('fatal')->error($message);
-            throw new Exception($message);
-        }
-        
-        if ($user->isBlocked) {
-            Log::channel($logChannel)->info("Table '".$table->googleSheetId."' user is blocked, do nothing.");
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /**
-     * @param Table                     $table
-     * @param ISpreadsheetClientService $spreadsheetClientService
-     * @param string|null               $logChannel
-     *
-     * @return bool
-     * @throws Exception
-     */
-    private function isModified(
-        Table $table,
-        ISpreadsheetClientService $spreadsheetClientService,
-        ?string $logChannel = 'Tables'
-    ): bool
-    {
-        $isTableExpired = !is_null($table->getDateExpired()) &&
-            (($table->getDateExpired() + 86400) < time()); // TODO change to days like xml
-        if ($isTableExpired) {
-            Log::channel($logChannel)->info("Table '".$table->getGoogleSheetId()."' expired.");
-            return false;
-        }
-        
-        try {
-            $timeModified = $spreadsheetClientService->getFileModifiedTime($table->getGoogleSheetId());
-        } catch (Exception $exception) {
-            throw new Exception("Table '".$table->getGoogleSheetId()."' google error.".PHP_EOL.
-                $exception->getMessage());
-        }
-        
-        $isModified = $table->getDateLastModified() < $timeModified->getTimestamp();
-        if (!$isModified) {
-            Log::channel($logChannel)->info("Table '".$table->getGoogleSheetId()."' is up to date.");
-        }
-        
-        return $isModified;
     }
     
     /**
@@ -516,15 +446,13 @@ class Kernel extends ConsoleKernel
      * @throws Exception
      */
     private function isTableLaravelModified(
-        TableLaravel $table,
+        TableLaravel              $table,
         ISpreadsheetClientService $spreadsheetClientService,
-        ?string $logChannel = 'Tables'
+        ?string                   $logChannel = 'Tables'
     ): bool
     {
-        $isTableExpired = !is_null($table->dateExpired) &&
-            (($table->dateExpired + 86400) < time()); // TODO change to days like xml
-        if ($isTableExpired) {
-            Log::channel($logChannel)->info("Table '".$table->googleSheetId."' expired.");
+        if (is_null($table->dateExpired)) {
+            Log::channel($logChannel)->info("Table '".$table->googleSheetId."' has no dateExpired.");
             return false;
         }
         
@@ -543,128 +471,114 @@ class Kernel extends ConsoleKernel
         return $isModified;
     }
     
-    private function startRandomizeTextJob(Table $table): void
+    private function startRandomizeTextJob(TableLaravel $table, ISpreadsheetClientService $spreadsheetClientService): void
     {
         $this->handleJob(
             $table,
-            (new RandomizeTextJob(
+            (new RandomizeTextJobLaravel(
                 new SpintaxService(),
-                new SpreadsheetClientService(),
+                $spreadsheetClientService,
                 new XmlGeneration()
             ))
         );
     }
     
-    private function startFillImagesJob(Table $table, int $needsToUpdateTimeStamp): void
-    {
-        switch ($table->getTableId()) {
-            case 99999:
-                // tables using Google Drive Disk
-                $this->handleJob(
-                    $table,
-                    (new FillImagesJob(
-                        new SpreadsheetClientService(),
-                        new GoogleDriveClientService()
-                    ))
-                );
-                break;
-            default:
-                $this->handleJob(
-                    $table,
-                    (new FillImagesJobYandex(
-                        new SpreadsheetClientService(),
-                        new YandexDiskService(),
-                        new TableRepository(),
-                        new XmlGeneration(),
-                        $needsToUpdateTimeStamp
-                    ))
-                );
-        }
-    }
-    
-    private function startXMLGenerationJob(Table $table): void
+    private function startFillImagesJob(
+        TableLaravel              $table,
+        ISpreadsheetClientService $spreadsheetClientService,
+        int                       $needsToUpdateTimeStamp
+    ): void
     {
         $this->handleJob(
             $table,
-            (new GenerateXMLJob(
-                new SpreadsheetClientService(),
+            (new FillImagesJobYandexLaravel(
+                $spreadsheetClientService,
+                new YandexDiskService(),
                 new XmlGeneration(),
-                new TableRepository(),
-                new GeneratorRepository(),
+                $needsToUpdateTimeStamp
+            ))
+        );
+    }
+    
+    private function startXMLGenerationJob(TableLaravel $table, ISpreadsheetClientService $spreadsheetClientService): void
+    {
+        $this->handleJob(
+            $table,
+            (new GenerateXMLJobLaravel(
+                $spreadsheetClientService,
+                new XmlGeneration(),
                 new XmlGenerationService(
-                    new SpreadsheetClientService(),
+                    $spreadsheetClientService,
                     new SheetNames(),
                     new XmlGeneration(),
                     new DictRepository()
-                ),
-                new SheetNames()
+                )
             ))
         );
     }
     
     /**
-     * @param Table   $table
-     * @param JobBase $job
+     * @param TableLaravel $table
+     * @param JobBase      $job
+     * @param string       $logChannel
      */
     private function handleJob(
-        Table $table,
-        JobBase $job
+        TableLaravel $table,
+        JobBase      $job,
+        string       $logChannel = 'Tables'
     ): void
     {
         $actionType = 'starting';
-        $this->logTableHandling($table, $job, $actionType);
+        $this->logTableHandling($table->googleSheetId, $job, $actionType, $logChannel);
         
         try {
             $job->start($table);
         } catch (Exception $exception) {
-            $this->logTableError($table->getGoogleSheetId(), $exception);
+            $this->logTableError($table->googleSheetId, $exception, $logChannel);
         }
     }
     
-    private function logTableHandling($table, $job, string $actionType): void
+    private function logTableHandling(string $googleSheetId, $job, string $actionType, string $logChannel = 'Tables'): void
     {
-        $message = "Table '".$table->getGoogleSheetId()."' ".$actionType." '".get_class($job)."'...";
-        Log::channel('Tables')->info($message);
-        echo $message;
+        $message = "Table '".$googleSheetId."' ".$actionType." '".get_class($job)."'...";
+        Log::channel($logChannel)->info($message);
     }
     
-    private function logTableError(string $googleSheetId, Exception $exception, ?string $logChannel = 'Tables'): void
+    private function logTableError(string $googleSheetId, Exception $exception, string $logChannel = 'Tables'): void
     {
-        $message = "Error on '".$googleSheetId."' Kernel".PHP_EOL.$exception->getMessage();
+        $message = "Error on '".$googleSheetId."' at Kernel".PHP_EOL.$exception->getMessage();
         Log::channel($logChannel)->error($message);
-        echo $message;
     }
     
     private function updateLastModified(
-        Table $table,
-        ITableRepository $tableRepository,
-        int $needsToUpdateTimeStamp
+        TableLaravel $table,
+        int          $needsToUpdateTimeStamp
     ): void
     {
-        $existingTable = $tableRepository->get($table->getTableGuid());
-        if ($existingTable && ($existingTable->getDateLastModified() === $needsToUpdateTimeStamp)) {
+        if ($table->dateLastModified === $needsToUpdateTimeStamp) {
             return;
         }
         
-        $table->setDateLastModified(time());
-        $tableRepository->update($table);
-        Log::channel('Tables')->info("Table '".$table->getGoogleSheetId()."' updated.");
+        $table->dateLastModified = time();
+        $table->save();
+        
+        Log::channel('Tables')->info("Table '".$table->googleSheetId."' updated.");
     }
     
-    private function processUpdateXml(Table $table): void
+    private function processUpdateXml(
+        TableLaravel              $table,
+        ISpreadsheetClientService $spreadsheetClientService,
+        int                       $key,
+        string                    $logChannel = 'xml'
+    ): void
     {
-        $spreadsheetClientService = new SpreadsheetClientServiceSecond();
-        
-        $logChannel = 'xml';
-        Log::channel($logChannel)->info("Table '".$table->getGoogleSheetId()."' started");
+        Log::channel($logChannel)->info("Table '".$table->googleSheetId."' started ".$key.".");
         try {
-            if (!$this->isTableBlocked($table, $logChannel)) {
-                Log::channel($logChannel)->info("Table '".$table->getGoogleSheetId()."' updating...");
-                $this->startXMLUpdateJob($table, $spreadsheetClientService);
-                Log::channel($logChannel)->info("Table '".$table->getGoogleSheetId()."' finished.");
-            }
+            Log::channel($logChannel)->info("Table '".$table->googleSheetId."' updating...");
+            $this->startXMLUpdateJob($table, $spreadsheetClientService);
+            Log::channel($logChannel)->info("Table '".$table->googleSheetId."' finished.");
         } catch (Exception $exception) {
-            $this->logTableError($table->getGoogleSheetId(), $exception, $logChannel);
+            $this->logTableError($table->googleSheetId, $exception, $logChannel);
         }
         
         $timeToSleep = 1;
@@ -672,57 +586,25 @@ class Kernel extends ConsoleKernel
         sleep($timeToSleep);
     }
     
-    private function startXMLUpdateJob(Table $table, ISpreadsheetClientService $spreadsheetClientService): void
+    private function startXMLUpdateJob(
+        TableLaravel              $table,
+        ISpreadsheetClientService $spreadsheetClientService
+    ): void
     {
-        $this->handleSecondJob(
+        $this->handleJob(
             $table,
-            (new UpdateXMLJob(
+            (new UpdateXMLJobLaravel(
                 $spreadsheetClientService,
                 new XmlGeneration(),
-                new TableRepository(),
-                new GeneratorRepository(),
                 new XmlGenerationService(
                     $spreadsheetClientService,
                     new SheetNames(),
                     new XmlGeneration(),
                     new DictRepository()
-                ),
-                new SheetNames()
-            ))
+                )
+            )),
+            'xml'
         );
-    }
-    
-    /**
-     * @param Table   $table
-     * @param JobBase $job
-     */
-    private function handleSecondJob(
-        Table $table,
-        JobBase $job
-    ): void
-    {
-        $actionType = 'starting';
-        $this->logTableHandlingSecond($table, $job, $actionType);
-        
-        try {
-            $job->start($table);
-        } catch (Exception $exception) {
-            $this->logTableErrorSecond($table, $exception);
-        }
-    }
-    
-    private function logTableHandlingSecond($table, $job, string $actionType): void
-    {
-        $message = "Table '".$table->getGoogleSheetId()."' ".$actionType." '".get_class($job)."'...";
-        Log::channel('xml')->info($message);
-        echo $message;
-    }
-    
-    private function logTableErrorSecond(Table $table, Exception $exception): void
-    {
-        $message = "Error on '".$table->getGoogleSheetId()."' Kernel".PHP_EOL.$exception->getMessage();
-        Log::channel('xml')->error($message);
-        echo $message;
     }
     
     /**
