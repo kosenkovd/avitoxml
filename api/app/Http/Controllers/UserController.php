@@ -14,6 +14,7 @@ use App\Http\Resources\UserResource;
 use App\Mappers\UserDTOMapper;
 use App\Models\Generator;
 use App\Models\GeneratorLaravel;
+use App\Models\Invitation;
 use App\Models\Table;
 use App\Models\TableLaravel;
 use App\Models\User;
@@ -29,6 +30,10 @@ use App\Services\Interfaces\IXmlGenerationService;
 use App\Services\MailService;
 use App\Services\SpreadsheetClientService;
 use Exception;
+use Google_Client;
+use Google_Service_Drive;
+use Google_Service_Drive_Permission;
+use Google_Service_Sheets;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +42,7 @@ use Illuminate\Routing\Controller as BaseController;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use JsonMapper;
 use Ramsey\Uuid\Guid\Guid;
@@ -185,6 +191,8 @@ class UserController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
+    
+        Log::channel('apilog')->info('PUT /users/'.$id.' - user '.$currentUser->id);
         
         if (!(($currentUser->id === (int)$id) ||
             ($currentUser->roleId === $this->roles->Admin))) {
@@ -254,6 +262,8 @@ class UserController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
+    
+        Log::channel('apilog')->info('PUT /users/'.$id.'/token - user '.$currentUser->id);
         
         if ($currentUser->roleId !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
@@ -289,10 +299,13 @@ class UserController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
+    
+        Log::channel('apilog')->info('PUT /users/update - user '.$currentUser->id);
         
         $request->validate([
             'email' => ['required', 'string', 'email', 'max:100', 'unique:avitoxml_users'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'invitation' => 'string|nullable'
         ]);
         
         if (
@@ -320,6 +333,20 @@ class UserController extends BaseController
     
         $user->email = $request->input('email');
         $user->password = Hash::make($request->input('password'));
+    
+        $invitationHash = $request->input('invitation');
+        if (!is_null($invitationHash)) {
+            /** @var Invitation|null $invitation */
+            $invitation = Invitation::query()->where('hash', $invitationHash)->first();
+            if (is_null($invitation)) {
+                return response()->json(
+                    new ErrorResponse(Response::$statusTexts[404], 'Invalid invitation hash.'),
+                    404
+                );
+            }
+        
+            $user->masterInvitationId = $invitation->id;
+        }
         
         $user->save();
     
@@ -328,11 +355,36 @@ class UserController extends BaseController
         return response()->json(null, 200);
     }
     
-    public function test()
+    public function test(Request $request)
     {
-//        $email = request()->get('email');
-//        mail($email, 'Новые пользователи','$userLinks');
-//        dump($email);
-//        dump('$userLinks');
+//        if ($request->get('code')) {
+//
+//            $res = Http::post('https://oauth2.googleapis.com/token', [
+//                'code' => $request->get('code'),
+//                'client_id' => "126284738006-c7evde41fmje87q6i3j64kgfn2bpj499.apps.googleusercontent.com",
+//                'client_secret' => "AcQWTzVI3qHqgBF5aKDJ3k30",
+//                'grant_type' => 'authorization_code',
+//                'redirect_uri' => 'https://api.agishev-autoz.ru/api/test'
+//            ]);
+//
+//            echo(json_encode($res->json()));
+//            file_put_contents(__dir__. '/../../Configuration/test'.time().'.json', json_encode($res->json()));
+//            die;
+//
+////        $client = new Google_Client();
+////        $client->setAuthConfig(__dir__. '/../../Configuration/OAuth.json');
+////        $access_token = $client->fetchAccessTokenWithAuthCode($request->get('code'));
+////        var_dump($access_token);
+////
+////        $client->setAccessToken($access_token);
+////        $client->setScopes([Google_Service_Sheets::SPREADSHEETS]);
+////        $client->setAccessType('offline');
+//
+////        setPermissions('1-jeOZluHoKBIdvM21ViX2z6tmdyUA4vFUqrboT5nJ1o', $client);
+//
+//
+//        }
+//
+//        dd($request->json());
     }
 }

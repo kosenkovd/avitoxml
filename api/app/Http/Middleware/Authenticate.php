@@ -39,7 +39,10 @@ class Authenticate
             }
             
             /** @var UserLaravel $user */
-            $user = UserLaravel::query()->where('apiKey', $hash)->first();
+            $user = UserLaravel::query()
+                ->where('apiKey', $hash)
+//                ->whereNull('email') TODO change it when front updated
+                ->first();
             if (is_null($user)) {
                 return response()->json(
                     new ErrorResponse("User with specified hash was not found"),

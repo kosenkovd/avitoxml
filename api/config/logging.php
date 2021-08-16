@@ -123,6 +123,20 @@ return [
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 2,
         ],
+
+        'subscribe' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/subscribe/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 7,
+        ],
+
+        'transactions' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/transactions/laravel.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 7,
+        ],
         
         'fatal' => [
             'driver' => 'single',

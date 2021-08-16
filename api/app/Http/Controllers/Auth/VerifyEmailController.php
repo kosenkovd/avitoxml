@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\DTOs\ErrorResponse;
 use App\Models\UserLaravel;
+use App\Services\TransactionsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -11,6 +12,15 @@ use Illuminate\Routing\Controller;
 
 class VerifyEmailController extends Controller
 {
+    private TransactionsService $transactionsService;
+    
+    public function __construct(
+        TransactionsService $transactionsService
+    )
+    {
+        $this->transactionsService = $transactionsService;
+    }
+    
     /**
      * Handle the incoming request.
      *
@@ -46,6 +56,7 @@ class VerifyEmailController extends Controller
                 ), 409);
         }
         
+        $this->transactionsService->createWallet($user);
         $user->markEmailAsVerified();
         
         return response()->json();
