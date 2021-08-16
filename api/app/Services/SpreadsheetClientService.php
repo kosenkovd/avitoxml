@@ -74,12 +74,12 @@
 
             $drivePermissions->setRole('writer');
             $drivePermissions->setType('user');
-            $drivePermissions->setEmailAddress('xml.avito@gmail.com');
+            $drivePermissions->setEmailAddress('Ipagishev@gmail.com');
             $driveService->permissions->create($id, $drivePermissions);
             
             $drivePermissions->setRole('owner');
             $drivePermissions->setType('user');
-            $drivePermissions->setEmailAddress('Ipagishev@gmail.com');
+            $drivePermissions->setEmailAddress('xml.avito@gmail.com');
             $driveService->permissions->create(
                 $id,
                 $drivePermissions,
@@ -152,9 +152,9 @@
             $this->client->setScopes([Google_Service_Sheets::SPREADSHEETS]);
             $this->client->setAccessType('offline');
             $this->client->setAuthConfig(__dir__. '/../Configuration/GoogleAccountConfig.json');
-            
+    
             $this->sheetsService = new Google_Service_Sheets($this->client);
-            
+    
             $this->drivePermissions = new Google_Service_Drive_Permission();
             $this->drivePermissions->setRole('writer');
             $this->drivePermissions->setType('anyone');

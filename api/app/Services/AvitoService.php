@@ -42,7 +42,40 @@ class AvitoService implements IAvitoService {
         $res = Http::withHeaders([
             'Authorization' => $token
         ])
-            ->get('https://api.avito.ru/autoload/v1/accounts/'.$userId.'/reports/last_report/');
+            ->get('https://api.avito.ru/autoload/v1/accounts/'.$userId.'/reports/');
+    
+        if ($res->status() !== 200) {
+            $message = 'Avito error on getting report'.PHP_EOL.
+                $res->json()['error']['message'];
+            Log::channel('avitoReport')->error($message);
+        
+            return [];
+        }
+        
+        $reports = $res->json()['reports'];
+        $reportId = null;
+        foreach ($reports as $report) {
+            if (is_null($report['finished_at'])) {
+                continue;
+            }
+    
+            $reportId = $report['id'];
+            break;
+        }
+    
+        if (is_null($reportId)) {
+            return [];
+        }
+        
+        $res = Http::withHeaders([
+            'Authorization' => $token
+        ])
+            ->get('https://api.avito.ru/autoload/v1/accounts/'.$userId.'/reports/'.$reportId);
+        
+//        $res = Http::withHeaders([
+//            'Authorization' => $token
+//        ])
+//            ->get('https://api.avito.ru/autoload/v1/accounts/'.$userId.'/reports/last_report/');
         
         if ($res->status() !== 200) {
             $message = 'Avito error on getting report'.PHP_EOL.

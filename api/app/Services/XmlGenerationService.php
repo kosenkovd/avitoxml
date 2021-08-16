@@ -13,6 +13,7 @@ use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
 use DateTimeZone;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -44,6 +45,8 @@ class XmlGenerationService implements IXmlGenerationService {
     private bool $adsLimitEnabled = true;
     
     private string $noticeChannel = 'notice';
+    
+    protected int $adsLimit = 10001;
     
     private function isExistsInRow(array $row, ?int $column): bool
     {
@@ -116,9 +119,9 @@ class XmlGenerationService implements IXmlGenerationService {
     
     private function shouldSkipAvitoRow(array $row, TableHeader $propertyColumns): bool
     {
-//        if (!$this->isExistsInRow($row, $propertyColumns->dateCreated)) {
-//            return false;
-//        }
+        if (!$this->isExistsInRow($row, $propertyColumns->dateCreated)) {
+            return true;
+        }
         
         return false;
     }
@@ -334,20 +337,19 @@ class XmlGenerationService implements IXmlGenerationService {
     /**
      * Create ads from sheet rows for Ula.
      *
-     * @param array $values rows from sheet.
+     * @param array       $values rows from sheet.
      * @param TableHeader $propertyColumns
-     * @param string $targetSheet
-     * @param int $adsLimit
+     * @param int         $adsLimit
+     *
      * @return string generated ads.
      */
     private function createAdsForUlaSheet(
         array $values,
         TableHeader $propertyColumns,
-        string $targetSheet,
         int $adsLimit
     ): string
     {
-        $ulaCategories = $this->dictRepository->getUlaCategories();
+        $ulaCategories = DB::table('avitoxml_ula_categories')->get();
         
         $xml = "";
         $ads = 0;
@@ -460,7 +462,7 @@ class XmlGenerationService implements IXmlGenerationService {
             }
             
             try {
-                $range = $targetSheet.'!A1:FZ5001';
+                $range = $targetSheet.'!A1:FZ'.$this->adsLimit;
                 $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                     $spreadsheetId,
                     $range
@@ -512,7 +514,7 @@ class XmlGenerationService implements IXmlGenerationService {
             }
             
             try {
-                $range = $targetSheet.'!A1:FZ5001';
+                $range = $targetSheet.'!A1:FZ'.$this->adsLimit;
                 $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                     $spreadsheetId,
                     $range
@@ -570,7 +572,7 @@ class XmlGenerationService implements IXmlGenerationService {
             }
             
             try {
-                $range = $targetSheet.'!A1:FZ5001';
+                $range = $targetSheet.'!A1:FZ'.$this->adsLimit;
                 $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                     $spreadsheetId,
                     $range
@@ -592,7 +594,7 @@ class XmlGenerationService implements IXmlGenerationService {
                 '<shop>'.PHP_EOL.
                 '<offers>'.PHP_EOL;
             
-            $xml .= $this->createAdsForUlaSheet($values, $propertyColumns, $targetSheet, $adsLimit);
+            $xml .= $this->createAdsForUlaSheet($values, $propertyColumns, $adsLimit);
             return $xml.
                 '</offers>'.PHP_EOL.
                 '</shop>'.PHP_EOL.
@@ -635,7 +637,7 @@ class XmlGenerationService implements IXmlGenerationService {
             }
         
             try {
-                $range = $targetSheet.'!A1:FZ5001';
+                $range = $targetSheet.'!A1:FZ'.$this->adsLimit;
                 $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
                     $spreadsheetId,
                     $range

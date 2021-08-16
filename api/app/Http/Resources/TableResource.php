@@ -55,6 +55,7 @@ class TableResource extends JsonResource
                 'generatorGuid' => $generator->generatorGuid,
                 'targetPlatform' => $generator->targetPlatform,
                 'maxAds' => $generator->maxAds,
+                'subscribed' => (bool)$generator->subscribed,
             ];
         });
         

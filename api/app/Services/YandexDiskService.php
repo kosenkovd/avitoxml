@@ -110,6 +110,7 @@
             
             if(!is_null($newName))
             {
+                $newName = urlencode($newName);
                 $newFilePath = $folderPath.$newName;
             }
             else
@@ -127,7 +128,6 @@
             }
             
             $file = $this->disk->getResource($this->cleanupPath($currentPath));
-            echo "Save to ".$newFilePath." from ".$currentPath.PHP_EOL;
             $result = $file->move($this->cleanupPath($newFilePath));
             if(!$result)
             {

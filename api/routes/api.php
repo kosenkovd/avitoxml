@@ -51,3 +51,30 @@ Route::get('/email/verify/{id}/{hash}', [C\Auth\VerifyEmailController::class, 'v
 Route::post('/email/resendVerify', [C\Auth\VerifyEmailController::class, 'resend'])
     ->withoutMiddleware('auth');
 
+Route::get('/config/maxAds', [C\ConfigController::class, 'maxAds']);
+Route::post('/prices/', C\PricesController::class);
+Route::get('/users/invitations/{hash}', [C\InvitationsController::class, 'check'])
+    ->withoutMiddleware('auth');
+
+Route::middleware('verified')->group(function () {
+    Route::get('/wallet/balance', [C\WalletController::class, 'index']);
+    Route::post('/wallet/deposit', [C\WalletController::class, 'deposit']);
+    
+    Route::post('/transactions/maxAds', [C\TransactionsController::class, 'maxAds']);
+    Route::get('/transactions', [C\TransactionsController::class, 'index']);
+    Route::post('/transactions/orders', [C\TransactionsController::class, 'order']);
+    
+    Route::get('/users/invitations', [C\InvitationsController::class, 'index']);
+    Route::post('/users/invitations', [C\InvitationsController::class, 'store']);
+    Route::put('/users/invitations/{hash}', [C\InvitationsController::class, 'update']);
+    
+    Route::get('/referrals', [C\ReferralsController::class, 'index']);
+    Route::get('/referrals/counters', [C\ReferralsController::class, 'counters']);
+    Route::get('/referrals/profit', [C\ReferralsController::class, 'partnersProfit']);
+    
+    Route::get('/statistics', [C\StatisticsController::class, 'get']);
+    Route::get('/statistics/period', [C\StatisticsController::class, 'period']);
+});
+
+Route::post('/transactions/notifications', [C\TransactionsController::class, 'notifications'])
+    ->withoutMiddleware('auth');

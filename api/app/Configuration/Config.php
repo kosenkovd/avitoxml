@@ -19,6 +19,7 @@ class Config {
     private bool $isLoggingEnabled;
     private int $needsToUpdateTimeStamp;
     private string $copyMarketplaceSpreadsheetId;
+    private string $terminalPassword;
 
     public function __construct()
     {
@@ -158,5 +159,13 @@ class Config {
     public function getCopyMarketplaceSpreadsheetId(): string
     {
         return $this->copyMarketplaceSpreadsheetId;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getTerminalPassword(): string
+    {
+        return $this->terminalPassword;
     }
 }

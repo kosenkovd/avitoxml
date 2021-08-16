@@ -140,7 +140,7 @@ class SpintaxService implements ISpintaxService
     public function randomize(string $text) : string
     {
         // Adding square braces to be able to shuffle elements for input like "cat | dog"
-        $text = "[".$text."]";
+//        $text = "[".$text."]";
         
         $text = $this->processSquareBraces($text);
 

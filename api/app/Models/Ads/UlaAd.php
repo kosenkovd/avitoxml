@@ -6,20 +6,21 @@
     use App\Models\TableHeader;
     use DateTimeZone;
     use Illuminate\Support\Carbon;
+    use Illuminate\Support\Collection;
     use Illuminate\Support\Facades\Log;
 
     class UlaAd extends AdBase {
         protected ?UlaCategory $ulaCategory;
         
-        /** @var UlaCategory[] */
-        protected array $ulaCategories;
+        /** @var Collection<UlaCategory> */
+        protected Collection $ulaCategories;
         
         protected ?string $datePublication;
         protected ?string $subCategory;
         protected ?string $autoPart;
         protected ?string $urlAd;
         
-        public function __construct(array $row, TableHeader $propertyColumns, $ulaCategories)
+        public function __construct(array $row, TableHeader $propertyColumns, Collection $ulaCategories)
         {
             parent::__construct($row, $propertyColumns);
             
@@ -126,10 +127,13 @@ ULAXML;
             $name = mb_strtolower(preg_replace('/\s/i', "", $this->category));
             
             foreach ($this->ulaCategories as $ulaCategory) {
-                if ($ulaCategory->getName() === $name) {
-                    return $ulaCategory->getId();
+                if ($ulaCategory->name === $name) {
+                    return $ulaCategory->id;
                 }
             }
+            
+            Log::channel($this->noticeChannel)->notice("Notice on category '".$this->category."'");
+            
             return "";
         }
         
@@ -138,14 +142,17 @@ ULAXML;
             if (!$this->subCategory && !$this->category) {
                 return "";
             }
+            
             $name = mb_strtolower(preg_replace('/\s/i', "", $this->subCategory));
             $category = mb_strtolower(preg_replace('/\s/i', "", $this->category));
             
             foreach ($this->ulaCategories as $ulaCategory) {
-                if ($ulaCategory->getName() === $category.$name) {
-                    return $ulaCategory->getId();
+                if ($ulaCategory->name === $category.$name) {
+                    return $ulaCategory->id;
                 }
             }
+    
+            Log::channel($this->noticeChannel)->notice("Notice on subCategory '".$this->subCategory."'");
             
             return "";
         }
@@ -158,8 +165,8 @@ ULAXML;
             $name = mb_strtolower(preg_replace('/\s/i', "", $this->autoPart));
             
             foreach ($this->ulaCategories as $ulaCategory) {
-                if ($ulaCategory->getName() === $name) {
-                    return $ulaCategory->getId();
+                if ($ulaCategory->name === $name) {
+                    return $ulaCategory->id;
                 }
             }
             return "";

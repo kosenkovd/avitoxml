@@ -10,46 +10,42 @@ use Illuminate\Support\Facades\Log;
 
 class CronLockService
 {
-    public function checkAndCreate(string $scriptName, int $minutes): bool
+    public function checkAndCreate(string $scriptName, int $minutes, string $scriptId = null): bool
     {
-        $lock = DB::table('cron_lock')
-            ->where('name', $scriptName)
-            ->first();
+        $lock = $this->find($scriptName);
         
         if (is_null($lock)) {
-            $this->create($scriptName);
+            $this->create($scriptName, $scriptId);
             return false;
         }
     
         // Check if lock already exists and refresh if timeout
-        if (($lock->created_at + ($minutes * 60)) > time()) {
-            $this->refresh($scriptName);
+        if (time() > ($lock->created_at + ($minutes * 60))) {
+            $this->refresh($scriptName, $scriptId);
             return false;
         }
         
         return true;
     }
     
-    public function checkAndRefreshOrClearIfTimeout(string $scriptName, int $minutes): bool
+    public function checkWhileProcessing(string $scriptName, int $minutes, string $scriptId): bool
     {
-        $lock = DB::table('cron_lock')
-            ->where('name', $scriptName)
-            ->first();
-        
+        $lock = $this->find($scriptName);
+
         if (is_null($lock)) {
-            Log::channel('fatal')->error("Script '".$scriptName."' have no lock.");
-            $this->create($scriptName);
             return false;
         }
     
-        // Check if lock alive and clear if timeout
-        if (($lock->created_at + ($minutes * 60)) < time()) {
-            $this->clear($scriptName);
-            return true;
+        if (strcmp($lock->scriptId, $scriptId) !== 0) {
+            return false;
         }
-        
-        $this->refresh($scriptName);
-        return false;
+
+        // Check if lock alive
+        if (time() > ($lock->created_at + ($minutes * 60))) {
+            return false;
+        }
+
+        return true;
     }
     
     public function clear(string $scriptName): void
@@ -59,24 +55,33 @@ class CronLockService
             ->delete();
     }
     
-    public function create(string $scriptName): void
+    private function find(string $scriptName): ?object
+    {
+        return DB::table('cron_lock')
+            ->where('name', $scriptName)
+            ->first();
+    }
+    
+    private function create(string $scriptName, string $scriptId = null): void
     {
         try {
             DB::table('cron_lock')->insert([
+                'scriptId' => $scriptId,
                 'name' => $scriptName,
                 'created_at' => time()
             ]);
         } catch (Exception $exception) {
-            Log::channel('fatal')->error("Script '".$scriptName."' already running.".PHP_EOL.
+            Log::channel('fatal')->error("Script '".$scriptName."' can't create lock.".PHP_EOL.
                 $exception->getMessage());
         }
     }
     
-    public function refresh(string $scriptName): void
+    private function refresh(string $scriptName, string $scriptId): void
     {
         DB::table('cron_lock')
             ->where('name', $scriptName)
             ->update([
+                'scriptId' => $scriptId,
                 'created_at' => time()
             ]);
     }

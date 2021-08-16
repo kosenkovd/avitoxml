@@ -5,24 +5,19 @@ namespace App\Http\Controllers;
 
 use App\Configuration\Spreadsheet\SheetNames;
 use App\DTOs\ErrorResponse;
-use App\DTOs\GeneratorDTO;
 use App\Enums\Roles;
 use App\Models\GeneratorLaravel;
 use App\Models\TableLaravel;
 use App\Models\TableMarketplace;
-use App\Models\User;
 use App\Models\UserLaravel;
-use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
-
-use App\Models;
 use App\Repositories\Interfaces;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use JsonMapper;
 
@@ -105,7 +100,7 @@ class GeneratorController extends BaseController
      *
      * @return Response generated XML.
      */
-    public function show(string $tableGuid, string $generatorGuid): Response
+    public function show(string $tableGuid, string $generatorGuid, Request $request): Response
     {
         /** @var TableLaravel|null $table */
         $table = TableLaravel::query()->where('tableGuid', $tableGuid)->first();
@@ -141,10 +136,19 @@ class GeneratorController extends BaseController
             return response($this->xmlGenerationService->getEmptyGeneratedXML($generator->targetPlatform), 200)
                 ->header("Content-Type", "application/xml");
         }
-    
-        $content = $generator->lastGeneration;
-    
-        return response($content, 200)
+        
+        if ($request->get('test') === 'test') {
+            $generatorContents = DB::table('avitoxml_generators_content')
+                ->where('generatorId', $generator->id)
+                ->orderBy('order')
+                ->get();
+            if ($generatorContents->count() > 0) {
+                return response($generatorContents->join(''))
+                    ->header("Content-Type", "application/xml");
+            }
+        }
+        
+        return response($generator->lastGeneration, 200)
             ->header("Content-Type", "application/xml");
     }
     
@@ -163,6 +167,9 @@ class GeneratorController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
+    
+        Log::channel('apilog')->info('PUT /tables/'.$tableGuid.'/generators/'
+            .$generatorGuid.' - user '.$currentUser->id);
         
         if ($currentUser->roleId !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);

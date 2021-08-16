@@ -58,12 +58,12 @@
 
             $drivePermissions->setRole('writer');
             $drivePermissions->setType('user');
-            $drivePermissions->setEmailAddress('xml.avito@gmail.com');
+            $drivePermissions->setEmailAddress('Ipagishev@gmail.com');
             $driveService->permissions->create($id, $drivePermissions);
             
             $drivePermissions->setRole('owner');
             $drivePermissions->setType('user');
-            $drivePermissions->setEmailAddress('Ipagishev@gmail.com');
+            $drivePermissions->setEmailAddress('xml.avito@gmail.com');
             $driveService->permissions->create(
                 $id,
                 $drivePermissions,

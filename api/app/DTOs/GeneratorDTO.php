@@ -14,6 +14,19 @@ class GeneratorDTO
     
     public int $maxAds;
     
+    public bool $subscribed;
+    
+    /**
+     * @param bool $subscribed
+     *
+     * @return GeneratorDTO
+     */
+    public function setSubscribed(bool $subscribed): GeneratorDTO
+    {
+        $this->subscribed = $subscribed;
+        return $this;
+    }
+    
     /**
      * @param string $targetPlatform
      * @return GeneratorDTO

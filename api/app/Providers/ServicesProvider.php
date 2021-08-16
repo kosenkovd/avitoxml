@@ -14,7 +14,9 @@ use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IYandexDiskService;
 use App\Services\Interfaces\IYandexFileDownloader;
+use App\Services\PriceService;
 use App\Services\SpreadsheetClientService;
+use App\Services\TransactionsService;
 use App\Services\YandexDiskService;
 use App\Services\YandexFileDownloader;
 use Illuminate\Support\ServiceProvider;
@@ -70,5 +72,16 @@ class ServicesProvider extends ServiceProvider
         $this->app->singleton(CronLockService::class, function () {
             return new CronLockService();
         });
+        
+        $this->app->singleton(PriceService::class, function () {
+            return new PriceService();
+        });
+        $this->app->singleton(TransactionsService::class, function () {
+            return new TransactionsService(
+                new PriceService(),
+                new SheetNames()
+            );
+        });
+        
     }
 }

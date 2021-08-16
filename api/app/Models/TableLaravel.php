@@ -15,7 +15,6 @@ use Illuminate\Support\Collection;
  * @property int|null                     $id
  * @property int                          $userId
  * @property string                       $googleSheetId
- * @property string|null                  $googleDriveId
  * @property string|null                  $yandexToken
  * @property string|null                  $avitoClientId
  * @property string|null                  $avitoClientSecret

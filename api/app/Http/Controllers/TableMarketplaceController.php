@@ -106,13 +106,13 @@ class TableMarketplaceController extends BaseController
         switch ($currentUser->roleId) {
             case $this->roles->Admin:
                 $tables = TableMarketplace::query()
-                    ->with('generators:id,tableMarketplaceId,generatorGuid,targetPlatform,maxAds')
+                    ->with('generators:id,tableMarketplaceId,generatorGuid,targetPlatform,maxAds,subscribed')
                     ->get();
                 break;
             case $this->roles->Customer:
                 $tables = $currentUser
                     ->tablesMarketplace()
-                    ->with('generators:id,tableMarketplaceId,generatorGuid,targetPlatform,maxAds')
+                    ->with('generators:id,tableMarketplaceId,generatorGuid,targetPlatform,maxAds,subscribed')
                     ->get();
         }
         

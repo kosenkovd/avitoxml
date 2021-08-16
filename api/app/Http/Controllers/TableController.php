@@ -3,51 +3,31 @@
 namespace App\Http\Controllers;
 
 use App\Configuration\Spreadsheet\SheetNames;
-use App\Configuration\XmlGeneration;
-use App\Console\Jobs\FillImagesJobYandex;
-use App\Console\Jobs\GenerateXMLJob;
-use App\Console\Jobs\RandomizeTextJob;
 use App\DTOs\ErrorResponse;
-use App\DTOs\TableDTO;
-use App\DTOs\UserDTO;
 use App\Helpers\LinkHelper;
 use App\Http\Resources\TableCollection;
 use App\Http\Resources\TableDetailResource;
 use App\Http\Resources\TableResource;
-use App\Mappers\UserDTOMapper;
 use App\Models\Generator;
 use App\Models\GeneratorLaravel;
 use App\Models\Table;
 use App\Models\TableLaravel;
-use App\Models\User;
 use App\Models\UserLaravel;
-use App\Repositories\TableRepository;
-use App\Services\Interfaces\IGoogleDriveClientService;
 use App\Services\Interfaces\IMailService;
 use App\Services\Interfaces\ISpreadsheetClientService;
-use App\Services\Interfaces\IYandexDiskService;
-use App\Services\SpintaxService;
-use App\Services\SpreadsheetClientService;
-use App\Services\XmlGenerationService;
-use App\Services\YandexDiskService;
 use DateTimeZone;
 use Exception;
-use Http\Client\Exception\HttpException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
-
-use App\Models;
-use App\Mappers\TableDtoMapper;
 use App\Repositories\Interfaces;
 use App\Enums\Roles;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use JsonMapper;
+use Illuminate\Support\Facades\Log;
 use Ramsey\Uuid\Guid\Guid;
-use Symfony\Component\HttpFoundation\Exception\JsonException;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
  * Class TableController
@@ -115,16 +95,18 @@ class TableController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
-    
+        
         $tables = new Collection;
         switch ($currentUser->roleId) {
             case $this->roles->Admin:
                 $tables = TableLaravel::query()
-                    ->with('generators:id,tableId,generatorGuid,targetPlatform,maxAds')
+                    ->with('generators:id,tableId,generatorGuid,targetPlatform,maxAds,subscribed')
                     ->get();
                 break;
             case $this->roles->Customer:
-                $tables = $currentUser->tables;
+                $tables = $currentUser->tables()
+                    ->with('generators:id,tableId,generatorGuid,targetPlatform,maxAds,subscribed')
+                    ->get();
         }
         
         return response()->json(new TableCollection($tables), 200);
@@ -174,18 +156,27 @@ class TableController extends BaseController
         $request->validate(['userId' => 'int|nullable']);
         
         $userId = $request->input('userId');
-    
+        
         $maxAds = 10;
         $days = 3;
-    
+        
         // No userId - Client creates Table for himself
         if (is_null($userId)) {
-            if ($currentUser->tables->count() >= 2) {
+            $hasZeroTables = $currentUser->tables()
+                ->whereHas('generators', function (Builder $q) {
+                    $q->where('maxAds', '<', 500);
+                })
+                ->exists();
+            if (
+                !$currentUser->tables->isEmpty() &&
+                $hasZeroTables
+            ) {
                 return response()->json(new ErrorResponse(Response::$statusTexts[403], 'TOO_MANY_TABLES'),
                     403
                 );
             }
             
+            // Only first created table have max ads and days
             if (!$currentUser->tables->isEmpty()) {
                 $maxAds = 0;
                 $days = 0;
@@ -197,7 +188,7 @@ class TableController extends BaseController
             
             return response()->json(new TableResource($table), 201);
         }
-    
+        
         if ($currentUser->roleId !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
@@ -231,6 +222,8 @@ class TableController extends BaseController
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
     
+        Log::channel('apilog')->info('PUT /tables/'.$tableGuid.' - user '.$currentUser->id);
+        
         /** @var TableLaravel $existingTable */
         $existingTable = TableLaravel::query()->firstWhere('tableGuid', $tableGuid);
         if (is_null($existingTable)) {
@@ -241,10 +234,10 @@ class TableController extends BaseController
             if ($currentUser->id !== $existingTable->userId) {
                 return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
             }
-    
+            
             $request->validate(['tableNotes' => 'string|nullable']);
             $existingTable->update(['notes' => $request->input('tableNotes')]);
-    
+            
             return response()->json(null, 200);
         }
         
@@ -256,6 +249,12 @@ class TableController extends BaseController
             'notes' => $request->input('tableNotes'),
             'dateExpired' => $request->input('dateExpired')
         ]);
+        
+        if ($request->input('dateExpired') < time()) {
+            $existingTable->generators()->update([
+                'subscribed' => 0
+            ]);
+        }
         
         return response()->json(null, 200);
     }
@@ -272,6 +271,8 @@ class TableController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
+    
+        Log::channel('apilog')->info('PUT /tables/'.$tableGuid.'/tokens - user '.$currentUser->id);
         
         /** @var TableLaravel $table */
         $table = TableLaravel::query()->where('tableGuid', $tableGuid)->first();
@@ -298,11 +299,12 @@ class TableController extends BaseController
             'avitoClientId',
             'avitoClientSecret',
             'avitoUserId',
-        ]))->filter()->all();
-        
-        if (isset($input['avitoUserId']) && $input['avitoUserId'] !== '') {
-            $input['avitoUserId'] = preg_replace('/\s/i', "", $input['avitoUserId']);
-        }
+        ]))
+            ->filter()
+            ->map(function (string $value): string {
+                return preg_replace('/\s/i', "", trim($value));
+            })
+            ->all();
         
         $table->update($input);
         
@@ -323,6 +325,8 @@ class TableController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
+    
+        Log::channel('apilog')->info('DELETE /tables/'.$tableGuid.' - user '.$currentUser->id);
         
         if ($currentUser->roleId !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
@@ -354,7 +358,7 @@ class TableController extends BaseController
     private function createTable(int $userId, int $maxAds, int $days): Table
     {
         $googleTableId = $this->spreadsheetClientService->copyTable();
-    
+        
         $dateExpired = Carbon::createFromTime(
             0,
             0,
