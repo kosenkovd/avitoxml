@@ -41,8 +41,9 @@
             
             $this->description = null;
             if (isset($row[$propertyColumns->description])) {
-                $this->description = str_replace("\n\r", "\n", $row[$propertyColumns->description]);
-                $this->description = str_replace("\n", "\r\n", $this->description);
+                $this->description = str_replace("\r\n", "<br>", $row[$propertyColumns->description]);
+                $this->description = str_replace("\n\r", "\n", $this->description);
+                $this->description = str_replace("\n", "<br>", $this->description);
             } else {
                 $this->description = null;
             }
