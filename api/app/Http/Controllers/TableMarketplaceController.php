@@ -13,6 +13,7 @@ use App\Models\TableMarketplace;
 use App\Models\UserLaravel;
 use App\Services\Interfaces\IMailService;
 use App\Services\Interfaces\ISpreadsheetClientService;
+use DateTimeZone;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -263,8 +264,11 @@ class TableMarketplaceController extends BaseController
     private function createTable(int $userId): TableMarketplace
     {
         $googleTableId = $this->spreadsheetClientService->copyTableMarketplace();
-        
-        $dateExpired = Carbon::now()->addDays(3)->getTimestamp();
+    
+        $dateExpired = Carbon::now(new DateTimeZone("Europe/Moscow"))
+            ->setTime(0, 0)
+            ->addDays(3)
+            ->getTimestamp();
         
         /** @var TableMarketplace $table */
         $table = TableMarketplace::query()->make();

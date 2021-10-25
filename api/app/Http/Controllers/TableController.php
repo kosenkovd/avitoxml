@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\DTOs\ErrorResponse;
 use App\Helpers\LinkHelper;
@@ -66,13 +67,15 @@ class TableController extends BaseController
      * @var SheetNames configuration with sheet names.
      */
     private SheetNames $sheetNamesConfig;
+    private Config $config;
     
     public function __construct(
         Interfaces\ITableRepository $tableRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
         ISpreadsheetClientService $spreadsheetClientService,
         IMailService $mailService,
-        SheetNames $sheetNames
+        SheetNames $sheetNames,
+        Config $config
     )
     {
         $this->tableRepository = $tableRepository;
@@ -81,6 +84,7 @@ class TableController extends BaseController
         $this->mailService = $mailService;
         $this->sheetNamesConfig = $sheetNames;
         $this->roles = new Roles();
+        $this->config = $config;
     }
     
     /**
@@ -182,10 +186,8 @@ class TableController extends BaseController
                 $maxAds = 0;
                 $days = 0;
             }
-            
-            $tableLegacy = $this->createTable($currentUser->id, $maxAds, $days);
-            /** @var TableLaravel $table */
-            $table = TableLaravel::query()->find($tableLegacy->getTableId());
+    
+            $table = $this->createTable($currentUser->id, $maxAds, $days);
             
             return response()->json(new TableResource($table), 201);
         }
@@ -200,11 +202,9 @@ class TableController extends BaseController
         if (is_null($user)) {
             return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
         }
-        
-        $tableLegacy = $this->createTable($user->id, $maxAds, $days);
-        /** @var TableLaravel $table */
-        $table = TableLaravel::query()->find($tableLegacy->getTableId());
-        
+    
+        $table = $this->createTable($user->id, $maxAds, $days);
+
         return response()->json(new TableResource($table), 201);
     }
     
@@ -354,37 +354,28 @@ class TableController extends BaseController
      * @param int $maxAds
      * @param int $days
      *
-     * @return Table
+     * @return TableLaravel
      */
-    private function createTable(int $userId, int $maxAds, int $days): Table
+    private function createTable(int $userId, int $maxAds, int $days): TableLaravel
     {
         $googleTableId = $this->spreadsheetClientService->copyTable();
-        
-        $dateExpired = Carbon::createFromTime(
-            0,
-            0,
-            0,
-            new DateTimeZone("Europe/Moscow")
-        )
+    
+        $dateExpired = Carbon::now(new DateTimeZone("Europe/Moscow"))
+            ->setTime(0, 0)
             ->addDays($days)
             ->getTimestamp();
         
-        $table = new Table(
-            null,
-            $userId,
-            $googleTableId,
-            null,
-            null,
-            $dateExpired,
-            false,
-            null,
-            null,
-            Guid::uuid4()->toString(),
-            0,
-            []
-        );
-        
-        $newTableId = $this->tableRepository->insert($table);
+        /** @var TableLaravel $table */
+        $table = TableLaravel::query()->make();
+        $table->userId = $userId;
+        $table->googleSheetId = $googleTableId;
+        $table->dateExpired = $dateExpired;
+        $table->tableGuid = Guid::uuid4()->toString();
+        $table->dateLastModified = 0;
+    
+        $table->save();
+    
+        $newTableId = $table->id;
         
         $targetsToAdd = [
             [
@@ -401,31 +392,26 @@ class TableController extends BaseController
             ]
         ];
         
-        $table->setTableId($newTableId);
-        
         foreach ($targetsToAdd as $target) {
-            $generator = new Generator(
-                null,
-                $newTableId,
-                Guid::uuid4()->toString(),
-                0,
-                $target["target"],
-                $maxAds
-            );
-            
-            $newGeneratorId = $this->generatorRepository->insert($generator);
-            
-            $table->addGenerator($generator->setGeneratorId($newGeneratorId));
+            /** @var GeneratorLaravel $generator */
+            $generator = GeneratorLaravel::query()->make();
+            $generator->tableId = $newTableId;
+            $generator->generatorGuid = Guid::uuid4()->toString();
+            $generator->targetPlatform = $target['target'];
+            $generator->maxAds = $maxAds;
+            $generator->dateLastGenerated = 0;
+    
+            $generator->save();
             
             $this->spreadsheetClientService->updateCellContent(
                 $googleTableId,
                 $this->sheetNamesConfig->getInformation(),
                 $target["cell"],
-                LinkHelper::getXmlGeneratorLink($table->getTableGuid(), $generator->getGeneratorGuid())
+                LinkHelper::getXmlGeneratorLink($table->tableGuid, $generator->generatorGuid)
             );
         }
-        
-        $this->mailService->sendEmailWithTableData($table);
+    
+        $this->mailService->sendEmailWithTableDataLaravel($table);
         
         return $table;
     }
