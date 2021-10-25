@@ -11,28 +11,14 @@ use App\Console\Jobs\GenerateXMLJobLaravel;
 use App\Console\Jobs\ParserAmountJob;
 use App\Console\Jobs\FillAvitoReportJob;
 use App\Console\Jobs\FillAvitoStatisticsJob;
-use App\Console\Jobs\FillImagesJob;
-use App\Console\Jobs\FillImagesJobYandex;
-use App\Console\Jobs\GenerateXMLJob;
 use App\Console\Jobs\GetAvitoTokensJob;
 use App\Console\Jobs\JobBase;
-use App\Console\Jobs\RandomizeTextJob;
 use App\Console\Jobs\RandomizeTextJobLaravel;
-use App\Console\Jobs\UpdateXMLJob;
 use App\Console\Jobs\UpdateXMLJobLaravel;
-use App\Models\Table;
 use App\Models\TableLaravel;
 use App\Models\TableMarketplace;
-use App\Models\UserLaravel;
-use App\Repositories\DictRepository;
-use App\Repositories\GeneratorRepository;
-use App\Repositories\Interfaces\ITableRepository;
-use App\Repositories\Interfaces\IUserRepository;
-use App\Repositories\TableRepository;
-use App\Repositories\UserRepository;
 use App\Services\AvitoService;
 use App\Services\CronLockService;
-use App\Services\GoogleDriveClientService;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\SpintaxService;
 use App\Services\SpreadsheetClientService;
@@ -40,7 +26,6 @@ use App\Services\SpreadsheetClientServiceSecond;
 use App\Services\SpreadsheetClientServiceThird;
 use App\Services\XmlGenerationService;
 use App\Services\YandexDiskService;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Builder;
@@ -365,8 +350,7 @@ class Kernel extends ConsoleKernel
             $xmlGenerationService = new XmlGenerationService(
                 $spreadsheetClientService,
                 new SheetNames(),
-                new XmlGeneration(),
-                new DictRepository()
+                new XmlGeneration()
             );
             $tables = TableMarketplace::query()
                 ->with('generators:id,tableMarketplaceId,targetPlatform,maxAds')
@@ -517,8 +501,7 @@ class Kernel extends ConsoleKernel
                 new XmlGenerationService(
                     $spreadsheetClientService,
                     new SheetNames(),
-                    new XmlGeneration(),
-                    new DictRepository()
+                    new XmlGeneration()
                 )
             ))
         );
@@ -606,8 +589,7 @@ class Kernel extends ConsoleKernel
                 new XmlGenerationService(
                     $spreadsheetClientService,
                     new SheetNames(),
-                    new XmlGeneration(),
-                    new DictRepository()
+                    new XmlGeneration()
                 )
             )),
             'xml'

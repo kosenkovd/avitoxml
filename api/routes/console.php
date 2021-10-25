@@ -7,7 +7,6 @@ use App\Console\Jobs\ParserAmountJob;
 use App\Models\TableLaravel;
 use App\Models\TableMarketplace;
 use App\Models\UserLaravel;
-use App\Repositories\TableRepository;
 use App\Services\AvitoService;
 use App\Services\Interfaces\ISpintaxService;
 use App\Services\SpintaxService;

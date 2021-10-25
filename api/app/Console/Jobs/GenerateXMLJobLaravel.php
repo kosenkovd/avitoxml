@@ -4,14 +4,9 @@
 namespace App\Console\Jobs;
 
 
-use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
-use App\Models\Generator;
 use App\Models\GeneratorLaravel;
-use App\Models\Table;
 use App\Models\TableLaravel;
-use App\Repositories\Interfaces\IGeneratorRepository;
-use App\Repositories\Interfaces\ITableRepository;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
 use \Exception;

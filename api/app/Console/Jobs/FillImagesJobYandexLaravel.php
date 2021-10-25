@@ -3,16 +3,13 @@
 
 namespace App\Console\Jobs;
 
-use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Helpers\LinkHelper;
 use App\Helpers\SpreadsheetHelper;
 use App\Models\GeneratorLaravel;
-use App\Models\Table;
 use App\Models\TableHeader;
 use App\Models\TableLaravel;
-use App\Repositories\Interfaces\ITableRepository;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IYandexDiskService;
 use Illuminate\Support\Facades\Log;

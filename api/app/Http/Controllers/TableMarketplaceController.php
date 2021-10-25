@@ -20,7 +20,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
 
-use App\Repositories\Interfaces;
 use App\Enums\Roles;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -35,16 +34,6 @@ use Ramsey\Uuid\Guid\Guid;
  */
 class TableMarketplaceController extends BaseController
 {
-    /**
-     * @var Interfaces\ITableRepository Models\Table repository.
-     */
-    private Interfaces\ITableRepository $tableRepository;
-    
-    /**
-     * @var Interfaces\IGeneratorRepository Models\Generator repository.
-     */
-    private Interfaces\IGeneratorRepository $generatorRepository;
-    
     /**
      * @var ISpreadsheetClientService Google Spreadsheet services client.
      */
@@ -67,16 +56,12 @@ class TableMarketplaceController extends BaseController
     private Config $config;
     
     public function __construct(
-        Interfaces\ITableRepository     $tableRepository,
-        Interfaces\IGeneratorRepository $generatorRepository,
         ISpreadsheetClientService       $spreadsheetClientService,
         IMailService                    $mailService,
         SheetNames                      $sheetNames,
         Config                          $config
     )
     {
-        $this->tableRepository = $tableRepository;
-        $this->generatorRepository = $generatorRepository;
         $this->spreadsheetClientService = $spreadsheetClientService;
         $this->mailService = $mailService;
         $this->sheetNamesConfig = $sheetNames;

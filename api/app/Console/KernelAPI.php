@@ -2,39 +2,11 @@
 
 namespace App\Console;
 
-use App\Configuration\Config;
-use App\Configuration\Spreadsheet\SheetNames;
-use App\Configuration\XmlGeneration;
-use App\Console\Jobs\FillAmountJob;
-use App\Console\Jobs\FillAvitoReportJob;
-use App\Console\Jobs\FillAvitoStatisticsJob;
-use App\Console\Jobs\FillImagesJob;
-use App\Console\Jobs\FillImagesJobYandex;
-use App\Console\Jobs\GenerateXMLJob;
-use App\Console\Jobs\JobBase;
-use App\Console\Jobs\RandomizeTextJob;
-use App\Console\Jobs\UpdateXMLJob;
 use App\Models\GeneratorLaravel;
-use App\Models\Table;
 use App\Models\TableLaravel;
 use App\Models\UserLaravel;
-use App\Repositories\DictRepository;
-use App\Repositories\GeneratorRepository;
-use App\Repositories\Interfaces\ITableRepository;
-use App\Repositories\Interfaces\IUserRepository;
-use App\Repositories\TableRepository;
-use App\Repositories\UserRepository;
-use App\Services\AvitoService;
-use App\Services\GoogleDriveClientService;
-use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\PriceService;
-use App\Services\SpintaxService;
-use App\Services\SpreadsheetClientService;
-use App\Services\SpreadsheetClientServiceSecond;
 use App\Services\TransactionsService;
-use App\Services\XmlGenerationService;
-use App\Services\YandexDiskService;
-use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Database\Eloquent\Builder;
@@ -152,13 +124,13 @@ class Kernel extends ConsoleKernel
             UserLaravel::query()
                 ->where('isBlocked', false)
                 ->whereDoesntHave('tables', function (Builder $q) {
-                    $q->where('dateExpired', '>', time() + 86400);
+                    $q->where('dateExpired', '>', time() - 86400);
                 })
                 ->update(['isBlocked' => true]);
             UserLaravel::query()
                 ->where('isBlocked', true)
                 ->whereHas('tables', function (Builder $q) {
-                    $q->where('dateExpired', '>', time() + 86400);
+                    $q->where('dateExpired', '>', time() - 86400);
                 })
                 ->update(['isBlocked' => false]);
         })

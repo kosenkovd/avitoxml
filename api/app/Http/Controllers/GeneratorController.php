@@ -15,9 +15,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
-use App\Repositories\Interfaces;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use JsonMapper;
 
 /**
  * Class GeneratorController
@@ -28,16 +28,6 @@ use JsonMapper;
 class GeneratorController extends BaseController
 {
     /**
-     * @var Interfaces\ITableRepository Models\Table repository.
-     */
-    private Interfaces\ITableRepository $tableRepository;
-    
-    /**
-     * @var Interfaces\IGeneratorRepository Models\Generator repository.
-     */
-    private Interfaces\IGeneratorRepository $generatorsRepository;
-    
-    /**
      * @var IXmlGenerationService XML generator for spreadsheet.
      */
     private IXmlGenerationService $xmlGenerationService;
@@ -47,30 +37,18 @@ class GeneratorController extends BaseController
      */
     private SheetNames $sheetNamesConfig;
     
-    private JsonMapper $jsonMapper;
-    
-    private Interfaces\IUserRepository $userRepository;
-    
     /**
      * @var Roles Enum of roles.
      */
     private Roles $roles;
     
     public function __construct(
-        Interfaces\ITableRepository $tableRepository,
-        Interfaces\IGeneratorRepository $generatorsRepository,
-        Interfaces\IUserRepository $userRepository,
         IXmlGenerationService $xmlGenerationService,
-        SheetNames $sheetNames,
-        JsonMapper $jsonMapper
+        SheetNames $sheetNames
     )
     {
-        $this->tableRepository = $tableRepository;
-        $this->generatorsRepository = $generatorsRepository;
-        $this->userRepository = $userRepository;
         $this->xmlGenerationService = $xmlGenerationService;
         $this->sheetNamesConfig = $sheetNames;
-        $this->jsonMapper = $jsonMapper;
         $this->roles = new Roles();
     }
     
@@ -98,9 +76,55 @@ class GeneratorController extends BaseController
      *
      * @return Response generated XML.
      */
-    public function show(string $tableGuid, string $generatorGuid): Response
+    public function show(string $tableGuid, string $generatorGuid, Request $request): Response
     {
-        return response('')
+        /** @var TableLaravel|null $table */
+        $table = TableLaravel::query()->where('tableGuid', $tableGuid)->first();
+        if(is_null($table)) {
+            $table = TableMarketplace::query()->where('tableGuid', $tableGuid)->first();
+            
+            if(is_null($table)) {
+                return response(Response::$statusTexts[404], 404);
+            }
+        }
+        
+        $user = $table->user;
+        if (is_null($user)) {
+            Log::channel('fatal')
+                ->error("Error on '".$table->googleSheetId."' table have no user!");
+            return response(Response::$statusTexts[500], 500);
+        }
+        
+        /** @var GeneratorLaravel|null $generator */
+        $generator = $table->generator($generatorGuid);
+        if(is_null($generator)) {
+            return response(Response::$statusTexts[404], 404);
+        }
+        
+        if (
+            ($user->isBlocked) ||
+            (
+                ($generator->targetPlatform === $this->sheetNamesConfig->getAvito()) &&
+                ($table->dateExpired < time()) &&
+                (Carbon::createFromTimestamp($table->dateExpired)->diffInDays() >= 1)
+            )
+        ) {
+            return response($this->xmlGenerationService->getEmptyGeneratedXML($generator->targetPlatform), 200)
+                ->header("Content-Type", "application/xml");
+        }
+        
+        $generatorContents = DB::table('avitoxml_generators_content')
+            ->where('generatorId', $generator->id)
+            ->orderBy('order')
+            ->get();
+        if ($generatorContents->count() > 0) {
+            return response($generatorContents->map(function ($content) {
+                return $content->content;
+            })->join(''))
+                ->header("Content-Type", "application/xml");
+        }
+        
+        return response($generator->lastGeneration, 200)
             ->header("Content-Type", "application/xml");
     }
     

@@ -6,9 +6,7 @@ namespace App\Services;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Models\Ads;
-use App\Models\GeneratorLaravel;
 use App\Models\TableHeader;
-use App\Repositories\Interfaces\IDictRepository;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
 use DateTimeZone;
@@ -37,16 +35,11 @@ class XmlGenerationService implements IXmlGenerationService {
      */
     private XmlGeneration $xmlGeneration;
     
-    /**
-     * @var IDictRepository dict repository.
-     */
-    private IDictRepository $dictRepository;
-    
     private bool $adsLimitEnabled = true;
     
     private string $noticeChannel = 'notice';
     
-    protected int $adsLimit = 10001;
+    protected int $adsLimit = 10501;
     
     private function isExistsInRow(array $row, ?int $column): bool
     {
@@ -420,14 +413,12 @@ class XmlGenerationService implements IXmlGenerationService {
     public function __construct(
         ISpreadsheetClientService $spreadsheetClientService,
         SheetNames $sheetNames,
-        XmlGeneration $xmlGeneration,
-        IDictRepository $dictRepository
+        XmlGeneration $xmlGeneration
     )
     {
         $this->spreadsheetClientService = $spreadsheetClientService;
         $this->sheetNamesConfig = $sheetNames;
         $this->xmlGeneration = $xmlGeneration;
-        $this->dictRepository = $dictRepository;
     }
     
     /**

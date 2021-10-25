@@ -6,7 +6,6 @@ namespace App\Providers;
 use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
-use App\Repositories\DictRepository;
 use App\Services\AvitoService;
 use App\Services\CronLockService;
 use App\Services\GoogleDriveClientService;
@@ -51,8 +50,7 @@ class ServicesProvider extends ServiceProvider
             return new XmlGenerationService(
                 new SpreadsheetClientService(),
                 new SheetNames(),
-                new XmlGeneration(),
-                new DictRepository()
+                new XmlGeneration()
             );
         });
         $this->app->bind(ISpintaxService::class, function () {
@@ -63,9 +61,6 @@ class ServicesProvider extends ServiceProvider
         });
         $this->app->bind(IYandexFileDownloader::class, function () {
             return new YandexFileDownloader();
-        });
-        $this->app->bind(JsonMapper::class, function () {
-            return new JsonMapper();
         });
         $this->app->bind(IAvitoService::class, function () {
             return new AvitoService();

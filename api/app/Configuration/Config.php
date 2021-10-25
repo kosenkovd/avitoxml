@@ -17,6 +17,9 @@ class Config {
     private string $rootDirectory;
     private string $dbCertificateName;
     private bool $isLoggingEnabled;
+    /**
+     * @var int $needsToUpdateTimeStamp hack to check Table if FillImagesJob not finished
+     */
     private int $needsToUpdateTimeStamp;
     private string $copyMarketplaceSpreadsheetId;
     private string $terminalPassword;

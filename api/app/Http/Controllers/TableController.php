@@ -2,16 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\DTOs\ErrorResponse;
 use App\Helpers\LinkHelper;
 use App\Http\Resources\TableCollection;
 use App\Http\Resources\TableDetailResource;
 use App\Http\Resources\TableResource;
-use App\Models\Generator;
 use App\Models\GeneratorLaravel;
-use App\Models\Table;
 use App\Models\TableLaravel;
 use App\Models\UserLaravel;
 use App\Services\Interfaces\IMailService;
@@ -23,7 +20,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
-use App\Repositories\Interfaces;
 use App\Enums\Roles;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -38,16 +34,6 @@ use Ramsey\Uuid\Guid\Guid;
  */
 class TableController extends BaseController
 {
-    /**
-     * @var Interfaces\ITableRepository Models\Table repository.
-     */
-    private Interfaces\ITableRepository $tableRepository;
-    
-    /**
-     * @var Interfaces\IGeneratorRepository Models\Generator repository.
-     */
-    private Interfaces\IGeneratorRepository $generatorRepository;
-    
     /**
      * @var ISpreadsheetClientService Google Spreadsheet services client.
      */
@@ -67,24 +53,17 @@ class TableController extends BaseController
      * @var SheetNames configuration with sheet names.
      */
     private SheetNames $sheetNamesConfig;
-    private Config $config;
     
     public function __construct(
-        Interfaces\ITableRepository $tableRepository,
-        Interfaces\IGeneratorRepository $generatorRepository,
         ISpreadsheetClientService $spreadsheetClientService,
         IMailService $mailService,
-        SheetNames $sheetNames,
-        Config $config
+        SheetNames $sheetNames
     )
     {
-        $this->tableRepository = $tableRepository;
-        $this->generatorRepository = $generatorRepository;
         $this->spreadsheetClientService = $spreadsheetClientService;
         $this->mailService = $mailService;
         $this->sheetNamesConfig = $sheetNames;
         $this->roles = new Roles();
-        $this->config = $config;
     }
     
     /**

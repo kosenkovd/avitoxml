@@ -41,12 +41,8 @@ class FillAvitoReportJob extends JobBase {
      */
     public function start(TableLaravel $table): void
     {
-        if (
-            !$table->avitoClientId ||
-            !$table->avitoClientSecret ||
-            !$table->avitoUserId
-        ) {
-            Log::channel($this->logChannel)->error("Error on '".$table->googleSheetId."' table have no tokens");
+        if (!$table->avitoClientId || !$table->avitoClientSecret || !$table->avitoUserId) {
+            Log::channel($this->logChannel)->error("Error on '".$table->googleSheetId."' table has no tokens");
             return;
         }
     
@@ -91,7 +87,7 @@ class FillAvitoReportJob extends JobBase {
         }
     
         if (!$this->areNecessaryColumnsExists($propertyColumns)) {
-            Log::channel($this->logChannel)->error("Error on '".$table->googleSheetId."' table have no columns");
+            Log::channel($this->logChannel)->error("Error on '".$table->googleSheetId."' table has no columns");
             return;
         }
     

@@ -6,13 +6,10 @@ namespace App\Console\Jobs;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Helpers\SpreadsheetHelper;
-use App\Models\Table;
-use App\Repositories\Interfaces\ITableRepository;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use mysql_xdevapi\Exception;
 
 class ParserAmountJob extends JobBase
 {
@@ -57,7 +54,6 @@ class ParserAmountJob extends JobBase
      */
     protected SheetNames $sheetNamesConfig;
     
-    private ITableRepository $tableRepository;
     private XmlGeneration $xmlGeneration;
     
     /**
@@ -447,13 +443,11 @@ class ParserAmountJob extends JobBase
     
     public function __construct(
         ISpreadsheetClientService $spreadsheetClientService,
-        ITableRepository          $tableRepository,
         XmlGeneration             $xmlGeneration,
         string                    $logChannel = 'parser'
     )
     {
         parent::__construct($spreadsheetClientService);
-        $this->tableRepository = $tableRepository;
         $this->sheetNamesConfig = new SheetNames();
         $this->xmlGeneration = $xmlGeneration;
         $this->logChannel = $logChannel;

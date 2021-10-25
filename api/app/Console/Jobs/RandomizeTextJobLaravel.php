@@ -7,8 +7,6 @@ namespace App\Console\Jobs;
 use App\Configuration\XmlGeneration;
 use App\Helpers\SpreadsheetHelper;
 use App\Models\GeneratorLaravel;
-use App\Models\Table;
-use App\Models\TableHeader;
 use App\Models\TableLaravel;
 use App\Services\Interfaces\ISpintaxService;
 use App\Services\Interfaces\ISpreadsheetClientService;
