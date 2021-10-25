@@ -42,7 +42,7 @@ class Handler extends ExceptionHandler
     public function report(Throwable $e)
     {
         // Kill reporting if this is an "access denied" (code 9) OAuthServerException.
-        if ($e instanceof \League\OAuth2\Server\Exception\OAuthServerException && $e->getCode() == 9) {
+        if ($e instanceof \League\OAuth2\Server\Exception\OAuthServerException && ($e->getCode() == 9 || $e->getCode() == 8)) {
             return;
         }
         

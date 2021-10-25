@@ -175,6 +175,11 @@ class UserLaravel extends \Illuminate\Foundation\Auth\User implements \Illuminat
     
     public function getReferralIncomeAttribute(): int
     {
+        // временно для пользователя с кучей рефералов
+        if ($this->id === 55) {
+            return 30;
+        }
+
         $activeReferrals = $this->activeReferralsCounter;
         if ($activeReferrals >= 30) {
             return 30;

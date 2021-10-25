@@ -2,7 +2,6 @@
     
     namespace App\Models\Ads;
     
-    use App\Models\Dict\UlaCategory;
     use App\Models\TableHeader;
     use DateTimeZone;
     use Illuminate\Support\Carbon;
@@ -10,21 +9,25 @@
     use Illuminate\Support\Facades\Log;
 
     class UlaAd extends AdBase {
-        protected ?UlaCategory $ulaCategory;
-        
-        /** @var Collection<UlaCategory> */
         protected Collection $ulaCategories;
+        protected Collection $ulaTypes;
         
         protected ?string $datePublication;
         protected ?string $subCategory;
         protected ?string $autoPart;
         protected ?string $urlAd;
         
-        public function __construct(array $row, TableHeader $propertyColumns, Collection $ulaCategories)
+        public function __construct(
+            array $row,
+            TableHeader $propertyColumns,
+            Collection $ulaCategories,
+            Collection $ulaTypes
+        )
         {
             parent::__construct($row, $propertyColumns);
             
             $this->ulaCategories = $ulaCategories;
+            $this->ulaTypes = $ulaTypes;
             
             $this->datePublication = isset($row[$propertyColumns->dateCreated])
                 ? htmlspecialchars(trim($row[$propertyColumns->dateCreated]))
@@ -71,7 +74,7 @@ ULAXML;
             $datePublication = $this->generateDatePublication();
             $ulaCategory = $this->generateUlaCategory();
             $ulaSubCategory = $this->generateUlaSubCategory();
-            $ulaAutoPartCategory = $this->generateUlaAutoPartCategory();
+            $ulaType = $this->generateUlaType();
             $condition = $this->generateCondition();
             
             $imageTags = $this->generateImageUlaTags($this->images);
@@ -80,7 +83,7 @@ ULAXML;
             $resultXml .= $this->addTagIfPropertySet($this->urlAd, "url");
             $resultXml .= $this->addTagIfPropertySet($ulaCategory, "youlaCategoryId");
             $resultXml .= $this->addTagIfPropertySet($ulaSubCategory, "youlaSubcategoryId");
-            $resultXml .= $this->addTagIfPropertySet($ulaAutoPartCategory, "avtozapchasti_tip");
+            $resultXml .= $ulaType;
             $resultXml .= $condition;
             $resultXml .= $this->addTagIfPropertySet($this->address, "address");
             $resultXml .= $this->addTagIfPropertySet($this->price, "price");
@@ -99,7 +102,7 @@ ULAXML;
                 return "";
             }
             
-            $dateRaw = $this->datePublication;
+            $dateRaw = mb_strtolower($this->datePublication);
     
             if ($dateRaw === 'сразу') {
                 return Carbon::now($this->timezone)->format('d-m-Y');
@@ -148,7 +151,7 @@ ULAXML;
             $category = mb_strtolower(preg_replace('/\s/i', "", $this->category));
             
             foreach ($this->ulaCategories as $ulaCategory) {
-                if ($ulaCategory->name === $category.$name) {
+                if ($ulaCategory->name === $category . $name) {
                     return $ulaCategory->id;
                 }
             }
@@ -158,18 +161,21 @@ ULAXML;
             return "";
         }
         
-        protected function generateUlaAutoPartCategory(): string
+        protected function generateUlaType(): string
         {
             if (!$this->autoPart) {
                 return "";
             }
             $name = mb_strtolower(preg_replace('/\s/i', "", $this->autoPart));
             
-            foreach ($this->ulaCategories as $ulaCategory) {
-                if ($ulaCategory->name === $name) {
-                    return $ulaCategory->id;
+            foreach ($this->ulaTypes as $type) {
+                if ($type->name === $name) {
+                    return $this->addTagIfPropertySet($type->id, $type->tag);
                 }
             }
+    
+            Log::channel($this->noticeChannel)->notice("Notice on ulaTypes '".$this->autoPart."'");
+            
             return "";
         }
         

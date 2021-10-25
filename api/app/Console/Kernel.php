@@ -93,7 +93,7 @@ class Kernel extends ConsoleKernel
                 ->whereHas('user', function (Builder $query) {
                     $query->where('isBlocked', false);
                 })
-                ->where('dateExpired', '>=', Carbon::now()->startOfDay()->timestamp)
+//                ->where('dateExpired', '>=', Carbon::now()->startOfDay()->timestamp)
                 ->with('user')
                 ->with('generators:id,tableId,targetPlatform,maxAds')
                 ->get();
@@ -138,13 +138,15 @@ class Kernel extends ConsoleKernel
             }
             
             Log::channel($logChannel)->alert("Starting Schedule");
+            
             $spreadsheetClientService = new SpreadsheetClientServiceSecond();
             $noLock = false;
+            
             $tables = TableLaravel::query()
                 ->whereHas('user', function (Builder $query) {
                     $query->where('isBlocked', false);
                 })
-                ->where('dateExpired', '>=', Carbon::now()->startOfDay()->timestamp)
+//                ->where('dateExpired', '>=', Carbon::now()->startOfDay()->timestamp)
                 ->with('user')
                 ->with('generators:id,tableId,targetPlatform,maxAds')
                 ->get();
@@ -453,6 +455,11 @@ class Kernel extends ConsoleKernel
     {
         if (is_null($table->dateExpired)) {
             Log::channel($logChannel)->info("Table '".$table->googleSheetId."' has no dateExpired.");
+            return false;
+        }
+    
+        if (($table->dateExpired + 86400) < time()) {
+            Log::channel($logChannel)->info("Table '".$table->googleSheetId."' expired.");
             return false;
         }
         

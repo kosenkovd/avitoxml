@@ -33,6 +33,7 @@ use Illuminate\Support\Collection;
  * @property string                       $apiKey
  * @property string|null                  $notes
  * @property int|null                     $masterInvitationId
+ * @property Collection<UserLaravel>      $allReferrals
  * @property Wallet                       $wallet
  * @property Collection<TableLaravel>     $tables
  * @property Collection<tableMarketplace> $tablesMarketplace

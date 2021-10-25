@@ -18,6 +18,55 @@
         protected ?string $contactPhone = null;
         protected ?string $category = null;
         protected ?string $adType = null;
+    
+        protected array $workTypes = [];
+        protected ?string $extraBox = null;
+        protected array $bodyRepair = [];
+        protected ?string $workExperience = null;
+        protected ?string $guarantee = null;
+        protected array $selfService = [];
+        protected array $diagnostics = [];
+        protected array $wheelService = [];
+        protected array $additionalEquipment = [];
+        protected array $tuning = [];
+        protected array $maintenance = [];
+        protected array $transmissionRepair = [];
+        protected array $brakeRepair = [];
+        protected array $steeringRepair = [];
+        protected array $suspensionRepair = [];
+        protected array $conditionerRepair = [];
+        protected array $lockRepair = [];
+        protected array $engineRepair = [];
+        protected array $exhaustRepair = [];
+        protected array $buyingHelp = [];
+        protected array $roadsideHelp = [];
+        protected array $painting = [];
+        protected array $reEquipment = [];
+        protected array $windowTinting = [];
+        protected array $electricalRepair = [];
+        protected array $glassRepair = [];
+        protected array $washAndCare = [];
+    
+        protected ?string $transportType = null;
+        protected ?string $purpose = null;
+        protected ?string $rentType = null;
+        protected ?string $minimumRentalPeriod = null;
+        protected ?string $trailerType = null;
+        protected ?string $height = null;
+        protected ?string $width = null;
+        protected ?string $length = null;
+        protected ?string $carryingCapacity = null;
+        protected ?string $maximumPermittedWeight = null;
+        protected ?string $pledge = null;
+        protected ?string $pledgeAmount = null;
+        protected ?string $commission = null;
+        protected ?string $commissionAmount = null;
+        protected ?string $buyout = null;
+        protected ?string $delivery = null;
+        protected array $rentPurpose = [];
+        protected array $extraTaxi = [];
+        protected array $extraSelf = [];
+        
         protected ?string $condition = null;
         protected ?string $title = null;
         protected ?string $description = null;
@@ -28,6 +77,7 @@
         protected ?string $avitoId = null;
         protected ?string $adStatus = null;
         protected ?string $placementType = null;
+        protected ?string $apparelType = null;
         protected ?string $messages = null;
         protected ?DateTimeZone $timezone = null;
         protected ?string $contactsType;
@@ -96,6 +146,149 @@
             $this->adType = isset($row[$propertyColumns->adType])
                 ? htmlspecialchars($row[$propertyColumns->adType])
                 : null;
+    
+            $this->workTypes = isset($row[$propertyColumns->workTypes])
+                ? explode(PHP_EOL, $row[$propertyColumns->workTypes])
+                : [];
+            $this->extraBox = isset($row[$propertyColumns->extraBox])
+                ? htmlspecialchars($row[$propertyColumns->extraBox])
+                : null;
+            $this->bodyRepair = isset($row[$propertyColumns->bodyRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->bodyRepair])
+                : [];
+            $this->workExperience = isset($row[$propertyColumns->workExperience])
+                ? htmlspecialchars($row[$propertyColumns->workExperience])
+                : null;
+            $this->guarantee = isset($row[$propertyColumns->guarantee])
+                ? htmlspecialchars($row[$propertyColumns->guarantee])
+                : null;
+            $this->selfService = isset($row[$propertyColumns->selfService])
+                ? explode(PHP_EOL, $row[$propertyColumns->selfService])
+                : [];
+            $this->diagnostics = isset($row[$propertyColumns->diagnostics])
+                ? explode(PHP_EOL, $row[$propertyColumns->diagnostics])
+                : [];
+            $this->wheelService = isset($row[$propertyColumns->wheelService])
+                ? explode(PHP_EOL, $row[$propertyColumns->wheelService])
+                : [];
+            $this->additionalEquipment = isset($row[$propertyColumns->additionalEquipment])
+                ? explode(PHP_EOL, $row[$propertyColumns->additionalEquipment])
+                : [];
+            $this->tuning = isset($row[$propertyColumns->tuning])
+                ? explode(PHP_EOL, $row[$propertyColumns->tuning])
+                : [];
+            $this->maintenance = isset($row[$propertyColumns->maintenance])
+                ? explode(PHP_EOL, $row[$propertyColumns->maintenance])
+                : [];
+            $this->transmissionRepair = isset($row[$propertyColumns->transmissionRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->transmissionRepair])
+                : [];
+            $this->brakeRepair = isset($row[$propertyColumns->brakeRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->brakeRepair])
+                : [];
+            $this->steeringRepair = isset($row[$propertyColumns->steeringRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->steeringRepair])
+                : [];
+            $this->suspensionRepair = isset($row[$propertyColumns->suspensionRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->suspensionRepair])
+                : [];
+            $this->conditionerRepair = isset($row[$propertyColumns->conditionerRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->conditionerRepair])
+                : [];
+            $this->lockRepair = isset($row[$propertyColumns->lockRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->lockRepair])
+                : [];
+            $this->engineRepair = isset($row[$propertyColumns->engineRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->engineRepair])
+                : [];
+            $this->exhaustRepair = isset($row[$propertyColumns->exhaustRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->exhaustRepair])
+                : [];
+            $this->buyingHelp = isset($row[$propertyColumns->buyingHelp])
+                ? explode(PHP_EOL, $row[$propertyColumns->buyingHelp])
+                : [];
+            $this->roadsideHelp = isset($row[$propertyColumns->roadsideHelp])
+                ? explode(PHP_EOL, $row[$propertyColumns->roadsideHelp])
+                : [];
+            $this->painting = isset($row[$propertyColumns->painting])
+                ? explode(PHP_EOL, $row[$propertyColumns->painting])
+                : [];
+            $this->reEquipment = isset($row[$propertyColumns->reEquipment])
+                ? explode(PHP_EOL, $row[$propertyColumns->reEquipment])
+                : [];
+            $this->windowTinting = isset($row[$propertyColumns->windowTinting])
+                ? explode(PHP_EOL, $row[$propertyColumns->windowTinting])
+                : [];
+            $this->electricalRepair = isset($row[$propertyColumns->electricalRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->electricalRepair])
+                : [];
+            $this->glassRepair = isset($row[$propertyColumns->glassRepair])
+                ? explode(PHP_EOL, $row[$propertyColumns->glassRepair])
+                : [];
+            $this->washAndCare = isset($row[$propertyColumns->washAndCare])
+                ? explode(PHP_EOL, $row[$propertyColumns->washAndCare])
+                : [];
+    
+    
+            $this->transportType = isset($row[$propertyColumns->transportType])
+                ? htmlspecialchars($row[$propertyColumns->transportType])
+                : null;
+            $this->purpose = isset($row[$propertyColumns->purpose])
+                ? htmlspecialchars($row[$propertyColumns->purpose])
+                : null;
+            $this->rentType = isset($row[$propertyColumns->rentType])
+                ? htmlspecialchars($row[$propertyColumns->rentType])
+                : null;
+            $this->minimumRentalPeriod = isset($row[$propertyColumns->minimumRentalPeriod])
+                ? htmlspecialchars($row[$propertyColumns->minimumRentalPeriod])
+                : null;
+            $this->trailerType = isset($row[$propertyColumns->trailerType])
+                ? htmlspecialchars($row[$propertyColumns->trailerType])
+                : null;
+            $this->height = isset($row[$propertyColumns->height])
+                ? htmlspecialchars($row[$propertyColumns->height])
+                : null;
+            $this->width = isset($row[$propertyColumns->width])
+                ? htmlspecialchars($row[$propertyColumns->width])
+                : null;
+            $this->length = isset($row[$propertyColumns->length])
+                ? htmlspecialchars($row[$propertyColumns->length])
+                : null;
+            $this->carryingCapacity = isset($row[$propertyColumns->carryingCapacity])
+                ? htmlspecialchars($row[$propertyColumns->carryingCapacity])
+                : null;
+            $this->maximumPermittedWeight = isset($row[$propertyColumns->maximumPermittedWeight])
+                ? htmlspecialchars($row[$propertyColumns->maximumPermittedWeight])
+                : null;
+            $this->pledge = isset($row[$propertyColumns->pledge])
+                ? htmlspecialchars($row[$propertyColumns->pledge])
+                : null;
+            $this->pledgeAmount = isset($row[$propertyColumns->pledgeAmount])
+                ? htmlspecialchars($row[$propertyColumns->pledgeAmount])
+                : null;
+            $this->commission = isset($row[$propertyColumns->commission])
+                ? htmlspecialchars($row[$propertyColumns->commission])
+                : null;
+            $this->commissionAmount = isset($row[$propertyColumns->commissionAmount])
+                ? htmlspecialchars($row[$propertyColumns->commissionAmount])
+                : null;
+            $this->buyout = isset($row[$propertyColumns->buyout])
+                ? htmlspecialchars($row[$propertyColumns->buyout])
+                : null;
+            $this->delivery = isset($row[$propertyColumns->delivery])
+                ? htmlspecialchars($row[$propertyColumns->delivery])
+                : null;
+    
+            $this->rentPurpose = isset($row[$propertyColumns->rentPurpose])
+                ? explode(PHP_EOL, $row[$propertyColumns->rentPurpose])
+                : [];
+            $this->extraTaxi = isset($row[$propertyColumns->extraTaxi])
+                ? explode(PHP_EOL, $row[$propertyColumns->extraTaxi])
+                : [];
+            $this->extraSelf = isset($row[$propertyColumns->extraSelf])
+                ? explode(PHP_EOL, $row[$propertyColumns->extraSelf])
+                : [];
+            
             $this->condition = isset($row[$propertyColumns->condition])
                 ? htmlspecialchars($row[$propertyColumns->condition])
                 : null;;
@@ -145,6 +338,10 @@
             
             $this->messages = isset($row[$propertyColumns->messages])
                 ? htmlspecialchars($row[$propertyColumns->messages])
+                : null;
+            
+            $this->apparelType = isset($row[$propertyColumns->apparelType])
+                ? htmlspecialchars($row[$propertyColumns->apparelType])
                 : null;
         }
         
@@ -289,6 +486,10 @@
                         $this->condition = 'Новый';
                 }
             }
+    
+            $extra = $this->formatArray($this->extraTaxi)
+                .PHP_EOL.$this->formatArray($this->extraSelf)
+                .(($this->extraBox === 'да') ? PHP_EOL.'<Option>Теплый бокс</Option>' : '');
             
             $resultXml = $this->addTagIfPropertySet($this->id, "Id");
             $resultXml .= $this->addTagIfPropertySet($this->dateBegin, "DateBegin");
@@ -303,12 +504,67 @@
             $resultXml .= $this->addTagIfPropertySet("<![CDATA[$this->description]]>", "Description");
             $resultXml .= $this->addTagIfPropertySet($this->price, "Price");
             $resultXml .= $this->addTagIfPropertySet($imageTags, "Images");
+
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->workTypes), "WorkTypes");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->bodyRepair), "BodyRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->workExperience, "WorkExperience");
+            $resultXml .= $this->addTagIfPropertySet($this->guarantee, "Guarantee");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->selfService), "SelfService");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->diagnostics), "Diagnostics");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->wheelService), "WheelService");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->additionalEquipment), "AdditionalEquipment");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->tuning), "Tuning");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->maintenance), "Maintenance");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->transmissionRepair), "TransmissionRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->brakeRepair), "BrakeRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->steeringRepair), "SteeringRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->suspensionRepair), "SuspensionRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->conditionerRepair), "ConditionerRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->lockRepair), "LockRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->engineRepair), "EngineRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->exhaustRepair), "ExhaustRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->buyingHelp), "BuyingHelp");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->roadsideHelp), "RoadsideHelp");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->painting), "Painting");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->reEquipment), "ReEquipment");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->windowTinting), "WindowTinting");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->electricalRepair), "ElectricalRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->glassRepair), "GlassRepair");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->washAndCare), "WashAndCare");
+    
+            $resultXml .= $this->addTagIfPropertySet($this->transportType, "TransportType");
+            $resultXml .= $this->addTagIfPropertySet($this->purpose, "Purpose");
+            $resultXml .= $this->addTagIfPropertySet($this->rentType, "RentType");
+            $resultXml .= $this->addTagIfPropertySet($this->minimumRentalPeriod, "MinimumRentalPeriod");
+            $resultXml .= $this->addTagIfPropertySet($this->trailerType, "TrailerType");
+            $resultXml .= $this->addTagIfPropertySet($this->height, "Height");
+            $resultXml .= $this->addTagIfPropertySet($this->width, "Width");
+            $resultXml .= $this->addTagIfPropertySet($this->length, "Length");
+            $resultXml .= $this->addTagIfPropertySet($this->carryingCapacity, "CarryingCapacity");
+            $resultXml .= $this->addTagIfPropertySet($this->maximumPermittedWeight, "MaximumPermittedWeight");
+            $resultXml .= $this->addTagIfPropertySet($this->pledge, "Pledge");
+            $resultXml .= $this->addTagIfPropertySet($this->pledgeAmount, "PledgeAmount");
+            $resultXml .= $this->addTagIfPropertySet($this->commission, "Commission");
+            $resultXml .= $this->addTagIfPropertySet($this->commissionAmount, "CommissionAmount");
+            $resultXml .= $this->addTagIfPropertySet($this->buyout, "Buyout");
+            $resultXml .= $this->addTagIfPropertySet($this->delivery, "Delivery");
+            $resultXml .= $this->addTagIfPropertySet($this->formatArray($this->rentPurpose), "RentPurpose");;
+            $resultXml .= $this->addTagIfPropertySet($extra, "Extra");;
+            
             $resultXml .= $this->addTagIfPropertySet($this->videoURL, "VideoURL");
             $resultXml .= $this->addTagIfPropertySet($this->avitoId, "AvitoId");
             $resultXml .= $this->addTagIfPropertySet($this->adStatus, "AdStatus");
             $resultXml .= $this->addTagIfPropertySet($this->placementType, "ListingFee");
             $resultXml .= $this->addTagIfPropertySet($this->messages, "AllowEmail");
+            $resultXml .= $this->addTagIfPropertySet($this->apparelType, "ApparelType");
             
             return $resultXml;
+        }
+        
+        protected function formatArray(array $array): string
+        {
+            return join(PHP_EOL, array_map(function (string $option): string {
+                return $this->addTagIfPropertySet($option, 'Option');
+            }, $array));
         }
     }

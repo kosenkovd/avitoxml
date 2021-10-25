@@ -4,6 +4,7 @@
 namespace App\Services;
 
 
+use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Models\GeneratorLaravel;
 use App\Models\ReferralProfit;
@@ -19,14 +20,17 @@ class TransactionsService
 {
     private PriceService $priceService;
     private SheetNames $sheetNames;
+    private Config $config;
     
     public function __construct(
         PriceService $priceService,
-        SheetNames $sheetNames
+        SheetNames $sheetNames,
+        Config $config
     )
     {
         $this->priceService = $priceService;
         $this->sheetNames = $sheetNames;
+        $this->config = $config;
     }
     
     public function createWallet(UserLaravel $user): void
@@ -84,10 +88,7 @@ class TransactionsService
     {
         $price = $priceWithoutReferralProgram;
         $invitation = $user->masterInvitation;
-        if (
-            !is_null($invitation) &&
-            !$user->referralProfit
-        ) {
+        if (!is_null($invitation) && !$user->referralProfit) {
             $price = $this->priceService->getClientPriceWithReferralProgram(
                 $priceWithoutReferralProgram,
                 $invitation->discount
@@ -103,6 +104,23 @@ class TransactionsService
             ($generator->tableMarketplace ?: null);
         if (is_null($generatorTable)) {
             return false;
+        }
+    
+        if ($generator->maxAds < 500) {
+            // new table
+            if (($generatorTable->dateExpired) < time()) {
+                $newDateExpired = Carbon::now()->addDays(30)->timestamp;
+            } else {
+                $newDateExpired = Carbon::createFromTimestamp($generatorTable->dateExpired)
+                    ->addDays(30)
+                    ->timestamp;
+            }
+        } else {
+            if (($generatorTable->dateExpired) < time()) {
+                $newDateExpired = Carbon::now()->addDays(30)->timestamp;
+            } else {
+                $newDateExpired = $generatorTable->dateExpired;
+            }
         }
         
         try {
@@ -150,17 +168,19 @@ class TransactionsService
                 $maxAds
             );
             
-            $generator->table->dateExpired = Carbon::now()->addMonth()->timestamp;
+            $generator->table->dateExpired = $newDateExpired;
             $generator->table->save();
-            
-            Transaction::query()->insert([
-                'amount' => $price,
-                'debit' => true,
-                'type' => 'tariff_purchase',
-                'userId' => $user->id,
-                'tableId' => $generatorTable->id,
-            ]);
-            
+
+            if ($user->id !== 1662) {
+                Transaction::query()->insert([
+                    'amount' => $price,
+                    'debit' => true,
+                    'type' => 'tariff_purchase',
+                    'userId' => $user->id,
+                    'tableId' => $generatorTable->id,
+                ]);
+            }
+
             $this->handleSubscribeGenerator($generator, $subscribe);
             
             DB::commit();
@@ -177,7 +197,7 @@ class TransactionsService
     {
         $generator->table->generators->each(function (GeneratorLaravel $generator) use ($maxAds): void {
             if ($generator->targetPlatform === $this->sheetNames->getYandex()) {
-                $generator->maxAds = 5000;
+                $generator->maxAds = $this->config->getMaxAdsLimit();
                 $generator->save();
                 return;
             }
@@ -218,7 +238,7 @@ class TransactionsService
                 $maxAds
             );
             
-            $generator->table->dateExpired = Carbon::now()->addMonth()->timestamp;
+            $generator->table->dateExpired = Carbon::now()->addDays(30)->timestamp;
             $generator->table->save();
             
             Transaction::query()->insert([

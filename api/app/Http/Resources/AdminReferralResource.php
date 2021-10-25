@@ -40,6 +40,7 @@ use Illuminate\Support\Collection;
  * @property Invitation                   $masterInvitation
  * @property Collection<UserLaravel>      $referrals
  * @property ReferralProfit               $referralProfit
+ * @property bool                         $isReferralActive
  */
 class AdminReferralResource extends JsonResource
 {
@@ -65,6 +66,7 @@ class AdminReferralResource extends JsonResource
             'socialNetworkUrl' => $this->socialNetworkUrl,
             'created_at' => Carbon::createFromTimeString($this->email_verified_at)->format('d.m.Y H:i'),
             'profit' => $this->referralProfit ? (int)$this->referralProfit->amount : 0,
+            'active' => $this->isReferralActive,
         ];
     }
 }

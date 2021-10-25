@@ -123,6 +123,5 @@ abstract class JobBase
     {
         $this->jobId = Guid::uuid4()->toString();
         $this->spreadsheetClientService = $spreadsheetClientService;
-        
     }
 }

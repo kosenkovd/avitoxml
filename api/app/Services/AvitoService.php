@@ -5,6 +5,7 @@ namespace App\Services;
 
 
 use App\Services\Interfaces\IAvitoService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -105,6 +106,8 @@ class AvitoService implements IAvitoService {
             ->post(
                 'https://api.avito.ru/stats/v1/accounts/'.$userId.'/items',
                 [
+                    "dateFrom" => Carbon::now()->subDays(270)->toDateString(),
+                    "dateTo" => Carbon::now()->toDateString(),
                     'itemIds' => $itemIds,
                     'fields' => $fields
                 ]

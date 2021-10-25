@@ -3,6 +3,7 @@
 
 namespace App\Providers;
 
+use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Repositories\DictRepository;
@@ -79,7 +80,8 @@ class ServicesProvider extends ServiceProvider
         $this->app->singleton(TransactionsService::class, function () {
             return new TransactionsService(
                 new PriceService(),
-                new SheetNames()
+                new SheetNames(),
+                new Config()
             );
         });
         

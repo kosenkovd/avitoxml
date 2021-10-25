@@ -88,7 +88,8 @@ class TransactionsController extends BaseController
             'targetPlatform' => 'string|required',
             'maxAds' => 'integer|required',
             'generatorGuid' => 'string|required',
-            'subscribe' => ['boolean', Rule::requiredIf($user->roleId !== $this->roles->Admin)]
+            'subscribe' => ['boolean', Rule::requiredIf($user->roleId !== $this->roles->Admin)],
+            'nextMonth' => 'boolean|nullable'
         ]);
         
         /** @var GeneratorLaravel|null $generator */
@@ -101,10 +102,10 @@ class TransactionsController extends BaseController
                 404
             );
         }
-        
-        $generatorUser = $generator->table ? $generator->table->user :
-            ($generator->tableMarketplace ? $generator->tableMarketplace->user : null);
-        
+
+        $generatorTable = $generator->table ?: $generator->tableMarketplace;
+        $generatorUser = $generatorTable ? $generatorTable->user : null;
+
         if (is_null($generatorUser)) {
             return response()->json(
                 new ErrorResponse(Response::$statusTexts[404], 'Can\'t find generator\'s user'),
@@ -120,6 +121,7 @@ class TransactionsController extends BaseController
         $targetPlatform = $request->input('targetPlatform');
         $maxAds = $request->input('maxAds');
         $subscribe = $request->input('subscribe');
+        $nextMonth = $request->input('nextMonth');
         
         $discount = DB::table('discount')
             ->where('ads', $maxAds)
@@ -142,13 +144,57 @@ class TransactionsController extends BaseController
             );
         }
         $priceForAd = $priceTargetPlatform->price;
-        
+
+        if (is_null($generator->table)) {
+//            if (!is_null($marketplace = $generator->tableMarketplace)) {
+//                $renewing =
+//            }
+            $renewing = false;
+        } else {
+            $renewing = $generator->table->dateExpired < time();
+        }
+
+        // Выбрана оплата для следующего месяца
+        if (!$renewing && $nextMonth) {
+            $generatorTable->generators->each(function(GeneratorLaravel $generator) use ($maxAds) {
+                if ($generator->targetPlatform === 'Яндекс') {
+                    $generator->subscribedMaxAds = $this->config->getMaxAdsLimit();
+                } else {
+                    $generator->subscribedMaxAds = $maxAds;
+                }
+                $generator->save();
+            });
+    
+            $this->transactionsService->handleSubscribeGenerator($generator, true);
+
+            return response()->json($generatorTable->dateExpired);
+        }
+
         $priceWithoutReferralProgram = $this->priceService->getMaxAdsPriceWithoutReferralProgram(
             $priceForAd,
             $maxAds,
             $discount,
             $generator,
+            $renewing
         );
+		
+        
+        if ($generator->maxAds < 500) {
+            // new table
+            if (($generatorTable->dateExpired) < time()) {
+                $newDateExpired = Carbon::now()->addDays(30)->timestamp;
+            } else {
+                $newDateExpired = Carbon::createFromTimestamp($generatorTable->dateExpired)
+                    ->addDays(30)
+                    ->timestamp;
+            }
+        } else {
+            if (($generatorTable->dateExpired) < time()) {
+                $newDateExpired = Carbon::now()->addDays(30)->timestamp;
+            } else {
+                $newDateExpired = $generatorTable->dateExpired;
+            }
+        }
         
         // Admin
         if ($user->roleId === $this->roles->Admin) {
@@ -158,7 +204,7 @@ class TransactionsController extends BaseController
                     $maxAds
                 );
                 
-                return response()->json($generator->table->dateExpired);
+                return response()->json($generatorTable->dateExpired);
             }
             
             $success = $this->transactionsService->handleMaxAdsAdmin(
@@ -168,7 +214,12 @@ class TransactionsController extends BaseController
                 $maxAds
             );
             
-            return response()->json($success ? Carbon::now()->addMonth()->timestamp : false);
+            if ($success && $user->isBlocked) {
+                $user->isBlocked = false;
+                $user->save();
+            }
+			
+            return response()->json($success ? $newDateExpired : false);
         }
         
         // Client
@@ -177,9 +228,9 @@ class TransactionsController extends BaseController
                 $generator,
                 $maxAds
             );
-            $this->transactionsService->handleSubscribeGenerator($generator, $subscribe);
+//            $this->transactionsService->handleSubscribeGenerator($generator, $subscribe);
             
-            return response()->json($generator->table->dateExpired);
+            return response()->json($generatorTable->dateExpired);
         }
         
         $success = $this->transactionsService->handleMaxAds(
@@ -187,10 +238,65 @@ class TransactionsController extends BaseController
             $generator,
             $priceWithoutReferralProgram,
             $maxAds,
-            $subscribe
+            true
         );
+    
+        if ($success && $user->isBlocked) {
+            $user->isBlocked = false;
+            $user->save();
+        }
         
-        return response()->json($success ? Carbon::now()->addMonth()->timestamp : false);
+        return response()->json($success ? $newDateExpired : false);
+    }
+
+    public function subscribe(Request $request): JsonResponse
+    {
+        /** @var UserLaravel $user */
+        $user = auth()->user();
+
+        $request->validate([
+            'generatorGuid' => 'string|required',
+            'subscribe' => 'boolean|required',
+        ]);
+
+        /** @var GeneratorLaravel|null $generator */
+        $generator = GeneratorLaravel::query()
+            ->where('generatorGuid', $request->input('generatorGuid'))
+            ->first();
+        if (is_null($generator)) {
+            return response()->json(
+                new ErrorResponse(Response::$statusTexts[404], 'Can\'t find user\'s generator'),
+                404
+            );
+        }
+
+        $generatorTable = $generator->table ?: $generator->tableMarketplace;
+        $generatorUser = $generatorTable ? $generatorTable->user : null;
+
+        if (is_null($generatorUser)) {
+            return response()->json(
+                new ErrorResponse(Response::$statusTexts[404], 'Can\'t find generator\'s user'),
+                404
+            );
+        }
+        if ($user->id !== $generatorUser->id) {
+            if ($user->roleId !== $this->roles->Admin) {
+                return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+            }
+        }
+
+        $subscribe = $request->input('subscribe');
+
+        $this->transactionsService->handleSubscribeGenerator($generator, $subscribe);
+
+        if (!$subscribe) {
+            $generatorTable->generators->each(function (GeneratorLaravel $generator) {
+                $generator->subscribedMaxAds = null;
+                $generator->save();
+            });
+        }
+
+        return response()->json();
     }
     
     public function order(Request $request): JsonResponse
@@ -220,15 +326,15 @@ class TransactionsController extends BaseController
         Log::channel('transactions')->info(json_encode($request->toArray()));
         
         $request->validate([
-            'Amount' => 'required',
-            'CardId' => 'required',
-            'ErrorCode' => 'required',
-            'ExpDate' => 'required',
+//            'Amount' => 'required',
+//            'CardId' => 'required',
+//            'ErrorCode' => 'required',
+//            'ExpDate' => 'required',
             'OrderId' => 'required',
-            'Pan' => 'required',
-            'PaymentId' => 'required',
+//            'Pan' => 'required',
+//            'PaymentId' => 'required',
             'Status' => 'required',
-            'Success' => 'required',
+//            'Success' => 'required',
             'TerminalKey' => 'required',
             'Token' => 'required',
         ]);
@@ -255,7 +361,7 @@ class TransactionsController extends BaseController
         if (!$check) {
             Log::channel('transactions')->info($orderMessage.' Wrong token');
             
-            return response()->json(new ErrorResponse(Response::$statusTexts[400]), 400);
+            return response('400');
         }
     
         /** @var Order|null $order */
@@ -264,10 +370,7 @@ class TransactionsController extends BaseController
             ->first();
         if (is_null($order)) {
             Log::channel('transactions')->info($orderMessage.' Can\'t find specified order.');
-            return response()->json(
-                new ErrorResponse(Response::$statusTexts[404], 'Can\'t find specified order.'),
-                404
-            );
+            return response('404');
         }
     
         $status = $request->input('Status');
@@ -281,7 +384,7 @@ class TransactionsController extends BaseController
         
         if ($status !== 'CONFIRMED') {
             Log::channel('transactions')->info($orderMessage.' status - '.$status);
-            return response()->json();
+            return response('409');
         }
     
         /** @var UserLaravel $user */
@@ -291,7 +394,7 @@ class TransactionsController extends BaseController
         $success = $this->transactionsService->handleTopUp($user, $amount);
         if (!$success) {
             Log::channel('transactions')->info($orderMessage.' DB error');
-            return response()->json(new ErrorResponse(Response::$statusTexts[500]), 500);
+            return response('500');
         }
     
         Log::channel('transactions')->info($orderMessage.' OK');

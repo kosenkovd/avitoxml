@@ -37,7 +37,8 @@ class PricesController extends BaseController
         $request->validate([
             'targetPlatform' => 'string|required',
             'maxAds' => 'integer|required',
-            'generatorGuid' => 'string|required'
+            'generatorGuid' => 'string|required',
+            'nextMonth' => 'boolean|nullable'
         ]);
     
         /** @var GeneratorLaravel|null $generator */
@@ -69,7 +70,8 @@ class PricesController extends BaseController
     
         $targetPlatform = $request->input('targetPlatform');
         $maxAds = $request->input('maxAds');
-    
+        $nextMonth = $request->input('nextMonth');
+
         $discount = DB::table('discount')
             ->where('ads', $maxAds)
             ->first();
@@ -91,15 +93,29 @@ class PricesController extends BaseController
             );
         }
         $priceForAd = $priceTargetPlatform->price;
-    
+
+        if (is_null($generator->table)) {
+//            if (!is_null($marketplace = $generator->tableMarketplace)) {
+//                $renewing =
+//            }
+            $renewing = false;
+        } else {
+            $renewing = $generator->table->dateExpired < time();
+        }
+
+        if (!$renewing && $nextMonth) {
+            $renewing = true;
+        }
+
         $price = $this->priceService->getMaxAdsPrice(
             $user,
             $priceForAd,
             $maxAds,
             $discount,
             $generator,
+            $renewing
         );
         
-        return response()->json(round($price, 2));
+        return response()->json($price);
     }
 }

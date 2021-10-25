@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Configuration\Config;
 use App\Models\GeneratorLaravel;
 use App\Models\Invitation;
 use App\Models\TableLaravel;
@@ -19,12 +20,15 @@ use Illuminate\Support\Collection;
 class StatisticsController extends BaseController
 {
     private TransactionsService $transactionsService;
+    private Config $config;
     
     public function __construct(
-        TransactionsService $transactionsService
+        TransactionsService $transactionsService,
+        Config $config
     )
     {
         $this->transactionsService = $transactionsService;
+        $this->config = $config;
     }
     
     /**
@@ -41,7 +45,7 @@ class StatisticsController extends BaseController
             ->has('totalProfit')
             ->count();
         
-        $LTV = round($totalBalance / $usersWhoToppedUpBalance, 2);
+        $LTV = round($usersWhoToppedUpBalance ? ($totalBalance / $usersWhoToppedUpBalance) : 0, 2);
         $userLifeTime = 11111111;
         
         $periods = collect([
@@ -49,25 +53,25 @@ class StatisticsController extends BaseController
             'month' => [
                 Carbon::now()
                     ->firstOfMonth()
-                    ->timestamp,
+                    ->addHours(3),
                 Carbon::now()
-                    ->timestamp
+                    ->addHours(3)
             ],
             'tomorrow' => [
                 Carbon::now()
                     ->subRealDay()
                     ->setTime(0, 0)
-                    ->timestamp,
+                    ->addHours(3),
                 Carbon::now()
                     ->setTime(0, 0)
-                    ->timestamp
+                    ->addHours(3)
             ],
             'today' => [
                 Carbon::now()
                     ->setTime(0, 0)
-                    ->timestamp,
+                    ->addHours(3),
                 Carbon::now()
-                    ->timestamp
+                    ->addHours(3)
             ]
         ]);
         
@@ -131,26 +135,26 @@ class StatisticsController extends BaseController
         
         
         $activeTables = TableLaravel::query()
-            ->where('dateExpired', '>=', Carbon::now()->timestamp)
+            ->where('dateExpired', '>=', time())
             ->count();
         
         $activeUsers = UserLaravel::query()
             ->whereHas('tables', function (Builder $query) {
-                $query->where('dateExpired', '>=', Carbon::now()->timestamp);
+                $query->where('dateExpired', '>=', time());
             })
             ->count();
         
         $totalBalanceForRegistrations = round($totalBalance / $registrations['all'], 2);
         
         $invitationsCounter = Invitation::query()->count();
-        $totalBalanceForInvitations = round($totalBalance / $invitationsCounter, 2);
+        $totalBalanceForInvitations = round($invitationsCounter ? ($totalBalance / $invitationsCounter) : 0, 2);
         
         $summaryAds = GeneratorLaravel::query()
             ->whereHas('table', function (Builder $q) {
-                $q->where('dateExpired', '>=', Carbon::now()->timestamp);
+                $q->where('dateExpired', '>=', time());
             })
             ->where('targetPlatform', 'Avito')
-            ->where('maxAds', '<=', 5000)
+            ->where('maxAds', '<=', $this->config->getMaxAdsLimit())
             ->sum('maxAds');
         
         $summaryAdsOnActiveTables = round($summaryAds / $activeTables);
@@ -222,8 +226,12 @@ class StatisticsController extends BaseController
         ]);
         
         $period = [
-            Carbon::createFromFormat('Y-m-d', $request->input('from'))->setTime(0, 0)->timestamp,
-            Carbon::createFromFormat('Y-m-d', $request->input('to'))->setTime(0, 0)->timestamp,
+            Carbon::createFromFormat('Y-m-d', $request->input('from'))
+                ->setTime(0, 0)
+                ->addHours(3),
+            Carbon::createFromFormat('Y-m-d', $request->input('to'))
+                ->setTime(0, 0)
+                ->addHours(3),
         ];
         
         $invitations = Invitation::query()

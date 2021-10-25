@@ -12,6 +12,56 @@ class TableHeader {
     public ?int $ID = null;
     public ?int $category = null;
     public ?int $goodsType = null;
+    public ?int $apparelType = null;
+
+    public ?int $workTypes = null;
+    public ?int $extraBox = null;
+    public ?int $bodyRepair = null;
+    public ?int $workExperience = null;
+    public ?int $guarantee = null;
+    public ?int $selfService = null;
+    public ?int $diagnostics = null;
+    public ?int $wheelService = null;
+    public ?int $additionalEquipment = null;
+    public ?int $tuning = null;
+    public ?int $maintenance = null;
+    public ?int $transmissionRepair = null;
+    public ?int $brakeRepair = null;
+    public ?int $steeringRepair = null;
+    public ?int $suspensionRepair = null;
+    public ?int $conditionerRepair = null;
+    public ?int $lockRepair = null;
+    public ?int $engineRepair = null;
+    public ?int $exhaustRepair = null;
+    public ?int $buyingHelp = null;
+    public ?int $roadsideHelp = null;
+    public ?int $painting = null;
+    public ?int $reEquipment = null;
+    public ?int $windowTinting = null;
+    public ?int $electricalRepair = null;
+    public ?int $glassRepair = null;
+    public ?int $washAndCare = null;
+
+    public ?int $transportType = null;
+    public ?int $purpose = null;
+    public ?int $rentType = null;
+    public ?int $minimumRentalPeriod = null;
+    public ?int $trailerType = null;
+    public ?int $height = null;
+    public ?int $width = null;
+    public ?int $length = null;
+    public ?int $carryingCapacity = null;
+    public ?int $maximumPermittedWeight = null;
+    public ?int $pledge = null;
+    public ?int $pledgeAmount = null;
+    public ?int $commission = null;
+    public ?int $commissionAmount = null;
+    public ?int $buyout = null;
+    public ?int $delivery = null;
+    public ?int $rentPurpose = null;
+    public ?int $extraTaxi = null;
+    public ?int $extraSelf = null;
+
     public ?int $adType = null;
     public ?int $condition = null;
     public ?int $title = null;
@@ -203,10 +253,157 @@ class TableHeader {
                     break;
                 case "видтовара":
                 case "подкатегория":
+                case "видуслуги":
                     $this->goodsType = $colNum;
                     break;
                 case "видобъявления":
                     $this->adType = $colNum;
+                    break;
+                case "видверхнейодежды":
+                    $this->apparelType = $colNum;
+                    break;
+                    
+                case "видработ":
+                    $this->workTypes = $colNum;
+                    break;
+                case "теплыйбокс":
+                    $this->extraBox = $colNum;
+                    break;
+                case "кузовнойремонт":
+                    $this->bodyRepair = $colNum;
+                    break;
+                case "опытработывгодах":
+                    $this->workExperience = $colNum;
+                    break;
+                case "гарантия.есть/нет":
+                    $this->guarantee = $colNum;
+                    break;
+                case "автосервисысамообслуживания":
+                    $this->selfService = $colNum;
+                    break;
+                case "диагностикаавто":
+                    $this->diagnostics = $colNum;
+                    break;
+                case "шиномонтажиремонтдисков":
+                    $this->wheelService = $colNum;
+                    break;
+                case "установкадопоборудования":
+                    $this->additionalEquipment = $colNum;
+                    break;
+                case "тюнингавто":
+                    $this->tuning = $colNum;
+                    break;
+                case "техническоеобслуживаниеавто":
+                    $this->maintenance = $colNum;
+                    break;
+                case "ремонттрансмиссии":
+                    $this->transmissionRepair = $colNum;
+                    break;
+                case "ремонттормознойсистемы":
+                    $this->brakeRepair = $colNum;
+                    break;
+                case "ремонтрулевогоуправления":
+                    $this->steeringRepair = $colNum;
+                    break;
+                case "ремонтподвески":
+                    $this->suspensionRepair = $colNum;
+                    break;
+                case "ремонткондиционеровиотопленияавто":
+                    $this->conditionerRepair = $colNum;
+                    break;
+                case "ремонтзамковиключейавто":
+                    $this->lockRepair = $colNum;
+                    break;
+                case "ремонтдвигателя":
+                    $this->engineRepair = $colNum;
+                    break;
+                case "ремонтвыхлопнойсистемы":
+                    $this->exhaustRepair = $colNum;
+                    break;
+                case "помощьприпокупкеавто":
+                    $this->buyingHelp = $colNum;
+                    break;
+                case "помощьнадороге":
+                    $this->roadsideHelp = $colNum;
+                    break;
+                case "покраскаавто":
+                    $this->painting = $colNum;
+                    break;
+                case "переоборудованиетранспорт":
+                    $this->reEquipment = $colNum;
+                    break;
+                case "тонировкаиоклейкаавто":
+                    $this->windowTinting = $colNum;
+                    break;
+                case "ремонтэлектрооборудования":
+                    $this->electricalRepair = $colNum;
+                    break;
+                case "ремонтавтостёкол":
+                    $this->glassRepair = $colNum;
+                    break;
+                case "мойкаиуходзаавто":
+                    $this->washAndCare = $colNum;
+                    break;
+                    
+                case "типтранспорта":
+                    $this->transportType = $colNum;
+                    break;
+                case "назначение":
+                    $this->purpose = $colNum;
+                    break;
+                case "типаренды":
+                    $this->rentType = $colNum;
+                    break;
+                case "минимальныйсрокарендывднях":
+                    $this->minimumRentalPeriod = $colNum;
+                    break;
+                case "типприцепа":
+                    $this->trailerType = $colNum;
+                    break;
+                case "высотавметрах":
+                    $this->height = $colNum;
+                    break;
+                case "ширинавметрах":
+                    $this->width = $colNum;
+                    break;
+                case "длиннавметрах":
+                    $this->length = $colNum;
+                    break;
+                case "грузоподъемностьв(кг)":
+                case "грузоподъемностьвкг.целоечисло.":
+                    $this->carryingCapacity = $colNum;
+                    break;
+                case "максимальнаяразрешеннаямасса(кг)":
+                case "максимальнаяразрешеннаямассавкг.целоечисло.":
+                    $this->maximumPermittedWeight = $colNum;
+                    break;
+                case "залог":
+                    $this->pledge = $colNum;
+                    break;
+                case "размерзалогаврублях":
+                    $this->pledgeAmount = $colNum;
+                    break;
+                case "комиссия":
+                    $this->commission = $colNum;
+                    break;
+                case "размеркомиссиив%":
+                    $this->commissionAmount = $colNum;
+                    break;
+                case "возможностьвыкупитьавто":
+                case "возможностьвыкупитьавто.":
+                    $this->buyout = $colNum;
+                    break;
+                case "доставка":
+                    $this->delivery = $colNum;
+                    break;
+                case "цельаренды":
+                    $this->rentPurpose = $colNum;
+                    break;
+                case "дополнительнодля\"автоподтакси\"":
+                    $this->extraTaxi = $colNum;
+                    break;
+                case "дополнительнодля\"автодляличногопользования\"":
+                    $this->extraSelf = $colNum;
                     break;
                 case "состояниетовара":
                     $this->condition = $colNum;
@@ -457,12 +654,14 @@ class TableHeader {
                     $this->contactsType = $colNum;
                     break;
                 case "типавтозапчастей":
+                case "тип":
                     $this->autoPart = $colNum;
                     break;
                 case "датаивремяначаларазмещенияобъявления(часовойпоясmsk)":
                 case "датаивремяпубликации(помск)":
                 case "датапубликации":
                 case "датаивремяпубликации":
+                    
                     $this->dateCreated = $colNum;
                     break;
                 case "часовойпояс":
@@ -475,6 +674,7 @@ class TableHeader {
                 case "подтипуслугииливидодежды":
                 case "подтипуслугивидодеждытипстроймат":
                 case "подтипуслугивидодеждытипстройматтипмотоцикла":
+                case "подтипуслуги":
                     $this->subTypeApparel = $colNum;
                     break;
                 case "размер":

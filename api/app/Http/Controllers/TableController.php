@@ -99,13 +99,14 @@ class TableController extends BaseController
         $tables = new Collection;
         switch ($currentUser->roleId) {
             case $this->roles->Admin:
+            case $this->roles->Service:
                 $tables = TableLaravel::query()
-                    ->with('generators:id,tableId,generatorGuid,targetPlatform,maxAds,subscribed')
+                    ->with('generators:id,tableId,generatorGuid,targetPlatform,maxAds,subscribedMaxAds,subscribed')
                     ->get();
                 break;
             case $this->roles->Customer:
                 $tables = $currentUser->tables()
-                    ->with('generators:id,tableId,generatorGuid,targetPlatform,maxAds,subscribed')
+                    ->with('generators:id,tableId,generatorGuid,targetPlatform,maxAds,subscribedMaxAds,subscribed')
                     ->get();
         }
         

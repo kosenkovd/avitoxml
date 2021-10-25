@@ -3,48 +3,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Configuration\Spreadsheet\SheetNames;
-use App\Console\Jobs\FillAvitoReportJob;
 use App\DTOs\ErrorResponse;
-use App\DTOs\UserDTO;
 use App\Enums\Roles;
-use App\Helpers\LinkHelper;
 use App\Http\Resources\UserCollection;
 use App\Http\Resources\UserResource;
-use App\Mappers\UserDTOMapper;
-use App\Models\Generator;
 use App\Models\GeneratorLaravel;
 use App\Models\Invitation;
-use App\Models\Table;
 use App\Models\TableLaravel;
-use App\Models\User;
 use App\Models\UserLaravel;
-use App\Repositories\GeneratorRepository;
-use App\Repositories\Interfaces\IGeneratorRepository;
-use App\Repositories\Interfaces\ITableRepository;
-use App\Repositories\Interfaces\IUserRepository;
-use App\Repositories\TableRepository;
-use App\Services\AvitoService;
-use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
-use App\Services\MailService;
-use App\Services\SpreadsheetClientService;
 use Exception;
-use Google_Client;
-use Google_Service_Drive;
-use Google_Service_Drive_Permission;
-use Google_Service_Sheets;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use JsonMapper;
+use Laravel\Passport\ClientRepository;
 use Ramsey\Uuid\Guid\Guid;
 
 /**
@@ -56,46 +34,19 @@ use Ramsey\Uuid\Guid\Guid;
  */
 class UserController extends BaseController
 {
+    private static int $botClientId = 3;
+    
     private Roles $roles;
     
-    private IUserRepository $userRepository;
-    
-    private JsonMapper $jsonMapper;
-    /**
-     * @var ISpreadsheetClientService
-     */
-    private ISpreadsheetClientService $spreadsheetClientService;
-    /**
-     * @var ITableRepository
-     */
-    private ITableRepository $tableRepository;
-    /**
-     * @var MailService
-     */
-    private MailService $mailService;
-    /**
-     * @var IGeneratorRepository
-     */
-    private IGeneratorRepository $generatorRepository;
-    /**
-     * @var SheetNames
-     */
-    private SheetNames $sheetNamesConfig;
     /**
      * @var IXmlGenerationService
      */
     private IXmlGenerationService $xmlGenerationService;
     
     public function __construct(
-        IUserRepository $userRepository,
-        ITableRepository $tableRepository,
-        JsonMapper $jsonMapper,
         IXmlGenerationService $xmlGenerationService
     )
     {
-        $this->userRepository = $userRepository;
-        $this->tableRepository = $tableRepository;
-        $this->jsonMapper = $jsonMapper;
         $this->roles = new Roles();
         $this->xmlGenerationService = $xmlGenerationService;
     }
@@ -109,7 +60,7 @@ class UserController extends BaseController
      */
     public function myAccount(): JsonResponse
     {
-        return response()->json(new UserResource(auth()->user()), 200);
+        return response()->json(new UserResource(auth()->user()));
     }
     
     /**
@@ -127,11 +78,13 @@ class UserController extends BaseController
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
         
-        if ($currentUser->roleId !== $this->roles->Admin) {
-            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+        switch ($currentUser->roleId) {
+            case $this->roles->Admin:
+            case $this->roles->Service:
+                return response()->json(new UserCollection(UserLaravel::with('wallet')->get()));
+            default:
+                return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
-        
-        return response()->json(new UserCollection(UserLaravel::all()), 200);
     }
     
     /**
@@ -191,7 +144,7 @@ class UserController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
-    
+        
         Log::channel('apilog')->info('PUT /users/'.$id.' - user '.$currentUser->id);
         
         if (!(($currentUser->id === (int)$id) ||
@@ -246,7 +199,7 @@ class UserController extends BaseController
             });
         }
         
-        return response()->json(null, 200);
+        return response()->json(null);
     }
     
     /**
@@ -262,7 +215,7 @@ class UserController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
-    
+        
         Log::channel('apilog')->info('PUT /users/'.$id.'/token - user '.$currentUser->id);
         
         if ($currentUser->roleId !== $this->roles->Admin) {
@@ -276,14 +229,14 @@ class UserController extends BaseController
         }
         
         if ($user->roleId === $this->roles->Admin) {
-            return response()->json($user->apiKey, 200);
+            return response()->json($user->apiKey);
         }
         
         $newApiKey = md5(Guid::uuid4()->toString());
         $user->apiKey = $newApiKey;
         $user->update();
         
-        return response()->json($newApiKey, 200);
+        return response()->json($newApiKey);
     }
     
     /**
@@ -299,7 +252,7 @@ class UserController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
-    
+        
         Log::channel('apilog')->info('PUT /users/update - user '.$currentUser->id);
         
         $request->validate([
@@ -317,7 +270,7 @@ class UserController extends BaseController
                 403
             );
         }
-    
+        
         /** @var UserLaravel|null $user */
         $user = UserLaravel::query()->find($id);
         if (is_null($user)) {
@@ -330,10 +283,10 @@ class UserController extends BaseController
                 403
             );
         }
-    
+        
         $user->email = $request->input('email');
         $user->password = Hash::make($request->input('password'));
-    
+        
         $invitationHash = $request->input('invitation');
         if (!is_null($invitationHash)) {
             /** @var Invitation|null $invitation */
@@ -344,47 +297,86 @@ class UserController extends BaseController
                     404
                 );
             }
-        
+            
             $user->masterInvitationId = $invitation->id;
         }
         
         $user->save();
-    
+        
         event(new Registered($user));
         
-        return response()->json(null, 200);
+        return response()->json(null);
+    }
+    
+    /**
+     * Post /users/accessToken
+     *
+     * @param Request $request
+     *
+     * @return JsonResponse
+     */
+    public function storeAccessClient(Request $request): JsonResponse
+    {
+        /** @var UserLaravel $currentUser */
+        $currentUser = auth()->user();
+    
+        switch ($currentUser->roleId) {
+            case $this->roles->Admin:
+            case $this->roles->Service:
+                return response()->json('');
+            default:
+                $client = DB::table('oauth_clients')
+                    ->where('user_id', $currentUser->id)
+                    ->where('personal_access_client', true)
+                    ->first();
+                if (!is_null($client)) {
+                    return response()->json(
+                        new ErrorResponse(Response::$statusTexts[409],
+                            'Already has Access Client'
+                        ), 409);
+                }
+            
+                /** @var ClientRepository $clientRepository */
+                $clientRepository = resolve(ClientRepository::class);
+                $newClient = $clientRepository->create(
+                    $currentUser->id,
+                    'Laravel Personal Access Client',
+                    'http://localhost',
+                    'users',
+                    true,
+                    false,
+                    true
+                );
+            
+                return response()->json($newClient ? $newClient->getAttribute('secret') : '');
+        }
+    }
+    
+    public function getAccessClient(Request $request): JsonResponse
+    {
+        /** @var UserLaravel $currentUser */
+        $currentUser = auth()->user();
+    
+        switch ($currentUser->roleId) {
+            case $this->roles->Admin:
+            case $this->roles->Service:
+                $client = DB::table('oauth_clients')
+                    ->where('user_id', self::$botClientId)
+                    ->where('personal_access_client', true)
+                    ->first();
+            
+                return response()->json($client ? $client->secret : '');
+            default:
+                $client = DB::table('oauth_clients')
+                    ->where('user_id', $currentUser->id)
+                    ->where('personal_access_client', true)
+                    ->first();
+            
+                return response()->json($client ? $client->secret : '');
+        }
     }
     
     public function test(Request $request)
     {
-//        if ($request->get('code')) {
-//
-//            $res = Http::post('https://oauth2.googleapis.com/token', [
-//                'code' => $request->get('code'),
-//                'client_id' => "126284738006-c7evde41fmje87q6i3j64kgfn2bpj499.apps.googleusercontent.com",
-//                'client_secret' => "AcQWTzVI3qHqgBF5aKDJ3k30",
-//                'grant_type' => 'authorization_code',
-//                'redirect_uri' => 'https://api.agishev-autoz.ru/api/test'
-//            ]);
-//
-//            echo(json_encode($res->json()));
-//            file_put_contents(__dir__. '/../../Configuration/test'.time().'.json', json_encode($res->json()));
-//            die;
-//
-////        $client = new Google_Client();
-////        $client->setAuthConfig(__dir__. '/../../Configuration/OAuth.json');
-////        $access_token = $client->fetchAccessTokenWithAuthCode($request->get('code'));
-////        var_dump($access_token);
-////
-////        $client->setAccessToken($access_token);
-////        $client->setScopes([Google_Service_Sheets::SPREADSHEETS]);
-////        $client->setAccessType('offline');
-//
-////        setPermissions('1-jeOZluHoKBIdvM21ViX2z6tmdyUA4vFUqrboT5nJ1o', $client);
-//
-//
-//        }
-//
-//        dd($request->json());
     }
 }

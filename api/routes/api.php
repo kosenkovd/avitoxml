@@ -16,7 +16,7 @@ use App\Http\Controllers as C;
 
 Route::apiResources([
     'tables' => C\TableController::class,
-    'tables.generators' => C\GeneratorController::class, // show ignore auth middleware in that middleware
+    'tables.generators' => C\GeneratorController::class, // show() ignore auth middleware in that middleware
     'marketplaces' => C\TableMarketplaceController::class,
 ]);
 
@@ -28,9 +28,11 @@ Route::post('/users/', [C\UserController::class, 'store']);
 Route::put('/users/{id}', [C\UserController::class, 'update']);
 Route::put('/users/{id}/token', [C\UserController::class, 'refreshToken']);
 Route::put('/users/{id}/update', [C\UserController::class, 'updateToLoginPass']);
+Route::post('/users/accessClient', [C\UserController::class, 'storeAccessClient']);
+Route::get('/users/accessClient', [C\UserController::class, 'getAccessClient']);
 
-Route::put('/test', [C\UserController::class, 'test'])
-    ->withoutMiddleware('auth');
+Route::post('/test', [C\UserController::class, 'test']);
+//    ->withoutMiddleware('auth');
 
 Route::post('/auth/register', C\Auth\RegisterController::class)
     ->withoutMiddleware('auth');
@@ -61,6 +63,7 @@ Route::middleware('verified')->group(function () {
     Route::post('/wallet/deposit', [C\WalletController::class, 'deposit']);
     
     Route::post('/transactions/maxAds', [C\TransactionsController::class, 'maxAds']);
+    Route::post('/transactions/subscribe', [C\TransactionsController::class, 'subscribe']);
     Route::get('/transactions', [C\TransactionsController::class, 'index']);
     Route::post('/transactions/orders', [C\TransactionsController::class, 'order']);
     

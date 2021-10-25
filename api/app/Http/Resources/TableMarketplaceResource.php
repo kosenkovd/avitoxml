@@ -51,10 +51,11 @@ class TableMarketplaceResource extends JsonResource
     {
         $generators = $this->generators->map(function (GeneratorLaravel $generator) {
             return [
-                'userId' => $generator->id,
+                'id' => $generator->id,
                 'generatorGuid' => $generator->generatorGuid,
                 'targetPlatform' => $generator->targetPlatform,
                 'maxAds' => $generator->maxAds,
+                'subscribedMaxAds' => $generator->subscribedMaxAds,
                 'subscribed' => (bool)$generator->subscribed,
             ];
         });

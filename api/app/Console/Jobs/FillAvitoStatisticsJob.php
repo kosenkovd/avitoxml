@@ -34,6 +34,25 @@ class FillAvitoStatisticsJob extends JobBase {
     const allTime = 'allTime';
     const manual = 'manual';
     
+    private $emptyResponseRow = [
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+        '',
+    ];
+    
     public function __construct(
         ISpreadsheetClientService $spreadsheetClientService,
         IAvitoService $avitoService,
@@ -130,6 +149,10 @@ class FillAvitoStatisticsJob extends JobBase {
             }
             
             $items->each(function (array $item) use ($collectedStatistics): void {
+                if (is_null($item['stats'])) {
+                    $collectedStatistics->put($item['itemId'], null);
+                    return;
+                }
                 $statistics = $this->getStatistics($item['stats']);
                 $collectedStatistics->put($item['itemId'], $statistics);
             });
@@ -137,25 +160,11 @@ class FillAvitoStatisticsJob extends JobBase {
         
         $valuesToWrite = new Collection;
         foreach ($values as $row) {
-            if (!$this->areNecessaryColumnsValuesExists($row, $propertyColumns)) {
-                $valuesToWrite->add([
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                    '',
-                ]);
+            if (
+                !$this->areNecessaryColumnsValuesExists($row, $propertyColumns) ||
+                is_null($collectedStatistics[$row[$propertyColumns->unloadingAvitoId]])
+            ) {
+                $valuesToWrite->add($this->emptyResponseRow);
                 continue;
             }
             

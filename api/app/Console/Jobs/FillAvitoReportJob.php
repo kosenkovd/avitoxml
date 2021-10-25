@@ -238,7 +238,7 @@ class FillAvitoReportJob extends JobBase {
         }
         
         return Carbon::createFromTimeString($ad['avito_date_end'])
-            ->subMonth()
+            ->subDays(30)
             ->format("d-m-Y H:i:s");
     }
     
@@ -317,69 +317,5 @@ class FillAvitoReportJob extends JobBase {
             
             throw $exception;
         }
-    }
-    
-    private function getMock(): array {
-        return [
-            'id' => 76934553,
-            'ads' => [
-                [
-                    "statuses" => [
-                        "processing" => [
-                            "value" => "processed",
-                            "help" => "Объявления, которые в данный цикл автозагрузки без изменений оставлены активными на сайте."
-                        ],
-                        "avito" => [
-                            "value" => "active",
-                            "help" => "Активное"
-                        ],
-                        "general" => [
-                            "value" => "success",
-                            "help" => "Успешно опубликовано"
-                        ]
-                    ],
-                    "ad_id" => "М-0001",
-                    "avito_id" => "2078740792",
-                    "avito_date_end" => "2021-05-26T14:07:49+03:00",
-                    "url" => "https://www.avito.ru/sankt-peterburg/tovary_dlya_detey_i_igrushki/rastuschiy_stul_2078740792",
-                    "vas_active" => []
-                ],
-                [
-                    "statuses" => [
-                        "processing" => [
-                            "value" => null,
-                            "help" => "Количество объявлений в XML-файле с повторяющимися ID или одинаковым описанием и значениями параметров."
-                        ],
-                        "avito" => [
-                            "value" => null,
-                            "help" => null
-                        ],
-                        "general" => [
-                            "value" => "in_feed",
-                            "help" => "Объявлений в файле"
-                        ]
-                    ],
-                    "ad_id" => "М-0002",
-                    "avito_id" => null,
-                    "avito_date_end" => null,
-                    "vas_active" => [],
-                    "messages" => [
-                        [
-                            "type" => "error",
-                            "code" => null,
-                            "help_url" => null,
-                            "element_name" => null,
-                            "description" => "Проверьте корректность значения в элементе <a href=\"https://autoload.avito.ru/format/lichnye_veschi/#Id\">Id</a> или удалите дубли объявлений из вашего XML-файла."
-                        ]
-                    ]
-                ],
-            ],
-            "customer_name" => "",
-            "finished_at" => null,
-            "generated_at" => "2021-05-08T22:16:51.728918+03:00",
-            "status" => "processing",
-            "started_at" => "2021-05-08T22:02:30.425000+03:00",
-            "version" => "0.3"
-        ];
     }
 }

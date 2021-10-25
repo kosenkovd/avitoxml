@@ -42,6 +42,7 @@ class GeneratorResource extends JsonResource
             ->setGeneratorUrl(LinkHelper::getXmlGeneratorLink($this->table->tableGuid, $this->generatorGuid))
             ->setGeneratorGuid($this->generatorGuid)
             ->setMaxAds($this->maxAds)
+            ->setSubscribedMaxAds($this->subscribedMaxAds)
             ->setSubscribed($this->subscribed);
     }
 }

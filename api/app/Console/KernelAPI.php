@@ -81,7 +81,7 @@ class Kernel extends ConsoleKernel
                         ->where('subscribed', true);
                 })
                 ->with('user:id,walletId,masterInvitationId')
-                ->with('generators:id,tableId,targetPlatform,maxAds,subscribed')
+                ->with('generators:id,tableId,targetPlatform,maxAds,subscribedMaxAds,subscribed')
                 ->get();
             
             $tables->each(function (TableLaravel $table) use ($priceService, $transactionService, $targetPlatform) {
@@ -91,7 +91,8 @@ class Kernel extends ConsoleKernel
                 /** @var GeneratorLaravel $generator */
                 foreach ($table->generators as $generator) {
                     if ($generator->targetPlatform === $targetPlatform) {
-                        $maxAds = $generator->maxAds;
+                        // Выбирается указанное на след. месяц число
+                        $maxAds = $generator->subscribedMaxAds ?: $generator->maxAds;
                         
                         $discount = DB::table('discount')
                             ->where('ads', $maxAds)
@@ -116,13 +117,26 @@ class Kernel extends ConsoleKernel
                             true
                         );
                         
+                        $user = $table->user;
                         $success = $transactionService->handleMaxAds(
-                            $table->user,
+                            $user,
                             $generator,
                             $priceWithoutReferralProgram,
                             $maxAds,
                             $generator->subscribed
                         );
+                        
+                        if ($success) {
+                            $table->generators->each(function (GeneratorLaravel $generator) {
+                                $generator->subscribedMaxAds = null;
+                                $generator->save();
+                            });
+    
+                            if ($success && $user->isBlocked) {
+                                $user->isBlocked = false;
+                                $user->save();
+                            }
+                        }
                         
                         Log::channel('subscribe')
                             ->info("Table '".$table->googleSheetId."' ".($success ? "Renewed" : "Has errors"));
@@ -132,6 +146,23 @@ class Kernel extends ConsoleKernel
             });
         })
             ->name("subscribe") // имя процесса сбрасывается withoutOverlapping через 24 часа
+            ->withoutOverlapping();
+        
+        $schedule->call(function () {
+            UserLaravel::query()
+                ->where('isBlocked', false)
+                ->whereDoesntHave('tables', function (Builder $q) {
+                    $q->where('dateExpired', '>', time() + 86400);
+                })
+                ->update(['isBlocked' => true]);
+            UserLaravel::query()
+                ->where('isBlocked', true)
+                ->whereHas('tables', function (Builder $q) {
+                    $q->where('dateExpired', '>', time() + 86400);
+                })
+                ->update(['isBlocked' => false]);
+        })
+            ->name("archive") // имя процесса сбрасывается withoutOverlapping через 24 часа
             ->withoutOverlapping();
     }
     

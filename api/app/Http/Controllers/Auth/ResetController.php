@@ -36,9 +36,9 @@ class ResetController extends Controller
                 Lang::get(Password::INVALID_USER)
             ), 404);
         }
-        if ($user->isBlocked) {
-            return response()->json(new ErrorResponse("User is blocked", 'BLOCKED'), 403);
-        }
+//        if ($user->isBlocked) {
+//            return response()->json(new ErrorResponse("User is blocked", 'BLOCKED'), 403);
+//        }
         
         $status = Password::sendResetLink($credentials);
         

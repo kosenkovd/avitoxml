@@ -20,7 +20,8 @@ class Config {
     private int $needsToUpdateTimeStamp;
     private string $copyMarketplaceSpreadsheetId;
     private string $terminalPassword;
-
+    private string $maxAdsLimit;
+    
     public function __construct()
     {
         $configurationJson =  json_decode(file_get_contents(__dir__. '/appsettings.json'), true);
@@ -167,5 +168,13 @@ class Config {
     public function getTerminalPassword(): string
     {
         return $this->terminalPassword;
+    }
+    
+    /**
+     * @return int
+     */
+    public function getMaxAdsLimit(): int
+    {
+        return $this->maxAdsLimit;
     }
 }

@@ -2,18 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\DTOs\ErrorResponse;
 use App\Helpers\LinkHelper;
-use App\Http\Resources\TableCollection;
-use App\Http\Resources\TableDetailResource;
 use App\Http\Resources\TableMarketplaceCollection;
 use App\Http\Resources\TableMarketplaceResource;
-use App\Http\Resources\TableResource;
-use App\Models\Generator;
 use App\Models\GeneratorLaravel;
-use App\Models\Table;
-use App\Models\TableLaravel;
 use App\Models\TableMarketplace;
 use App\Models\UserLaravel;
 use App\Services\Interfaces\IMailService;
@@ -24,16 +19,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
 
-use App\Models;
-use App\Mappers\TableDtoMapper;
 use App\Repositories\Interfaces;
 use App\Enums\Roles;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use JsonMapper;
+use Illuminate\Support\Facades\Log;
 use Ramsey\Uuid\Guid\Guid;
-use Symfony\Component\HttpFoundation\Exception\JsonException;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
 /**
  * Class TableController
@@ -72,13 +63,15 @@ class TableMarketplaceController extends BaseController
      * @var SheetNames configuration with sheet names.
      */
     private SheetNames $sheetNamesConfig;
+    private Config $config;
     
     public function __construct(
-        Interfaces\ITableRepository $tableRepository,
+        Interfaces\ITableRepository     $tableRepository,
         Interfaces\IGeneratorRepository $generatorRepository,
-        ISpreadsheetClientService $spreadsheetClientService,
-        IMailService $mailService,
-        SheetNames $sheetNames
+        ISpreadsheetClientService       $spreadsheetClientService,
+        IMailService                    $mailService,
+        SheetNames                      $sheetNames,
+        Config                          $config
     )
     {
         $this->tableRepository = $tableRepository;
@@ -87,6 +80,7 @@ class TableMarketplaceController extends BaseController
         $this->mailService = $mailService;
         $this->sheetNamesConfig = $sheetNames;
         $this->roles = new Roles();
+        $this->config = $config;
     }
     
     /**
@@ -101,18 +95,18 @@ class TableMarketplaceController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
-    
+        
         $tables = new Collection;
         switch ($currentUser->roleId) {
             case $this->roles->Admin:
                 $tables = TableMarketplace::query()
-                    ->with('generators:id,tableMarketplaceId,generatorGuid,targetPlatform,maxAds,subscribed')
+                    ->with('generators:id,tableMarketplaceId,generatorGuid,targetPlatform,maxAds,subscribedMaxAds,subscribed')
                     ->get();
                 break;
             case $this->roles->Customer:
                 $tables = $currentUser
                     ->tablesMarketplace()
-                    ->with('generators:id,tableMarketplaceId,generatorGuid,targetPlatform,maxAds,subscribed')
+                    ->with('generators:id,tableMarketplaceId,generatorGuid,targetPlatform,maxAds,subscribedMaxAds,subscribed')
                     ->get();
         }
         
@@ -147,7 +141,7 @@ class TableMarketplaceController extends BaseController
         $request->validate(['userId' => 'int|nullable']);
         
         $userId = $request->input('userId');
-    
+        
         // No userId - Client creates Table for himself
         if (is_null($userId)) {
             if ($currentUser->tablesMarketplace->count() >= 1) {
@@ -160,7 +154,7 @@ class TableMarketplaceController extends BaseController
             
             return response()->json(new TableMarketplaceResource($table), 201);
         }
-    
+        
         if ($currentUser->roleId !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
         }
@@ -191,7 +185,9 @@ class TableMarketplaceController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
-    
+        
+        Log::channel('apilog')->info('PUT /marketplaces/'.$tableGuid.' - user '.$currentUser->id);
+        
         /** @var TableMarketplace|null $existingTable */
         $existingTable = TableMarketplace::query()->firstWhere('tableGuid', $tableGuid);
         if (is_null($existingTable)) {
@@ -202,10 +198,10 @@ class TableMarketplaceController extends BaseController
             if ($currentUser->id !== $existingTable->userId) {
                 return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
             }
-    
+            
             $request->validate(['tableNotes' => 'string|nullable']);
             $existingTable->update(['notes' => $request->input('tableNotes')]);
-    
+            
             return response()->json(null, 200);
         }
         
@@ -236,6 +232,8 @@ class TableMarketplaceController extends BaseController
     {
         /** @var UserLaravel $currentUser */
         $currentUser = auth()->user();
+        
+        Log::channel('apilog')->info('DELETE /marketplaces/'.$tableGuid.' - user '.$currentUser->id);
         
         if ($currentUser->roleId !== $this->roles->Admin) {
             return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
@@ -293,7 +291,7 @@ class TableMarketplaceController extends BaseController
             $generator->tableMarketplaceId = $newTableId;
             $generator->generatorGuid = Guid::uuid4()->toString();
             $generator->targetPlatform = $target['target'];
-            $generator->maxAds = 5000;
+            $generator->maxAds = $this->config->getMaxAdsLimit();
             $generator->dateLastGenerated = 0;
             
             $generator->save();

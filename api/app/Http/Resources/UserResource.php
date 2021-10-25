@@ -3,8 +3,10 @@
 namespace App\Http\Resources;
 
 use App\DTOs\UserDTO;
+use App\Enums\Roles;
 use App\Models\TableLaravel;
 use App\Models\TableMarketplace;
+use App\Models\Wallet;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
@@ -27,6 +29,7 @@ use Illuminate\Support\Collection;
  * @property string|null                  $notes
  * @property Collection<TableLaravel>     $tables
  * @property Collection<tableMarketplace> tablesMarketplace
+ * @property Wallet                       $wallet
  */
 class UserResource extends JsonResource
 {
@@ -39,6 +42,12 @@ class UserResource extends JsonResource
      */
     public function toArray($request): UserDTO
     {
+        $roles = new Roles();
+        $balance = (($this->id === 1662) || ($this->roleId === $roles->Admin) ||
+            ($this->roleId === $roles->Service) || !$this->wallet) ?
+            null :
+            $this->wallet->balance;
+        
         return (new UserDTO())
             ->setUserId($this->id)
             ->setRoleId($this->roleId)
@@ -50,6 +59,7 @@ class UserResource extends JsonResource
             ->setName($this->name)
             ->setToken($this->apiKey)
             ->setEmail($this->email)
-            ->setHasVerifyEmail($this->hasVerifiedEmail());
+            ->setHasVerifyEmail($this->hasVerifiedEmail())
+            ->setBalance($balance);
     }
 }

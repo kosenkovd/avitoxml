@@ -337,19 +337,21 @@ class XmlGenerationService implements IXmlGenerationService {
     /**
      * Create ads from sheet rows for Ula.
      *
-     * @param array       $values rows from sheet.
+     * @param array $values rows from sheet.
      * @param TableHeader $propertyColumns
-     * @param int         $adsLimit
-     *
+     * @param string $targetSheet
+     * @param int $adsLimit
      * @return string generated ads.
      */
     private function createAdsForUlaSheet(
         array $values,
         TableHeader $propertyColumns,
+        string $targetSheet,
         int $adsLimit
     ): string
     {
         $ulaCategories = DB::table('avitoxml_ula_categories')->get();
+        $ulaTypes = DB::table('avitoxml_ula_types')->get();
         
         $xml = "";
         $ads = 0;
@@ -367,7 +369,7 @@ class XmlGenerationService implements IXmlGenerationService {
                 break;
             }
             
-            $ad = new Ads\UlaAd($row, $propertyColumns, $ulaCategories);
+            $ad = new Ads\UlaAd($row, $propertyColumns, $ulaCategories, $ulaTypes);
             
             $xml .= $ad->toUlaXml().PHP_EOL;
         }
@@ -594,7 +596,7 @@ class XmlGenerationService implements IXmlGenerationService {
                 '<shop>'.PHP_EOL.
                 '<offers>'.PHP_EOL;
             
-            $xml .= $this->createAdsForUlaSheet($values, $propertyColumns, $adsLimit);
+            $xml .= $this->createAdsForUlaSheet($values, $propertyColumns, $targetSheet, $adsLimit);
             return $xml.
                 '</offers>'.PHP_EOL.
                 '</shop>'.PHP_EOL.

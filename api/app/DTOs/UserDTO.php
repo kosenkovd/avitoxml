@@ -27,6 +27,19 @@ class UserDTO
     public ?string $email;
     
     public ?bool $hasVerifyEmail;
+
+    public ?string $balance;
+    
+    /**
+     * @param string|null $balance
+     *
+     * @return UserDTO
+     */
+    public function setBalance(?string $balance): UserDTO
+    {
+        $this->balance = $balance;
+        return $this;
+    }
     
     /**
      * @param int $userId
