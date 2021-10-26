@@ -4,6 +4,7 @@
 namespace App\Console\Jobs;
 
 
+use App\Configuration\Config;
 use App\Models\TableHeader;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use DateTime;
@@ -41,7 +42,7 @@ abstract class JobBase
      */
     protected int $maxJobTime;
     
-    protected int $adsLimit = 10001;
+    protected int $adsLimit;
 
     protected function log(string $message) : void
     {
@@ -123,5 +124,6 @@ abstract class JobBase
     {
         $this->jobId = Guid::uuid4()->toString();
         $this->spreadsheetClientService = $spreadsheetClientService;
+        $this->adsLimit = resolve(Config::class)->getMaxAdsLimit();
     }
 }

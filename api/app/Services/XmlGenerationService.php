@@ -3,6 +3,7 @@
 
 namespace App\Services;
 
+use App\Configuration\Config;
 use App\Configuration\Spreadsheet\SheetNames;
 use App\Configuration\XmlGeneration;
 use App\Models\Ads;
@@ -39,7 +40,7 @@ class XmlGenerationService implements IXmlGenerationService {
     
     private string $noticeChannel = 'notice';
     
-    protected int $adsLimit = 10501;
+    protected int $adsLimit;
     
     private function isExistsInRow(array $row, ?int $column): bool
     {
@@ -419,6 +420,7 @@ class XmlGenerationService implements IXmlGenerationService {
         $this->spreadsheetClientService = $spreadsheetClientService;
         $this->sheetNamesConfig = $sheetNames;
         $this->xmlGeneration = $xmlGeneration;
+        $this->adsLimit = resolve(Config::class)->getMaxAdsLimit();
     }
     
     /**

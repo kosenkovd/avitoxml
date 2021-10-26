@@ -76,7 +76,7 @@ class CronLockService
         }
     }
     
-    private function refresh(string $scriptName, string $scriptId): void
+    private function refresh(string $scriptName, string $scriptId = null): void
     {
         DB::table('cron_lock')
             ->where('name', $scriptName)
