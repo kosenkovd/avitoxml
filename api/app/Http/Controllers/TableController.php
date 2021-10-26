@@ -378,7 +378,6 @@ class TableController extends BaseController
             $generator->generatorGuid = Guid::uuid4()->toString();
             $generator->targetPlatform = $target['target'];
             $generator->maxAds = $maxAds;
-            $generator->dateLastGenerated = 0;
     
             $generator->save();
             
