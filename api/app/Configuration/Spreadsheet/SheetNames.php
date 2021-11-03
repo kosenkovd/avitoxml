@@ -11,6 +11,7 @@ class SheetNames
     private string $yandex;
     private string $information;
     private string $yandexSettings;
+    private string $ozon;
 
     public function __construct()
     {
@@ -62,5 +63,13 @@ class SheetNames
     public function getYandexSettings(): string
     {
         return $this->yandexSettings;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getOzon(): string
+    {
+        return $this->ozon;
     }
 }

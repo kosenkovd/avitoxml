@@ -4,16 +4,19 @@
 namespace App\Http\Controllers;
 
 use App\Configuration\Spreadsheet\SheetNames;
-use App\Services\Interfaces\ISpreadsheetClientService;
+use App\DTOs\ErrorResponse;
+use App\Enums\Roles;
+use App\Models\GeneratorLaravel;
+use App\Models\TableLaravel;
+use App\Models\TableMarketplace;
+use App\Models\UserLaravel;
 use App\Services\Interfaces\IXmlGenerationService;
-use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller as BaseController;
-
-use App\Models;
-use App\Repositories\Interfaces;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -25,147 +28,163 @@ use Illuminate\Support\Facades\Log;
 class GeneratorController extends BaseController
 {
     /**
-     * @var Interfaces\ITableRepository Models\Table repository.
-     */
-    private Interfaces\ITableRepository $tablesRepository;
-
-    /**
-     * @var Interfaces\IGeneratorRepository Models\Generator repository.
-     */
-    private Interfaces\IGeneratorRepository $generatorsRepository;
-
-    /**
      * @var IXmlGenerationService XML generator for spreadsheet.
      */
-    private IXmlGenerationService $xmlGenerator;
-
-    /**
-     * @var ISpreadsheetClientService Google Spreadsheet client.
-     */
-    private ISpreadsheetClientService $spreadsheetClientService;
-
+    private IXmlGenerationService $xmlGenerationService;
+    
     /**
      * @var SheetNames configuration with sheet names.
      */
     private SheetNames $sheetNamesConfig;
-
+    
+    /**
+     * @var Roles Enum of roles.
+     */
+    private Roles $roles;
+    
     public function __construct(
-        Interfaces\ITableRepository $tablesRepository,
-        Interfaces\IGeneratorRepository  $generatorsRepository,
-        IXmlGenerationService $xmlGenerator,
-        ISpreadsheetClientService $spreadsheetClientService,
-        SheetNames $sheetNames)
+        IXmlGenerationService $xmlGenerationService,
+        SheetNames $sheetNames
+    )
     {
-        $this->tablesRepository = $tablesRepository;
-        $this->generatorsRepository = $generatorsRepository;
-        $this->xmlGenerator = $xmlGenerator;
-        $this->spreadsheetClientService = $spreadsheetClientService;
+        $this->xmlGenerationService = $xmlGenerationService;
         $this->sheetNamesConfig = $sheetNames;
+        $this->roles = new Roles();
     }
-
+    
     /**
      * GET /
      *
      * Get all generators instances for table.
+     *
      * @param string $tableId table guid.
+     *
      * @return JsonResponse all generators for table.
      */
-    public function index(string $tableId) : JsonResponse
+    public function index(string $tableId): JsonResponse
     {
-        $tables = [];
-        $table = new Models\Table();
-        $table->setTableId($tableId);
-        $tables[] = $table;
-        return response()->json($tables, 200);
+        return response()->json(null, 200);
     }
-
+    
     /**
-     * GET /$id
+     * GET /tables/{$tableGuid}/generators/{$generatorGuid}
      *
      * Get generated XML file.
-     * @param $tableGuid string table guid.
+     *
+     * @param $tableGuid     string table guid.
      * @param $generatorGuid string generator guid.
+     *
      * @return Response generated XML.
      */
-    public function show(string $tableGuid, string $generatorGuid) : Response
+    public function show(string $tableGuid, string $generatorGuid, Request $request): Response
     {
-        $table = $this->tablesRepository->get($tableGuid);
-        if(is_null($table))
-        {
-            return response("Table not found", 404);
-        }
-        $generator = null;
-        foreach ($table->getGenerators() as $curGenerator)
-        {
-            if(strcmp($curGenerator->getGeneratorGuid(), $generatorGuid) == 0)
-            {
-                $generator = $curGenerator;
-                break;
+        /** @var TableLaravel|null $table */
+        $table = TableLaravel::query()->where('tableGuid', $tableGuid)->first();
+        if(is_null($table)) {
+            $table = TableMarketplace::query()->where('tableGuid', $tableGuid)->first();
+            
+            if(is_null($table)) {
+                return response(Response::$statusTexts[404], 404);
             }
         }
-        if(is_null($generator))
-        {
-            return response("File not found", 404);
+        
+        $user = $table->user;
+        if (is_null($user)) {
+            Log::channel('fatal')
+                ->error("Error on '".$table->googleSheetId."' table have no user!");
+            return response(Response::$statusTexts[500], 500);
         }
-
-        $content = "";
-
-        try
-        {
-            $timeModified = $this->spreadsheetClientService->getFileModifiedTime(
-                $table->getGoogleSheetId(), $table->getTableGuid()."gfmt");
+        
+        /** @var GeneratorLaravel|null $generator */
+        $generator = $table->generator($generatorGuid);
+        if(is_null($generator)) {
+            return response(Response::$statusTexts[404], 404);
         }
-        catch (Exception $e)
-        {
-            $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
-
-            return response($content, 200)
+        
+        if (
+            ($user->isBlocked) ||
+            (
+                ($generator->targetPlatform === $this->sheetNamesConfig->getAvito()) &&
+                ($table->dateExpired < time()) &&
+                (Carbon::createFromTimestamp($table->dateExpired)->diffInDays() >= 1)
+            )
+        ) {
+            return response($this->xmlGenerationService->getEmptyGeneratedXML($generator->targetPlatform), 200)
                 ->header("Content-Type", "application/xml");
         }
-
-        // Expired or deleted tables always return last generated XML
-        $isTableExpiredOrDeleted = $table->isDeleted() ||
-            (!is_null($table->getDateExpired()) && $table->getDateExpired() < time());
-
-        // Xml must be regenerated twice an hour to update yandex ads that rely on date created that can be set long
-        // before real actual date
-        $isXmlActual = ($generator->getTargetPlatform() != $this->sheetNamesConfig->getYandex() ||
-                time() - $generator->getLastGenerated() < 1800) &&
-            (is_null($timeModified) || ($generator->getLastGenerated() > $timeModified->getTimestamp()));
-        if($isTableExpiredOrDeleted || $isXmlActual)
-        {
-            $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
+        
+        $generatorContents = DB::table('avitoxml_generators_content')
+            ->where('generatorId', $generator->id)
+            ->orderBy('order')
+            ->get();
+        if ($generatorContents->count() > 0) {
+            return response($generatorContents->map(function ($content) {
+                return $content->content;
+            })->join(''))
+                ->header("Content-Type", "application/xml");
         }
-        else
-        {
-            try
-            {
-                $content = $this->xmlGenerator->generateAvitoXML(
-                    $table->getGoogleSheetId(), $generator->getTargetPlatform());
-                $generator->setLastGenerated(time());
-                $this->generatorsRepository->update($generator);
-                $this->generatorsRepository->setLastGeneration($generator->getGeneratorId(), $content);
-            }
-            catch(Exception $e)
-            {
-                Log::error($e);
-                $content = $this->generatorsRepository->getLastGeneration($generator->getGeneratorId());
-            }
-        }
-
-        return response($content, 200)
+        
+        return response($generator->lastGeneration, 200)
             ->header("Content-Type", "application/xml");
     }
-
+    
+    /**
+     * PUT /tables/$tableGuid/generators/$generatorGuid
+     *
+     * Update table.
+     *
+     * @param        $request   Request update request.
+     * @param string $tableGuid table guid.
+     * @param string $generatorGuid
+     *
+     * @return JsonResponse updated table resource.
+     */
+    public function update(Request $request, string $tableGuid, string $generatorGuid): JsonResponse
+    {
+        /** @var UserLaravel $currentUser */
+        $currentUser = auth()->user();
+    
+        Log::channel('apilog')->info('PUT /tables/'.$tableGuid.'/generators/'
+            .$generatorGuid.' - user '.$currentUser->id);
+        
+        if ($currentUser->roleId !== $this->roles->Admin) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[403]), 403);
+        }
+    
+        /** @var TableLaravel|null $table */
+        $table = TableLaravel::query()->where('tableGuid', $tableGuid)->first();
+        if(is_null($table)) {
+            $table = TableMarketplace::query()->where('tableGuid', $tableGuid)->first();
+        
+            if(is_null($table)) {
+                return response()->json(Response::$statusTexts[404], 404);
+            }
+        }
+    
+        /** @var GeneratorLaravel|null $generator */
+        $generator = $table->generator($generatorGuid);
+        if (is_null($generator)) {
+            return response()->json(new ErrorResponse(Response::$statusTexts[404]), 404);
+        }
+        
+        $request->validate(['maxAds' => 'int|required']);
+        
+        $generator->update($request->only(['maxAds']));
+        
+        return response()->json(null, 200);
+    }
+    
     /**
      * POST /
      *
      * Create new generator for table.
+     *
      * @param string $tableId table guid.
-     * @param $request Request create request.
+     * @param        $request Request create request.
+     *
      * @return JsonResponse created generator resource.
      */
-    public function store(string $tableId, Request $request) : JsonResponse
+    public function store(string $tableId, Request $request): JsonResponse
     {
         return response()->json($request, 201);
     }

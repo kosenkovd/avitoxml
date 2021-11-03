@@ -1,0 +1,1 @@
+cd ~/avitoxml.beget.tech/public_html/api && /usr/local/bin/php7.4 -d memory_limit=-1 artisan schedule:run

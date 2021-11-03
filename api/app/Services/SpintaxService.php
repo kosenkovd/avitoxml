@@ -41,10 +41,15 @@ class SpintaxService implements ISpintaxService
     private function shuffleSquareBraces(array $matches) : string
     {
         $text = $this->processSquareBraces($matches[1]);
+        $separator = '';
+        if (preg_match('/^\+(.+)\+\s*(.*)/', $text, $matches)) {
+            $text = $matches[2];
+            $separator = ($matches[1] === '\n') ? PHP_EOL : $matches[1];
+        }
         $parts = $this->getSquareBracesVariants($text);
         shuffle($parts);
 
-        return join("", $parts);
+        return join($separator, $parts);
     }
 
     /**
@@ -135,7 +140,8 @@ class SpintaxService implements ISpintaxService
     public function randomize(string $text) : string
     {
         // Adding square braces to be able to shuffle elements for input like "cat | dog"
-        $text = "[".$text."]";
+//        $text = "[".$text."]";
+        
         $text = $this->processSquareBraces($text);
 
         return $this->processCurlyBraces($text);

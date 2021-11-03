@@ -4,13 +4,17 @@
 namespace App\Console\Jobs;
 
 
+use App\Configuration\Config;
 use App\Models\TableHeader;
 use App\Services\Interfaces\ISpreadsheetClientService;
 use DateTime;
+use Illuminate\Support\Facades\Log;
 use Ramsey\Uuid\Guid\Guid;
 
 abstract class JobBase
 {
+    protected string $logChannel = 'Tables';
+    
     /**
      * @var ISpreadsheetClientService Google Spreadsheet client.
      */
@@ -22,6 +26,11 @@ abstract class JobBase
      * @var bool is logging enabled.
      */
     protected bool $loggingEnabled = false;
+    
+    /**
+     * @var bool is logging enabled.
+     */
+    protected bool $timeoutEnabled = false;
 
     /**
      * @var int job execution time start epoch.
@@ -32,10 +41,11 @@ abstract class JobBase
      * @var int max time to execute job.
      */
     protected int $maxJobTime;
+    
+    protected int $adsLimit;
 
     protected function log(string $message) : void
     {
-        echo $message.PHP_EOL;
         if(!$this->loggingEnabled)
         {
             return;
@@ -54,38 +64,66 @@ abstract class JobBase
      */
     protected function stopIfTimeout(): void
     {
-        if(time() >= $this->startTimestamp + $this->maxJobTime)
+        if($this->checkIsTimeout())
         {
-            $this->log("Finished ".get_class($this)." job by timeout.");
+            $this->log("Finished ".get_class($this)." job by timeout");
             exit;
         }
     }
-
+    
+    protected function checkIsTimeout(): bool
+    {
+        return $this->timeoutEnabled && (time() >= ($this->startTimestamp + $this->maxJobTime));
+    }
+    
     /**
      * Extracts TableHeader and rows from table sheet.
      *
      * @param string $tableID
      * @param string $sheetName
-     * @param string $quotaUserPrefix
-     * @return array [ TableHeader, values ]
+     * @return array{ propertyColumns: TableHeader, values: array }
+     * @throws \Exception
      */
-    protected function getHeaderAndDataFromTable(string $tableID, string $sheetName, string $quotaUserPrefix) : array
+    protected function getHeaderAndDataFromTable(string $tableID, string $sheetName) : array
     {
-        $headerRange = $sheetName.'!A1:FZ1';
-        $headerResponse = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-            $tableID, $headerRange, $quotaUserPrefix."GH");
-        $propertyColumns = new TableHeader($headerResponse[0]);
-
-        $range = $sheetName.'!A2:FZ5001';
-        $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-            $tableID, $range, $quotaUserPrefix."GB");
-
+        $values = $this->getFullDataFromTable($tableID, $sheetName);
+        sleep(1);
+        
+        $headers = array_shift($values) ?? [];
+        $propertyColumns = new TableHeader($headers);
+        
         return [ $propertyColumns, $values ];
+    }
+    
+    /**
+     * Extracts data from table sheet.
+     *
+     * @param string $tableID
+     * @param string $sheetName
+     * @return array [ TableHeader, values ]
+     * @throws \Exception
+     */
+    protected function getFullDataFromTable(string $tableID, string $sheetName) : array
+    {
+        try {
+            $range = $sheetName.'!A1:FZ'.$this->adsLimit;
+            $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                $tableID,
+                $range
+        );
+        } catch (\Exception $exception) {
+            $message = "Error on '". $tableID."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
+            $this->log($message);
+            throw $exception;
+        }
+    
+        return $values;
     }
 
     public function __construct(ISpreadsheetClientService $spreadsheetClientService)
     {
         $this->jobId = Guid::uuid4()->toString();
         $this->spreadsheetClientService = $spreadsheetClientService;
+        $this->adsLimit = resolve(Config::class)->getMaxAdsLimit();
     }
 }

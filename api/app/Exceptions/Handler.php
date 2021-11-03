@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Throwable;
 
 class Handler extends ExceptionHandler
 {
@@ -14,7 +15,7 @@ class Handler extends ExceptionHandler
     protected $dontReport = [
         //
     ];
-
+    
     /**
      * A list of the inputs that are never flashed for validation exceptions.
      *
@@ -24,7 +25,7 @@ class Handler extends ExceptionHandler
         'password',
         'password_confirmation',
     ];
-
+    
     /**
      * Register the exception handling callbacks for the application.
      *
@@ -33,5 +34,18 @@ class Handler extends ExceptionHandler
     public function register()
     {
         //
+    }
+    
+    /**
+     * @inheritDoc
+     */
+    public function report(Throwable $e)
+    {
+        // Kill reporting if this is an "access denied" (code 9) OAuthServerException.
+        if ($e instanceof \League\OAuth2\Server\Exception\OAuthServerException && ($e->getCode() == 9 || $e->getCode() == 8)) {
+            return;
+        }
+        
+        parent::report($e);
     }
 }

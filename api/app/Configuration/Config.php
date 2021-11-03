@@ -10,13 +10,21 @@ class Config {
     private string $usersTableName;
     private string $tablesTableName;
     private string $tableUpdateLockTableName;
+    private string $tableUlaName;
     private string $generatorsTableName;
     private string $copySpreadsheetId;
     private string $baseFolderId;
     private string $rootDirectory;
     private string $dbCertificateName;
     private bool $isLoggingEnabled;
-
+    /**
+     * @var int $needsToUpdateTimeStamp hack to check Table if FillImagesJob not finished
+     */
+    private int $needsToUpdateTimeStamp;
+    private string $copyMarketplaceSpreadsheetId;
+    private string $terminalPassword;
+    private string $maxAdsLimit;
+    
     public function __construct()
     {
         $configurationJson =  json_decode(file_get_contents(__dir__. '/appsettings.json'), true);
@@ -27,6 +35,22 @@ class Config {
                 $this->$key = strval($value);
             }
         }
+    }
+    
+    /**
+     * @return int
+     */
+    public function getNeedsToUpdateTimeStamp(): int
+    {
+        return $this->needsToUpdateTimeStamp;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getTableUlaName(): string
+    {
+        return $this->tableUlaName;
     }
 
     /**
@@ -131,5 +155,29 @@ class Config {
     public function getDbCertificateName(): string
     {
         return $this->dbCertificateName;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getCopyMarketplaceSpreadsheetId(): string
+    {
+        return $this->copyMarketplaceSpreadsheetId;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getTerminalPassword(): string
+    {
+        return $this->terminalPassword;
+    }
+    
+    /**
+     * @return int
+     */
+    public function getMaxAdsLimit(): int
+    {
+        return $this->maxAdsLimit;
     }
 }

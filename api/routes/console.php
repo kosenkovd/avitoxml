@@ -1,14 +1,24 @@
 <?php
 
-use App\Console\Jobs\FillImagesJob;
-use App\Console\Jobs\RandomizeTextJob;
-use App\Repositories\Interfaces\ITableRepository;
-use App\Repositories\Interfaces\ITableUpdateLockRepository;
-//use App\Services\Interfaces\IGoogleServicesClient;
+use App\Configuration\Spreadsheet\SheetNames;
+use App\Configuration\XmlGeneration;
+use App\Console\Jobs\FillAvitoStatisticsJob;
+use App\Console\Jobs\ParserAmountJob;
+use App\Models\TableLaravel;
+use App\Models\TableMarketplace;
+use App\Models\UserLaravel;
+use App\Services\AvitoService;
 use App\Services\Interfaces\ISpintaxService;
-use App\Services\Logger;
-use Illuminate\Foundation\Inspiring;
+use App\Services\SpintaxService;
+use App\Services\SpreadsheetClientService;
+use App\Services\SpreadsheetClientServiceThird;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Foundation\Console\ClosureCommand;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Ramsey\Uuid\Guid\Guid;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,95 +31,84 @@ use Illuminate\Support\Facades\Artisan;
 |
 */
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote');
+Artisan::command('test', function () {
+    /** @var $this ClosureCommand */
+    
+    $client = new Google_Client();
+    $client->setScopes([Google_Service_Sheets::SPREADSHEETS]);
+    $client->addScope(Google_Service_Drive::DRIVE);
+    $client->setAccessType('offline');
+    $client->setAuthConfig(__dir__.'/../app/Configuration/OAuth.json');
 
-//Artisan::command('table:fillImages {tableID}', function (
-//    ITableRepository $tableRepository,
-//    ITableUpdateLockRepository $tableUpdateLockRepository,
-//    IGoogleServicesClient $googleServicesClient,
-//    string $tableID) {
-//    $logger = new Logger(
-//        "FillImagesBackground",
-//        new \App\Configuration\Config()
-//    );
-//    sleep(rand(1, 60));
-//
-//    $table = $tableRepository->get($tableID);
-//
-//    $lock = $tableUpdateLockRepository->getByTableId($table->getTableId());
-//    /*if($lock->getFillImagesLock() == 1)
+
+//    $client->setRedirectUri('https://api.agishev-autoz.ru/api/test'); // start
+//    $authUrl = $client->createAuthUrl();
+//    $this->comment($authUrl);
+//    die; // end
+    
+    
+    $access_token = json_decode(file_get_contents(__dir__.'/../app/Configuration/test1628610353.json'), true);
+    
+    $client->setAccessToken($access_token);
+    
+    $tables = TableMarketplace::all();
+    
+//    class Some
 //    {
-//        $logger->log("Lock is taken for ".$tableID);
-//        return;
-//    }*/
+//        public static bool $skip = true;
 //
-//    $logger->log("Setting lock for ".$tableID);
-//    $tableUpdateLockRepository->update($lock->setFillImagesLock(1));
+//        public static function setSome(bool $skip): void
+//        {
+//            self::$skip = $skip;
+//        }
 //
-//    $logger->log("Starting FillImagesJob for ".$tableID);
-//
-//    try
-//    {
-//        (new FillImagesJob($googleServicesClient))->start($table);
-//        $logger->log("Finished job execution for ".$tableID);
 //    }
-//    catch (Exception $e)
-//    {
-//        $logger->log("Exception thrown for ".$tableID);
-//        $logger->log(var_export($e, true));
-//        throw $e;
-//    }
-//    finally
-//    {
-//        $logger->log("Resetting lock start for ".$tableID);
-//        $tableUpdateLockRepository->update($lock->setFillImagesLock(0));
-//        $logger->log("Resetting lock completed for ".$tableID);
-//    }
-//})->purpose('Fill images for table');
+    
+    $tables->each(function (TableMarketplace $table) use ($client) {
+//        if ($table->googleSheetId === '1mwKkW_d_Y2bz50fLI1PtmCofo7LTEqioyInIfJC9hsw') {
+//            Some::setSome(false);
+//        }
 //
-//Artisan::command('table:randomizeText {tableID}', function (
-//    ITableRepository $tableRepository,
-//    ITableUpdateLockRepository $tableUpdateLockRepository,
-//    IGoogleServicesClient $googleServicesClient,
-//    ISpintaxService $spintaxService,
-//    string $tableID) {
-//    $logger = new Logger(
-//        "RandomizeTextBackground",
-//        new \App\Configuration\Config()
-//    );
-//    sleep(rand(1, 60));
+//        if (Some::$skip) {
+//            return;
+//        }
 //
-//    $table = $tableRepository->get($tableID);
-//
-//    $lock = $tableUpdateLockRepository->getByTableId($table->getTableId());
-//    /*if($lock->getRandomizeTextLock() == 1)
-//    {
-//        $logger->log("Lock is taken for ".$tableID);
-//        return;
-//    }*/
-//
-//    $logger->log("Setting lock for ".$tableID);
-//    $tableUpdateLockRepository->update($lock->setRandomizeTextLock(1));
-//
-//    $logger->log("Starting RandomizeTextJob for ".$tableID);
-//
-//    try
-//    {
-//        (new RandomizeTextJob($spintaxService, $googleServicesClient))->start($table);
-//        $logger->log("Finished job execution for ".$tableID);
-//    }
-//    catch (Exception $e)
-//    {
-//        $logger->log("Exception thrown for ".$tableID);
-//        $logger->log(var_export($e, true));
-//        throw $e;
-//    }
-//    finally
-//    {
-//        $logger->log("Resetting lock start for ".$tableID);
-//        $tableUpdateLockRepository->update($lock->setRandomizeTextLock(0));
-//        $logger->log("Resetting lock completed for ".$tableID);
-//    }
-//})->purpose('Randomize text for table');
+        Log::channel('test')->info($table->id);
+        Log::channel('test')->info($table->googleSheetId);
+        try {
+            setPermissions($table->googleSheetId, $client);
+            Log::channel('test')->info($table->googleSheetId.' ok');
+        } catch (Exception $exception) {
+            Log::channel('test')->error($exception->getMessage());
+        }
+        
+        sleep(5);
+//        die;
+    });
+});
+
+function setPermissions(string $id, Google_Client $client): void
+{
+    $client->addScope(Google_Service_Drive::DRIVE);
+    $driveService = new Google_Service_Drive($client);
+    $drivePermissions = new Google_Service_Drive_Permission();
+    
+    $drivePermissions->setRole('writer');
+    $drivePermissions->setType('anyone');
+    $driveService->permissions->create($id, $drivePermissions);
+    
+    $drivePermissions->setRole('writer');
+    $drivePermissions->setType('user');
+    $drivePermissions->setEmailAddress('Ipagishev@gmail.com');
+    $driveService->permissions->create($id, $drivePermissions);
+    
+    $drivePermissions->setRole('owner');
+    $drivePermissions->setType('user');
+    $drivePermissions->setEmailAddress('xml.avito@gmail.com');
+    $driveService->permissions->create(
+        $id,
+        $drivePermissions,
+        [
+            "transferOwnership" => true
+        ]);
+}
