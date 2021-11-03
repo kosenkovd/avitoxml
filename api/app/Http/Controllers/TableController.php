@@ -287,6 +287,9 @@ class TableController extends BaseController
             ->all();
         
         $table->update($input);
+
+        $table->dateLastModified = 0;
+        $table->save();
         
         return response()->json(null, 200);
     }

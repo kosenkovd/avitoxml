@@ -180,7 +180,6 @@ class Kernel extends ConsoleKernel
                 
                 (new ParserAmountJob(
                     new SpreadsheetClientServiceThird(),
-                    new TableRepository(),
                     new XmlGeneration()
                 ))->start($googleSheetId);
             } catch (Exception $exception) {
