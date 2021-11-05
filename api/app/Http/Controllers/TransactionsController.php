@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Configuration\Config;
+use App\Configuration\Spreadsheet\SheetNames;
 use App\DTOs\ErrorResponse;
 use App\Enums\Roles;
 use App\Http\Resources\AdminTransactionCollection;
@@ -31,17 +32,20 @@ class TransactionsController extends BaseController
     private TransactionsService $transactionsService;
     private Roles $roles;
     private Config $config;
+    private SheetNames $sheetNames;
     
     public function __construct(
         PriceService $priceService,
         TransactionsService $transactionsService,
-        Config $config
+        Config $config,
+        SheetNames $sheetNames,
     )
     {
         $this->priceService = $priceService;
         $this->transactionsService = $transactionsService;
         $this->roles = new Roles();
         $this->config = $config;
+        $this->sheetNames = $sheetNames;
     }
     
     /**
@@ -157,7 +161,10 @@ class TransactionsController extends BaseController
         // Выбрана оплата для следующего месяца
         if (!$renewing && $nextMonth) {
             $generatorTable->generators->each(function(GeneratorLaravel $generator) use ($maxAds) {
-                if ($generator->targetPlatform === 'Яндекс') {
+                if (
+                    $generator->targetPlatform === $this->sheetNames->getYandex() ||
+                    $generator->targetPlatform === $this->sheetNames->getMultimarket()
+                ) {
                     $generator->subscribedMaxAds = $this->config->getMaxAdsLimit();
                 } else {
                     $generator->subscribedMaxAds = $maxAds;

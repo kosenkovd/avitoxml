@@ -196,7 +196,10 @@ class TransactionsService
     public function setGeneratorsMaxAds(GeneratorLaravel $generator, $maxAds): void
     {
         $generator->table->generators->each(function (GeneratorLaravel $generator) use ($maxAds): void {
-            if ($generator->targetPlatform === $this->sheetNames->getYandex()) {
+            if (
+                $generator->targetPlatform === $this->sheetNames->getYandex() ||
+                $generator->targetPlatform === $this->sheetNames->getMultimarket()
+            ) {
                 $generator->maxAds = $this->config->getMaxAdsLimit();
                 $generator->save();
                 return;
