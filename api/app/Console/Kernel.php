@@ -11,7 +11,6 @@ use App\Console\Jobs\GenerateXMLJobLaravel;
 use App\Console\Jobs\ParserAmountJob;
 use App\Console\Jobs\FillAvitoReportJob;
 use App\Console\Jobs\FillAvitoStatisticsJob;
-use App\Console\Jobs\GetAvitoTokensJob;
 use App\Console\Jobs\JobBase;
 use App\Console\Jobs\RandomizeTextJobLaravel;
 use App\Console\Jobs\UpdateXMLJobLaravel;
@@ -190,47 +189,6 @@ class Kernel extends ConsoleKernel
             Log::channel($logChannel)->alert("Finished AmountParser ".$scriptId);
         })
             ->name("AmountParser1") // имя процесса сбрасывается withoutOverlapping через 24 часа
-            ->withoutOverlapping();
-        
-        $schedule->call(function () {
-            $scriptId = Guid::uuid4();
-            $logChannel = 'avitoTokens';
-            Log::channel($logChannel)->alert("Starting Schedule ".$scriptId);
-            
-            $spreadsheetClientService = new SpreadsheetClientServiceThird();
-            
-            $tables = TableLaravel::query()
-                ->with('user')
-                ->whereHas('user', function (Builder $query) {
-                    $query->where('isBlocked', false);
-                })
-                ->get();
-            
-            /** @var TableLaravel $table */
-            foreach ($tables as $table) {
-                try {
-                    if (
-                        !$this->isTableLaravelModified(
-                            $table,
-                            $spreadsheetClientService,
-                            $logChannel
-                        )
-                    ) {
-                        continue;
-                    }
-                    
-                    (new GetAvitoTokensJob(
-                        $spreadsheetClientService,
-                        new SheetNames()
-                    ))->start($table);
-                } catch (Exception $exception) {
-                    $this->logTableError($table->googleSheetId, $exception, $logChannel);
-                }
-            }
-            
-            Log::channel($logChannel)->alert("Ending Schedule ".$scriptId);
-        })
-            ->name("AvitoTokens1") // имя процесса сбрасывается withoutOverlapping через 24 часа
             ->withoutOverlapping();
         
         $schedule->call(function () {

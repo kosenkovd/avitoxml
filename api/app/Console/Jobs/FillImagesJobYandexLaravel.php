@@ -147,38 +147,6 @@ class FillImagesJobYandexLaravel extends JobBase
      */
     private function init(TableLaravel $table): bool
     {
-        $yandexTokenCell = 'D7';
-        
-        $range = $this->sheetNamesConfig->getInformation().'!'.$yandexTokenCell.':'.$yandexTokenCell;
-        
-        try {
-            $yandexConfig = $this->spreadsheetClientService->getSpreadsheetCellsRange(
-                $table->googleSheetId,
-                $range
-            );
-        } catch (\Exception $exception) {
-            $message = "Error on '".$table->googleSheetId."' while getting yandex token ".PHP_EOL.
-                $exception->getMessage();
-            Log::channel($this->logChannel)->error($message);
-            
-            throw $exception;
-        }
-        
-        $yandexToken = $yandexConfig ? @$yandexConfig[0][0] : null;
-        
-        // If there is a token in spreadsheet, renew token in database and remove token from spreadsheet
-        if (!is_null($yandexToken) && (trim($yandexToken) !== '')) {
-            $table->yandexToken = trim($yandexToken);
-            $table->save();
-            
-            $this->spreadsheetClientService->updateCellContent(
-                $table->googleSheetId,
-                $this->sheetNamesConfig->getInformation(),
-                $yandexTokenCell,
-                ""
-            );
-        }
-        
         if ($table->yandexToken == "") {
             return false;
         }
