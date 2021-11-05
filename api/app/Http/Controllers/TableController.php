@@ -371,7 +371,11 @@ class TableController extends BaseController
             [
                 "cell" => "C5",
                 "target" => $this->sheetNamesConfig->getYandex()
-            ]
+            ],
+            [
+                "cell" => "C6",
+                "target" => $this->sheetNamesConfig->getMultimarket()
+            ],
         ];
         
         foreach ($targetsToAdd as $target) {

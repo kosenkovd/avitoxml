@@ -179,6 +179,7 @@ class TableHeader {
 
     public ?int $placementType = null;
     public ?int $messages = null;
+    public ?int $contactmethod = null;
     
     public ?int $unloadingStatus = null;
     public ?int $unloadingAvitoStatus = null;
@@ -230,6 +231,16 @@ class TableHeader {
     public ?int $ozonInstock9 = null;
     public ?int $ozonWarehouseName10 = null;
     public ?int $ozonInstock10 = null;
+    
+    // multimarket
+    public ?int $multimarketParam1Name = null;
+    public ?int $multimarketParam2Name = null;
+    public ?int $multimarketParam3Name = null;
+    public ?int $multimarketParam4Name = null;
+    public ?int $multimarketParam1Value = null;
+    public ?int $multimarketParam2Value = null;
+    public ?int $multimarketParam3Value = null;
+    public ?int $multimarketParam4Value = null;
 
     public function __construct(array $headers)
     {
@@ -254,6 +265,7 @@ class TableHeader {
                 case "видтовара":
                 case "подкатегория":
                 case "видуслуги":
+                case "видтовараилиуслуг":
                     $this->goodsType = $colNum;
                     break;
                 case "видобъявления":
@@ -408,6 +420,7 @@ class TableHeader {
                 case "состояниетовара":
                     $this->condition = $colNum;
                     break;
+                case "заголовок":
                 case "заголовокобъявления":
                 case "названиевакансии":
                 case "названиезапчасти":
@@ -705,6 +718,9 @@ class TableHeader {
                 case "сообщения":
                     $this->messages = $colNum;
                     break;
+                case "методсвязи":
+                    $this->contactmethod = $colNum;
+                    break;
                 case "сферадеятельности":
                     $this->industry = $colNum;
                     break;
@@ -890,6 +906,30 @@ class TableHeader {
                     break;
                 case "остатокнаскладе10":
                     $this->ozonInstock10 = $colNum;
+                    break;
+                case "названиепараметра1":
+                    $this->multimarketParam1Name = $colNum;
+                    break;
+                case "названиепараметра2":
+                    $this->multimarketParam2Name = $colNum;
+                    break;
+                case "названиепараметра3":
+                    $this->multimarketParam3Name = $colNum;
+                    break;
+                case "названиепараметра4":
+                    $this->multimarketParam4Name = $colNum;
+                    break;
+                case "значениепараметра1":
+                    $this->multimarketParam1Value = $colNum;
+                    break;
+                case "значениепараметра2":
+                    $this->multimarketParam2Value = $colNum;
+                    break;
+                case "значениепараметра3":
+                    $this->multimarketParam3Value = $colNum;
+                    break;
+                case "значениепараметра4":
+                    $this->multimarketParam4Value = $colNum;
                     break;
             }
         }

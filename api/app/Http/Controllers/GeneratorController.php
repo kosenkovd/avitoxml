@@ -53,7 +53,7 @@ class GeneratorController extends BaseController
     }
     
     /**
-     * GET /
+     * GET /tables/{$tableGuid}/generators
      *
      * Get all generators instances for table.
      *
@@ -63,7 +63,7 @@ class GeneratorController extends BaseController
      */
     public function index(string $tableId): JsonResponse
     {
-        return response()->json(null, 200);
+        return response()->json(null, 405);
     }
     
     /**

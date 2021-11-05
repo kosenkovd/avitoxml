@@ -12,6 +12,7 @@ use App\Services\Interfaces\ISpreadsheetClientService;
 use App\Services\Interfaces\IXmlGenerationService;
 use DateTimeZone;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -181,6 +182,35 @@ class XmlGenerationService implements IXmlGenerationService {
     private function shouldSkipOzonRow(array $row, TableHeader $propertyColumns): bool
     {
         return false;
+    }
+    
+    private function shouldSkipMultimarketRow(array $row, TableHeader $propertyColumns): bool
+    {
+        if (!$this->isExistsInRow($row, $propertyColumns->dateCreated)) {
+            return true;
+        }
+        
+        $dateCreated = $row[$propertyColumns->dateCreated];
+        
+        if (mb_strtolower(trim($dateCreated)) === 'сразу') {
+            return false;
+        }
+        
+        $dateRawFixed = $dateCreated;
+        if (!strpos($dateRawFixed, ":")) {
+            $dateRawFixed .= ' 00:00';
+        }
+        $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
+        
+        try {
+            $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
+            // Skip(true) if Date from the table has not come
+            return $date->getTimestamp() > time();
+        } catch (\Exception $exception) {
+            Log::channel($this->noticeChannel)->notice("Notice on 'multimarket' ".$dateCreated);
+            
+            return true;
+        }
     }
     
     /**
@@ -406,6 +436,49 @@ class XmlGenerationService implements IXmlGenerationService {
             $ad = new Ads\OzonAd($row, $propertyColumns);
             
             $xml .= $ad->toOzonXml().PHP_EOL;
+        }
+        
+        return $xml;
+    }
+    
+    /**
+     * Create ads from sheet rows for Multimarket.
+     *
+     * @param array       $values rows from sheet.
+     * @param TableHeader $propertyColumns
+     * @param string      $targetSheet
+     * @param int         $adsLimit
+     * @param Collection  $usedCategories
+     *
+     * @return string generated ads.
+     */
+    private function createAdsForMultimarketSheet(
+        array $values,
+        TableHeader $propertyColumns,
+        string $targetSheet,
+        int $adsLimit,
+        Collection $usedCategories
+    ): string
+    {
+        $xml = "";
+        $ads = 0;
+        foreach ($values as $numRow => $row) {
+            if ($this->shouldSkipRow($row, $propertyColumns)) {
+                continue;
+            }
+            
+            if (($numRow !== 0) && $this->shouldSkipMultimarketRow($row, $propertyColumns)) {
+                continue;
+            }
+            
+            $ads++;
+            if ($this->isAdsLimitReached($ads, $adsLimit)) {
+                break;
+            }
+            
+            $ad = new Ads\MultimarketAd($row, $propertyColumns, $usedCategories);
+            
+            $xml .= $ad->toMultimarketXml().PHP_EOL;
         }
         
         return $xml;
@@ -665,6 +738,97 @@ class XmlGenerationService implements IXmlGenerationService {
     /**
      * @inheritDoc
      */
+    public function generateMultimarketXML(string $spreadsheetId, string $targetSheet, int $adsLimit): string
+    {
+        $defaultTime = Carbon::now(new DateTimeZone("Europe/Moscow"))
+            ->format('Y-m-d H:i');
+        
+        switch ($targetSheet) {
+            case "Мультимаркет":
+                $targetSheets = $this->xmlGeneration->getMultimarketTabs();
+                break;
+            default:
+                return '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
+                    '<yml_catalog  date="'.$defaultTime.'">'.PHP_EOL.
+                    '<shop>'.PHP_EOL.
+                    '<currencies>'.PHP_EOL.
+                        '<currency id="RUB" rate="1" />'.PHP_EOL.
+                    '</currencies>'.PHP_EOL.
+                    '<offers>'.PHP_EOL.
+                    '</offers>'.PHP_EOL.
+                    '</shop>'.PHP_EOL.
+                    '</yml_catalog>';
+        }
+    
+        $splitTargetSheets = explode(",", $targetSheets);
+    
+        $existingSheets = $this->spreadsheetClientService->getSheets(
+            $spreadsheetId
+        );
+    
+        $xml = '';
+        foreach ($splitTargetSheets as $targetSheet) {
+            $targetSheet = trim($targetSheet);
+            if (!in_array($targetSheet, $existingSheets)) {
+                continue;
+            }
+        
+            try {
+                $range = $targetSheet.'!A1:FZ'.$this->adsLimit;
+                $values = $this->spreadsheetClientService->getSpreadsheetCellsRange(
+                    $spreadsheetId,
+                    $range
+                );
+                $propertyColumns = new TableHeader(array_shift($values));
+            } catch (\Exception $exception) {
+                $message = "Error on '".$spreadsheetId."' while getting spreadsheet values".PHP_EOL.$exception->getMessage();
+//                Log::error($message);
+            
+                throw $exception;
+            }
+        
+            sleep(1);
+        
+            $dateBegin = $defaultTime;
+    
+            $usedCategories = collect($values)
+                ->map(function (array $row) use ($propertyColumns): string {
+                    $name = $row[$propertyColumns->category];
+                    return trim($name);
+                })
+                ->unique()
+                ->values();
+
+            $usedCategoriesString = $usedCategories
+                ->map(function (string $category, int $key) use ($propertyColumns): string {
+                    return '<category id="'.($key + 1).'">'.$category.'</category>'.PHP_EOL;
+                })
+                ->join('');
+        
+            $xml = '<?xml version="1.0" encoding="UTF-8"?>'.PHP_EOL.
+                '<yml_catalog date="'.$dateBegin.'">'.PHP_EOL.
+                '<shop>'.PHP_EOL.
+                '<currencies>'.PHP_EOL.
+                '<currency id="RUB" rate="1" />'.PHP_EOL.
+                '</currencies>'.PHP_EOL.
+                '<categories>'.PHP_EOL.
+                $usedCategoriesString.
+                '</categories>'.PHP_EOL.
+                '<offers>'.PHP_EOL;
+        
+            $xml .= $this->createAdsForMultimarketSheet($values, $propertyColumns, $targetSheet, $adsLimit, $usedCategories);
+            return $xml.
+                '</offers>'.PHP_EOL.
+                '</shop>'.PHP_EOL.
+                '</yml_catalog>';
+        }
+    
+        return $xml;
+    }
+    
+    /**
+     * @inheritDoc
+     */
     public function getEmptyGeneratedXML(string $targetPlatform): string
     {
         switch ($targetPlatform) {
@@ -676,6 +840,8 @@ class XmlGenerationService implements IXmlGenerationService {
                 return $this->generateUlaXML('', '', 0);
             case $this->sheetNamesConfig->getOzon():
                 return $this->generateOzonXML('', '', 0);
+            case $this->sheetNamesConfig->getMultimarket():
+                return $this->generateMultimarketXML('', '', 0);
             default:
                 return '';
         }

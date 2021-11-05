@@ -75,6 +75,9 @@ class UpdateXMLJobLaravel extends JobBase
                 case "Яндекс":
                     $targetSheets = $this->xmlGeneration->getYandexTabs();
                     break;
+                case "Мультимаркет":
+                    $targetSheets = $this->xmlGeneration->getMultimarketTabs();
+                    break;
             }
             
             $splitTargetSheets = explode(",", $targetSheets);
@@ -123,6 +126,13 @@ class UpdateXMLJobLaravel extends JobBase
                     break;
                 case "Яндекс":
                     $content = $this->xmlGenerationService->generateYandexXML(
+                        $table->googleSheetId,
+                        $generator->targetPlatform,
+                        $generator->maxAds
+                    );
+                    break;
+                case "Мультимаркет":
+                    $content = $this->xmlGenerationService->generateMultimarketXML(
                         $table->googleSheetId,
                         $generator->targetPlatform,
                         $generator->maxAds

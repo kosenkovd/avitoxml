@@ -53,7 +53,18 @@
         public function generateOzonXML(string $spreadsheetId, string $targetSheet, int $adsLimit): string;
     
         /**
-         * Delete all ads in XML
+         * Generates Multimarket XML for specified spreadsheet.
+         *
+         * @param string $spreadsheetId
+         * @param string $targetSheet
+         * @param int    $adsLimit
+         *
+         * @return string
+         */
+        public function generateMultimarketXML(string $spreadsheetId, string $targetSheet, int $adsLimit): string;
+    
+        /**
+         * Get empty XML for specified spreadsheet.
          *
          * @param string $targetPlatform
          *
