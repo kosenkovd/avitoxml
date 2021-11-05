@@ -10,8 +10,8 @@ class SheetNames
     private string $youla;
     private string $yandex;
     private string $information;
-    private string $yandexSettings;
     private string $ozon;
+    private string $multimarket;
 
     public function __construct()
     {
@@ -56,14 +56,6 @@ class SheetNames
     {
         return $this->information;
     }
-
-    /**
-     * @return string
-     */
-    public function getYandexSettings(): string
-    {
-        return $this->yandexSettings;
-    }
     
     /**
      * @return string
@@ -71,5 +63,13 @@ class SheetNames
     public function getOzon(): string
     {
         return $this->ozon;
+    }
+    
+    /**
+     * @return string
+     */
+    public function getMultimarket(): string
+    {
+        return $this->multimarket;
     }
 }

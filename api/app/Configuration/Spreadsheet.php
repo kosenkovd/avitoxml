@@ -6,8 +6,6 @@ namespace App\Configuration;
 
 class Spreadsheet
 {
-    private string $hourlyTriggerSpreadsheetId;
-
     public function __construct()
     {
         $configurationJson =  json_decode(file_get_contents(__dir__. '/appsettings.json'), true);
@@ -18,13 +16,5 @@ class Spreadsheet
                 $this->$key = strval($value);
             }
         }
-    }
-
-    /**
-     * @return string
-     */
-    public function getHourlyTriggerSpreadsheetId(): string
-    {
-        return $this->hourlyTriggerSpreadsheetId;
     }
 }

@@ -7,16 +7,10 @@ class Config {
     private string $dbName;
     private string $dbUser;
     private string $dbPassword;
-    private string $usersTableName;
-    private string $tablesTableName;
-    private string $tableUpdateLockTableName;
-    private string $tableUlaName;
-    private string $generatorsTableName;
     private string $copySpreadsheetId;
     private string $baseFolderId;
     private string $rootDirectory;
     private string $dbCertificateName;
-    private bool $isLoggingEnabled;
     /**
      * @var int $needsToUpdateTimeStamp hack to check Table if FillImagesJob not finished
      */
@@ -43,14 +37,6 @@ class Config {
     public function getNeedsToUpdateTimeStamp(): int
     {
         return $this->needsToUpdateTimeStamp;
-    }
-    
-    /**
-     * @return string
-     */
-    public function getTableUlaName(): string
-    {
-        return $this->tableUlaName;
     }
 
     /**
@@ -88,30 +74,6 @@ class Config {
     /**
      * @return string
      */
-    public function getUsersTableName(): string
-    {
-        return $this->usersTableName;
-    }
-
-    /**
-     * @return string
-     */
-    public function getTablesTableName(): string
-    {
-        return $this->tablesTableName;
-    }
-
-    /**
-     * @return string
-     */
-    public function getGeneratorsTableName(): string
-    {
-        return $this->generatorsTableName;
-    }
-
-    /**
-     * @return string
-     */
     public function getCopySpreadsheetId(): string
     {
         return $this->copySpreadsheetId;
@@ -128,25 +90,9 @@ class Config {
     /**
      * @return string
      */
-    public function getTableUpdateLockTableName(): string
-    {
-        return $this->tableUpdateLockTableName;
-    }
-
-    /**
-     * @return string
-     */
     public function getRootDirectory(): string
     {
         return $this->rootDirectory;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isLoggingEnabled(): bool
-    {
-        return $this->isLoggingEnabled;
     }
 
     /**

@@ -8,23 +8,13 @@ class XmlGeneration
 {
     private ?string $avitoTabs = null;
 
-    private ?string $avitoFirstLimit = null;
-
-    private ?string $avitoDefaultLimit = null;
-
     private ?string $youlaTabs = null;
 
-    private ?string $youlaFirstLimit = null;
-
-    private ?string $youlaDefaultLimit = null;
-
     private ?string $yandexTabs = null;
-
-    private ?string $yandexFirstLimit = null;
-
-    private ?string $yandexDefaultLimit = null;
     
     private ?string $ozonTabs = null;
+
+    private ?string $multimarketTabs = null;
 
     public function __construct()
     {
@@ -49,41 +39,9 @@ class XmlGeneration
     /**
      * @return string|null
      */
-    public function getAvitoFirstLimit(): ?string
-    {
-        return $this->avitoFirstLimit;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getAvitoDefaultLimit(): ?string
-    {
-        return $this->avitoDefaultLimit;
-    }
-
-    /**
-     * @return string|null
-     */
     public function getYoulaTabs(): ?string
     {
         return $this->youlaTabs;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getYoulaFirstLimit(): ?string
-    {
-        return $this->youlaFirstLimit;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getYoulaDefaultLimit(): ?string
-    {
-        return $this->youlaDefaultLimit;
     }
 
     /**
@@ -97,24 +55,16 @@ class XmlGeneration
     /**
      * @return string|null
      */
-    public function getYandexFirstLimit(): ?string
+    public function getOzonTabs(): ?string
     {
-        return $this->yandexFirstLimit;
-    }
-
-    /**
-     * @return string|null
-     */
-    public function getYandexDefaultLimit(): ?string
-    {
-        return $this->yandexDefaultLimit;
+        return $this->ozonTabs;
     }
     
     /**
      * @return string|null
      */
-    public function getOzonTabs(): ?string
+    public function getMultimarketTabs(): ?string
     {
-        return $this->ozonTabs;
+        return $this->multimarketTabs;
     }
 }

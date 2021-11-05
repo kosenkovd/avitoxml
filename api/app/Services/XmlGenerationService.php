@@ -674,7 +674,7 @@ class XmlGenerationService implements IXmlGenerationService {
                 return $this->generateYandexXML('', '', 0);
             case $this->sheetNamesConfig->getYoula():
                 return $this->generateUlaXML('', '', 0);
-            case "OZON":
+            case $this->sheetNamesConfig->getOzon():
                 return $this->generateOzonXML('', '', 0);
             default:
                 return '';
