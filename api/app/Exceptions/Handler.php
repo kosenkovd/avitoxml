@@ -42,7 +42,11 @@ class Handler extends ExceptionHandler
     public function report(Throwable $e)
     {
         // Kill reporting if this is an "access denied" (code 9) OAuthServerException.
-        if ($e instanceof \League\OAuth2\Server\Exception\OAuthServerException && ($e->getCode() == 9 || $e->getCode() == 8 || $e->getCode() == 10)) {
+        if (
+            ($e instanceof \League\OAuth2\Server\Exception\OAuthServerException &&
+                ($e->getCode() == 9 || $e->getCode() == 8 || $e->getCode() == 10)) ||
+            preg_match('/The refresh token is invalid/', $e->getMessage())
+        ) {
             return;
         }
         

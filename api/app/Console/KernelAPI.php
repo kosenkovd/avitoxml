@@ -45,8 +45,7 @@ class Kernel extends ConsoleKernel
             $tables = TableLaravel::query()
                 ->where('dateExpired', '<=', time())
                 ->whereHas('user', function (Builder $q) {
-                    $q->whereNotNull('email_verified_at')
-                        ->where('isBlocked', false);
+                    $q->whereNotNull('email_verified_at');
                 })
                 ->whereHas('generators', function (Builder $q) use ($targetPlatform) {
                     $q->where('targetPlatform', $targetPlatform)
@@ -63,6 +62,48 @@ class Kernel extends ConsoleKernel
                 /** @var GeneratorLaravel $generator */
                 foreach ($table->generators as $generator) {
                     if ($generator->targetPlatform === $targetPlatform) {
+                        
+                        switch ($table->userId) {
+                            // premium
+                            case 38:
+                            case 40:
+                            case 41:
+                            case 42:
+                            case 320:
+            
+                                // float 1200.00
+                                $premiumPrice = 1200.00;
+                                
+                                $user = $table->user;
+                                $success = $transactionService->handleMaxAds(
+                                    $user,
+                                    $generator,
+                                    $premiumPrice,
+                                    $generator->maxAds,
+                                    true
+                                );
+            
+                                if ($success) {
+                                    $table->generators->each(function (GeneratorLaravel $generator) {
+                                        $generator->subscribedMaxAds = null;
+                                        $generator->save();
+                                    });
+                
+                                    if ($user->isBlocked) {
+                                        $user->isBlocked = false;
+                                        $user->save();
+                                    }
+                                }
+            
+                                Log::channel('subscribe')
+                                    ->info("Table '".$table->googleSheetId."' ".($success ? "Renewed" : "Has errors"));
+            
+                                return;
+                            default:
+                        }
+
+                        // Regular users
+
                         // Выбирается указанное на след. месяц число
                         $maxAds = $generator->subscribedMaxAds ?: $generator->maxAds;
                         
@@ -95,7 +136,7 @@ class Kernel extends ConsoleKernel
                             $generator,
                             $priceWithoutReferralProgram,
                             $maxAds,
-                            $generator->subscribed
+                            true
                         );
                         
                         if ($success) {
@@ -103,8 +144,8 @@ class Kernel extends ConsoleKernel
                                 $generator->subscribedMaxAds = null;
                                 $generator->save();
                             });
-    
-                            if ($success && $user->isBlocked) {
+
+                            if ($user->isBlocked) {
                                 $user->isBlocked = false;
                                 $user->save();
                             }

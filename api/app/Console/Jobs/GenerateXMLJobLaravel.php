@@ -113,34 +113,46 @@ class GenerateXMLJobLaravel extends JobBase
      */
     private function processSheet(TableLaravel $table, GeneratorLaravel $generator): void
     {
+        switch ($table->userId) {
+            case 38:
+            case 40:
+            case 41:
+            case 42:
+            case 320:
+                $adsLimit = 100000;
+                break;
+            default:
+                $adsLimit = $generator->maxAds;
+        }
+
         try {
             switch ($generator->targetPlatform) {
                 case "Юла":
                     $content = $this->xmlGenerationService->generateUlaXML(
                         $table->googleSheetId,
                         $generator->targetPlatform,
-                        $generator->maxAds
+                        $adsLimit
                     );
                     break;
                 case "Яндекс":
                     $content = $this->xmlGenerationService->generateYandexXML(
                         $table->googleSheetId,
                         $generator->targetPlatform,
-                        $generator->maxAds
+                        $adsLimit
                     );
                     break;
                 case "Мультимаркет":
                     $content = $this->xmlGenerationService->generateMultimarketXML(
                         $table->googleSheetId,
                         $generator->targetPlatform,
-                        $generator->maxAds
+                        $adsLimit
                     );
                     break;
                 default:
                     $content = $this->xmlGenerationService->generateAvitoXML(
                         $table->googleSheetId,
                         $generator->targetPlatform,
-                        $generator->maxAds
+                        $adsLimit
                     );
             }
             

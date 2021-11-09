@@ -107,6 +107,9 @@ class FillImagesJobYandexLaravel extends JobBase
                 case "Яндекс":
                     $targetSheets = $this->xmlGeneration->getYandexTabs();
                     break;
+                case "Мультимаркет":
+                    $targetSheets = $this->xmlGeneration->getMultimarketTabs();
+                    break;
             }
             
             $splitTargetSheets = explode(",", $targetSheets);
