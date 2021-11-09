@@ -241,6 +241,11 @@ class TableHeader {
     public ?int $multimarketParam2Value = null;
     public ?int $multimarketParam3Value = null;
     public ?int $multimarketParam4Value = null;
+    public ?int $multimarketQuantity = null;
+    public ?int $multimarketOldPrice = null;
+    public ?int $multimarketDimensions = null;
+    public ?int $multimarketWeight = null;
+    public ?int $multimarketVendorCode = null;
 
     public function __construct(array $headers)
     {
@@ -930,6 +935,21 @@ class TableHeader {
                     break;
                 case "значениепараметра4":
                     $this->multimarketParam4Value = $colNum;
+                    break;
+                case "кол-во":
+                    $this->multimarketQuantity = $colNum;
+                    break;
+                case "стараяцена":
+                    $this->multimarketOldprice = $colNum;
+                    break;
+                case "габариты":
+                    $this->multimarketDimensions = $colNum;
+                    break;
+                case "вес":
+                    $this->multimarketWeight = $colNum;
+                    break;
+                case "артикул":
+                    $this->multimarketVendorCode = $colNum;
                     break;
             }
         }

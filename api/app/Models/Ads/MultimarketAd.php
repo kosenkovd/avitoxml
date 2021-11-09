@@ -14,14 +14,20 @@ class MultimarketAd extends AdBase
     
     protected ?string $groupId;
     
-    private ?string $multimarketParam1Name;
-    private ?string $multimarketParam2Name;
-    private ?string $multimarketParam3Name;
-    private ?string $multimarketParam4Name;
-    private ?string $multimarketParam1Value;
-    private ?string $multimarketParam2Value;
-    private ?string $multimarketParam3Value;
-    private ?string $multimarketParam4Value;
+    protected ?string $multimarketParam1Name;
+    protected ?string $multimarketParam2Name;
+    protected ?string $multimarketParam3Name;
+    protected ?string $multimarketParam4Name;
+    protected ?string $multimarketParam1Value;
+    protected ?string $multimarketParam2Value;
+    protected ?string $multimarketParam3Value;
+    protected ?string $multimarketParam4Value;
+    
+    protected ?string $quantity;
+    protected ?string $oldPrice;
+    protected ?string $dimensions;
+    protected ?string $vendorCode;
+    protected ?string $weight;
     
     public function __construct(array $row, TableHeader $propertyColumns, Collection $usedCategories)
     {
@@ -57,16 +63,26 @@ class MultimarketAd extends AdBase
         $this->multimarketParam4Value = isset($row[$propertyColumns->multimarketParam4Value])
             ? htmlspecialchars(trim($row[$propertyColumns->multimarketParam4Value]))
             : null;
-        
-        
-        $this->description = null;
-        if (isset($row[$propertyColumns->description])) {
-            $this->description = str_replace("\r\n", "<br>", $row[$propertyColumns->description]);
-            $this->description = str_replace("\n\r", "\n", $this->description);
-            $this->description = str_replace("\n", "<br>", $this->description);
-        } else {
-            $this->description = null;
-        }
+
+        $this->quantity = isset($row[$propertyColumns->multimarketQuantity])
+            ? htmlspecialchars(trim($row[$propertyColumns->multimarketQuantity]))
+            : null;
+        $this->oldPrice = isset($row[$propertyColumns->multimarketOldprice])
+            ? htmlspecialchars(trim($row[$propertyColumns->multimarketOldprice]))
+            : null;
+        $this->dimensions = isset($row[$propertyColumns->multimarketDimensions])
+            ? htmlspecialchars(trim($row[$propertyColumns->multimarketDimensions]))
+            : null;
+        $this->weight = isset($row[$propertyColumns->multimarketWeight])
+            ? htmlspecialchars(trim($row[$propertyColumns->multimarketWeight]))
+            : null;
+        $this->vendorCode = isset($row[$propertyColumns->multimarketVendorCode])
+            ? htmlspecialchars(trim($row[$propertyColumns->multimarketVendorCode]))
+            : null;
+    
+        $this->description = isset($row[$propertyColumns->description])
+            ? htmlspecialchars(trim($row[$propertyColumns->description]))
+            : null;
     }
     
     public function toAvitoXml(): string
@@ -99,7 +115,12 @@ class MultimarketAd extends AdBase
         $resultXml .= $this->addTagIfPropertySet($this->title, "name");
         $resultXml .= $this->addTagIfPropertySet("<![CDATA[$this->description]]>", "description");
         $resultXml .= $params;
-        
+        $resultXml .= $this->addTagIfPropertySet($this->quantity, "quantity");
+        $resultXml .= $this->addTagIfPropertySet($this->oldPrice, "oldprice");
+        $resultXml .= $this->addTagIfPropertySet($this->dimensions, "dimensions");
+        $resultXml .= $this->addTagIfPropertySet($this->weight, "weight");
+        $resultXml .= $this->addTagIfPropertySet($this->vendorCode, "vendorCode");
+    
         return $resultXml;
     }
     
