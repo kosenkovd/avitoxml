@@ -43,6 +43,8 @@ class XmlGenerationService implements IXmlGenerationService {
     
     protected int $adsLimit;
     
+    protected ?DateTimeZone $timezone = null;
+    
     private function isExistsInRow(array $row, ?int $column): bool
     {
         return !is_null($column) &&
@@ -60,7 +62,6 @@ class XmlGenerationService implements IXmlGenerationService {
     private function validateRequiredColumnsPresent(array $row, TableHeader $propertyColumns): bool
     {
         return isset($row[$propertyColumns->ID]) &&
-            isset($row[$propertyColumns->category]) &&
             !is_null($row[$propertyColumns->ID]) &&
             trim($row[$propertyColumns->ID]) !== "";
     }
@@ -138,9 +139,11 @@ class XmlGenerationService implements IXmlGenerationService {
             $dateRawFixed .= ' 00:00';
         }
         $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
-        
+
+        $this->setTimezone($row, $propertyColumns);
+
         try {
-            $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
+            $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
             // Skip(true) if Date from the table has not come
             return $date->getTimestamp() > time();
         } catch (\Exception $exception) {
@@ -167,9 +170,11 @@ class XmlGenerationService implements IXmlGenerationService {
             $dateRawFixed .= ' 00:00';
         }
         $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
-        
+
+        $this->setTimezone($row, $propertyColumns);
+
         try {
-            $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
+            $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
             // Skip(true) if Date from the table has not come
             return $date->getTimestamp() > time();
         } catch (\Exception $exception) {
@@ -201,15 +206,67 @@ class XmlGenerationService implements IXmlGenerationService {
             $dateRawFixed .= ' 00:00';
         }
         $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
-        
+
+        $this->setTimezone($row, $propertyColumns);
+
         try {
-            $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
+            $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
             // Skip(true) if Date from the table has not come
             return $date->getTimestamp() > time();
         } catch (\Exception $exception) {
             Log::channel($this->noticeChannel)->notice("Notice on 'multimarket' ".$dateCreated);
             
             return true;
+        }
+    }
+    
+    protected function setTimezone(array $row, TableHeader $propertyColumns): void
+    {
+        if (!$this->isExistsInRow($row, $propertyColumns->timezone)) {
+            $this->timezone = new DateTimeZone("Europe/Moscow");
+            return;
+        }
+        
+        $timezone = $row[$propertyColumns->timezone];
+        
+        // Lowering case and removing space characters to avoid errors in case of line break, etc.
+        $timezone = mb_strtolower(preg_replace('/\s/i', "", $timezone));
+        switch ($timezone) {
+            case "калининградскаяобласть(-1мск)":
+                $this->timezone = new DateTimeZone("+0200");
+                break;
+            case "московскоевремя":
+                $this->timezone = new DateTimeZone("Europe/Moscow");
+                break;
+            case "самарскоевремя(+1чмск)":
+                $this->timezone = new DateTimeZone("+0400");
+                break;
+            case "екатеринбургскоевремя(+2чмск)":
+                $this->timezone = new DateTimeZone("+0500");
+                break;
+            case "омскоевремя(+3чмск)":
+                $this->timezone = new DateTimeZone("+0600");
+                break;
+            case "красноярскоевремя(+4чмск)":
+                $this->timezone = new DateTimeZone("+0700");
+                break;
+            case "иркутскоевремя(+5чмск)":
+                $this->timezone = new DateTimeZone("+0800");
+                break;
+            case "якутскоевремя(+6чмск)":
+                $this->timezone = new DateTimeZone("+0900");
+                break;
+            case "владивостокскоевремя(+7чмск)":
+                $this->timezone = new DateTimeZone("+1000");
+                break;
+            case "магаданскоевремя(+8чмск)":
+                $this->timezone = new DateTimeZone("+1100");
+                break;
+            case "камчатскоевремя(+9чмск)":
+                $this->timezone = new DateTimeZone("+1200");
+                break;
+            default:
+                $this->timezone = new DateTimeZone("Europe/Moscow");
         }
     }
     
@@ -257,6 +314,10 @@ class XmlGenerationService implements IXmlGenerationService {
     {
         $category = $row[$propertyColumns->category];
         switch (trim($category)) {
+            case "Аудио и видео":
+            case "Телевизоры и проекторы":
+                $ad = new Ads\TvAd($row, $propertyColumns);
+                break;
             case "Велосипеды":
             case "Багги":
             case "Вездеходы":
@@ -793,7 +854,7 @@ class XmlGenerationService implements IXmlGenerationService {
     
             $usedCategories = collect($values)
                 ->map(function (array $row) use ($propertyColumns): string {
-                    $name = $row[$propertyColumns->category];
+                    $name = isset($row[$propertyColumns->category]) ? $row[$propertyColumns->category] : '';
                     return trim($name);
                 })
                 ->unique()

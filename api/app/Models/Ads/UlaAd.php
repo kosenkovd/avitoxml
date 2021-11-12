@@ -114,7 +114,7 @@ ULAXML;
                 $dateRawFixed = preg_replace('/\./', '-', $dateRawFixed);
     
                 try {
-                    $date = Carbon::createFromTimeString($dateRawFixed, new DateTimeZone("Europe/Moscow"));
+                    $date = Carbon::createFromTimeString($dateRawFixed, $this->timezone);
                     return $date->format('d-m-Y');
                 } catch (\Exception $exception) {
                     Log::channel($this->noticeChannel)->notice("Notice on 'generating date of publication' ".$dateRaw);
