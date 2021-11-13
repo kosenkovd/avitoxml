@@ -6,14 +6,18 @@ use App\Models\TableHeader;
 
 class TvAd extends AdBase
 {
+    protected ?string $goodsType = null;
     protected ?string $productsType = null;
 
     public function __construct(array $row, TableHeader $propertyColumns)
     {
         parent::__construct($row, $propertyColumns);
 
-        $this->productsType = isset($row[$propertyColumns->goodsType])
+        $this->goodsType = isset($row[$propertyColumns->goodsType])
             ? htmlspecialchars($row[$propertyColumns->goodsType])
+            : null;
+        $this->productsType = isset($row[$propertyColumns->subTypeApparel])
+            ? htmlspecialchars($row[$propertyColumns->subTypeApparel])
             : null;
     }
 
@@ -21,7 +25,8 @@ class TvAd extends AdBase
     {
         $defaultTags = $this->generateDefaultXML();
 
-        $resultXml = $this->addTagIfPropertySet($this->productsType, "ProductsType");
+        $resultXml = $this->addTagIfPropertySet($this->goodsType, "GoodsType");
+        $resultXml .= $this->addTagIfPropertySet($this->productsType, "ProductsType");
 
         return <<<AVITOXML
     <Ad>
